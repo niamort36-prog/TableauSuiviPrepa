@@ -3,897 +3,622 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Suivi Chantier - Alarmes</title>
+    <title>Suivi Chantier - LIVE Firebase</title>
     <style>
         :root {
-            --primary-color: #0055a4;
-            --secondary-color: #f1f5f9;
-            --bg-color: #f8fafc;
-            --card-bg: #ffffff;
-            --text-color: #1e293b;
-            --border-color: #e2e8f0;
-            --success-color: #10b981;
-            --danger-color: #ef4444;
-            --warning-color: #f59e0b;
-            --header-bg: #0f172a;
+            --primary: #0f172a;
+            --accent: #0ea5e9;
+            --bg: #f1f5f9;
+            --text: #334155;
+            --border: #cbd5e1;
+            
+            --row-ok: #d1fae5;
+            --row-warn: #fef08a;
+            --row-late: #fecaca;
+            --row-neutral: #ffffff;
         }
 
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 0; min-height: 100vh; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 90px; }
 
         /* --- NAVBAR --- */
-        .navbar { background-color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 100; }
-        .nav-logo { font-size: 1.2rem; font-weight: bold; color: var(--primary-color); cursor: pointer; }
-        .nav-actions { display: flex; gap: 15px; }
-        .btn-nav { background-color: transparent; color: #64748b; border: 1px solid #cbd5e1; padding: 8px 16px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 5px; }
-        .btn-nav.active { background-color: var(--primary-color); color: white; border-color: var(--primary-color); }
-        .btn-new { background-color: var(--primary-color); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 5px; }
-        
+        .navbar { background: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 1000; }
+        .nav-logo { font-size: 1.3rem; font-weight: 800; color: var(--primary); cursor: pointer; }
+        .nav-actions { display: flex; gap: 10px; }
+        .btn-nav { background: transparent; border: 1px solid var(--border); padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 500; }
+        .btn-nav.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .btn-new { background: var(--accent); color: white; border: none; padding: 8px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+
         /* --- LAYOUT --- */
-        .screen { padding: 30px; max-width: 1200px; margin: 0 auto; display: none; }
+        .screen { max-width: 1200px; margin: 20px auto; padding: 0 20px; display: none; }
         .screen.active { display: block; }
-        .projects-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; margin-top: 20px; }
-        .empty-state { text-align: center; color: #94a3b8; margin-top: 50px; padding: 40px; border: 2px dashed #cbd5e1; border-radius: 12px; }
-
-        /* --- CARTE PROJET --- */
-        .project-card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid var(--border-color); cursor: pointer; transition: transform 0.2s; position: relative; border-left: 5px solid transparent; }
-        .project-card:hover { transform: translateY(-3px); }
-        /* Bordures d'état sur la carte */
-        .project-card.status-red { border-left-color: var(--danger-color); }
-        .project-card.status-yellow { border-left-color: var(--warning-color); }
-        .project-card.status-green { border-left-color: var(--success-color); }
-
-        .card-header { margin-bottom: 15px; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: flex-start; }
-        .card-line-name { font-weight: bold; color: var(--primary-color); font-size: 1.1rem; display: block; }
-        .card-meta { font-size: 0.85rem; color: #64748b; margin-top: 2px; }
-        .card-body { display: flex; justify-content: space-between; align-items: start; }
-        .card-info-block { flex: 1; margin-right: 10px; }
-        .card-info-item { margin-bottom: 5px; display: flex; align-items: flex-start; gap: 5px; font-size: 0.9rem; }
-        .card-travaux { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e2e8f0; font-size: 0.85rem; color: #475569; font-style: italic; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        .btn-folder-card { margin-top: 10px; background-color: #e2e8f0; color: #475569; border: none; padding: 5px 10px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; }
-        .mini-gauge { width: 60px; height: 60px; flex-shrink: 0; }
         
-        /* Pastille d'état général */
-        .status-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
-        .dot-red { background-color: var(--danger-color); box-shadow: 0 0 5px var(--danger-color); }
-        .dot-yellow { background-color: var(--warning-color); box-shadow: 0 0 5px var(--warning-color); }
-        .dot-green { background-color: var(--success-color); }
+        /* --- ACCUEIL --- */
+        .projects-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 20px; }
+        .project-card { background: white; border-radius: 12px; padding: 20px; border: 1px solid var(--border); cursor: pointer; transition: transform 0.2s; position: relative; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .project-card:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        
+        .card-green { border-left: 6px solid #10b981; }
+        .card-yellow { border-left: 6px solid #eab308; }
+        .card-red { border-left: 6px solid #ef4444; }
 
-        .badge-deplacement { background-color: #dbeafe; color: #1e40af; font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; font-weight: bold; display: inline-flex; align-items: center; gap: 4px; margin-top: 5px; }
+        .card-header { display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; }
+        .card-title { font-weight: 700; color: var(--primary); font-size: 1.1rem; }
+        .card-dates { font-size: 0.9rem; color: #64748b; margin-top: 5px; display:flex; gap:5px; align-items:center;}
+        
+        .mini-gauge { width: 60px; height: 60px; position: absolute; top: 20px; right: 20px; }
 
-        /* --- ARCHIVES --- */
-        .folder-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; margin-top: 20px; }
-        .folder-card { background-color: #fff9db; border: 1px solid #fcd34d; border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; transition: transform 0.2s; }
-        .folder-card:hover { transform: scale(1.02); background-color: #fef3c7; }
-        .folder-contents { margin-top: 20px; padding: 20px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; display: none; }
+        /* ALERTES SUR ACCUEIL */
+        .card-alerts { margin-top: 15px; padding-top: 10px; border-top: 1px dashed #e2e8f0; font-size: 0.8rem; }
+        .alert-item { display: flex; align-items: center; gap: 5px; margin-bottom: 3px; font-weight: 600; }
+        .alert-red { color: #dc2626; }
+        .alert-orange { color: #d97706; }
 
         /* --- FORMULAIRE --- */
-        #form-screen { padding: 30px; max-width: 900px; margin: 0 auto; padding-bottom: 100px; }
-        .dashboard-container { background-color: var(--card-bg); border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); overflow: hidden; }
-        .selection-area { background-color: var(--secondary-color); padding: 20px; border-bottom: 1px solid var(--border-color); }
-        select { width: 100%; padding: 12px; font-size: 1rem; border: 2px solid var(--primary-color); border-radius: 6px; }
-        .line-header { background-color: var(--header-bg); color: white; padding: 20px; text-align: center; opacity: 0.5; transition: opacity 0.3s; }
-        .line-info { display: flex; justify-content: center; gap: 15px; align-items: center; flex-wrap: wrap; font-weight: bold; }
-        .tag { background-color: var(--primary-color); padding: 4px 10px; border-radius: 4px; font-size: 0.9rem; }
+        .dashboard-container { background: white; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); overflow: hidden; margin-bottom: 20px; border: 1px solid var(--border); }
+        .header-bar { background: var(--primary); color: white; padding: 20px; text-align: center; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 25px; border-bottom: 1px solid var(--border); }
+        .form-group { display: flex; flex-direction: column; gap: 5px; }
+        .form-label { font-size: 0.8rem; font-weight: 700; color: #475569; text-transform: uppercase; }
+        .form-input { padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95rem; }
+
+        /* TAGS */
+        .input-group-row { display: flex; gap: 5px; }
+        .btn-add-tag { background: var(--primary); color: white; border: none; padding: 0 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .tag-pill { background: #e0f2fe; color: #0369a1; padding: 2px 10px; border-radius: 15px; font-size: 0.85rem; border: 1px solid #bae6fd; display: inline-flex; align-items: center; gap: 5px; margin: 2px; }
+
+        /* TABLEAU TACHES */
+        .category-header { background: #e2e8f0; padding: 12px 20px; font-weight: 800; color: var(--primary); text-transform: uppercase; border-top: 1px solid #ccc; border-bottom: 1px solid #ccc; font-size: 1rem; }
+        .task-row { display: flex; align-items: center; padding: 15px 20px; border-bottom: 1px solid #e2e8f0; transition: background-color 0.2s; gap: 15px; }
         
-        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 20px; background-color: var(--secondary-color); border-bottom: 1px solid var(--border-color); }
-        .form-group { display: flex; flex-direction: column; }
-        .form-input { padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; }
-        
-        .tag-input-container { display: flex; gap: 5px; margin-bottom: 5px; }
-        .tag-add-btn { background: var(--primary-color); color: white; border: none; border-radius: 4px; padding: 0 10px; cursor: pointer; font-weight: bold; }
-        .tag-list { display: flex; flex-wrap: wrap; gap: 5px; min-height: 25px; }
-        .tag-pill { background-color: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 12px; font-size: 0.85rem; display: flex; align-items: center; gap: 5px; border: 1px solid #bae6fd; }
-        .tag-remove { cursor: pointer; font-weight: bold; color: #0284c7; }
-        .tag-remove:hover { color: #ef4444; }
+        .row-ok { background-color: var(--row-ok) !important; border-left: 5px solid #10b981; }
+        .row-warn { background-color: var(--row-warn) !important; border-left: 5px solid #eab308; }
+        .row-late { background-color: var(--row-late) !important; border-left: 5px solid #ef4444; }
+        .row-neutral { background-color: white; border-left: 5px solid transparent; }
 
-        .date-row { display: flex; align-items: center; gap: 10px; }
-        .date-row input { flex: 1; }
-        .date-separator { font-size: 0.8rem; color: #64748b; }
+        .task-name { flex: 2; font-weight: 600; font-size: 0.95rem; color: #334155; }
+        .task-deadline { flex: 1; font-size: 0.9rem; font-weight: bold; color: #b91c1c; text-align: center; background: rgba(255,255,255,0.5); padding: 5px; border-radius: 4px; }
+        .task-actions { flex: 1; display: flex; justify-content: flex-end; }
 
-        .deplacement-container { display: flex; align-items: center; background: white; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; margin-top: 5px; }
-        .deplacement-checkbox { width: 20px; height: 20px; accent-color: #d97706; cursor: pointer; margin-right: 10px; }
+        .btn-toggle { border: 1px solid #94a3b8; background: white; padding: 8px 16px; border-radius: 4px; font-weight: bold; color: #64748b; cursor: pointer; margin-left: 5px; }
+        .btn-toggle.active-yes { background: #10b981; color: white; border-color: #10b981; }
+        .btn-toggle.active-no { background: #64748b; color: white; border-color: #64748b; }
+        .input-manual { padding: 8px; border: 1px solid #94a3b8; border-radius: 4px; width: 100px; text-align: center; }
 
-        .category-section { padding: 0; border-bottom: 1px solid var(--border-color); }
-        .category-header { padding: 20px 20px 10px 20px; }
-        .category-title { color: var(--primary-color); font-size: 1.1rem; border-left: 4px solid var(--primary-color); padding-left: 10px; text-transform: uppercase; margin: 0; }
-        
-        /* STYLE DES TACHES AVEC ALARMES */
-        .task-item { display: flex; align-items: center; padding: 12px 20px; border-bottom: 1px solid #f1f5f9; transition: background-color 0.3s; }
-        .task-item:last-child { border-bottom: none; }
-        
-        /* États d'alarme */
-        .task-item.alarm-red { background-color: #fee2e2; border-left: 5px solid var(--danger-color); }
-        .task-item.alarm-yellow { background-color: #fef3c7; border-left: 5px solid var(--warning-color); }
-        .task-item.status-ok { background-color: #f0fdf4; border-left: 5px solid var(--success-color); }
+        /* STICKY FOOTER */
+        .footer-sticky { 
+            position: fixed; bottom: 0; left: 0; right: 0; 
+            background: white; padding: 15px 30px; 
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.1); border-top: 1px solid var(--border);
+            display: flex; gap: 15px; justify-content: flex-end; z-index: 2000;
+        }
+        .btn-action { padding: 12px 30px; border-radius: 8px; border: none; font-weight: bold; font-size: 1.1rem; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .btn-save { background: var(--success-color); background-color: #10b981; color: white; flex-grow: 1; max-width: 500px; }
+        .btn-save:hover { background-color: #059669; transform: scale(1.02); }
+        .btn-other { background: #6366f1; color: white; }
+        .btn-arch { background: #94a3b8; color: white; }
 
-        .task-checkbox { width: 20px; height: 20px; margin-right: 15px; cursor: pointer; accent-color: var(--primary-color); }
-        .task-content { flex-grow: 1; display: flex; flex-direction: column; }
-        .task-label { font-weight: 500; cursor: pointer; }
-        .task-deadline { font-size: 0.8rem; color: #64748b; margin-top: 2px; }
-        .alarm-text { font-weight: bold; font-size: 0.75rem; margin-left: 5px; }
-
-        .inline-input { width: 100px; padding: 5px; margin-left: 10px; border: 1px solid #cbd5e1; border-radius: 4px; }
-        textarea { width: 100%; height: 80px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; resize: vertical; }
-
-        .action-buttons { display: flex; gap: 15px; margin-top: 20px; }
-        .btn-validate { background-color: var(--success-color); color: white; border: none; padding: 15px; flex: 2; font-size: 1.1rem; font-weight: bold; cursor: pointer; border-radius: 8px; }
-        .btn-archive { background-color: var(--secondary-color); color: #64748b; border: 1px solid #cbd5e1; padding: 15px; flex: 1; font-size: 1rem; font-weight: bold; cursor: pointer; border-radius: 8px; }
-        .btn-archive:hover { background-color: #fee2e2; color: var(--danger-color); border-color: var(--danger-color); }
-
-        .gauge-section { display: flex; justify-content: center; padding: 20px; background-color: #fff; border-bottom: 1px solid var(--border-color); }
-        .gauge-container { width: 120px; height: 120px; position: relative; }
-        .circular-chart { display: block; margin: 0 auto; max-width: 100%; max-height: 100%; }
+        .circular-chart { display: block; margin: 0 auto; max-width: 100%; max-height: 250px; }
         .circle-bg { fill: none; stroke: #eee; stroke-width: 3.8; }
-        .circle { fill: none; stroke-width: 2.8; stroke-linecap: round; stroke: var(--primary-color); transition: stroke-dasharray 0.6s ease; }
-        .percentage { fill: var(--text-color); font-family: sans-serif; font-weight: bold; font-size: 0.5em; text-anchor: middle; }
+        .circle { fill: none; stroke-width: 2.8; stroke-linecap: round; transition: stroke-dasharray 0.6s ease; }
+        .percentage { fill: #0f172a; font-family: sans-serif; font-weight: bold; font-size: 0.5em; text-anchor: middle; }
 
-        @media (max-width: 600px) { .info-grid { grid-template-columns: 1fr; } }
+        @media print {
+            .navbar, .footer-sticky, .btn-add-tag, .tag-remove { display: none !important; }
+            .screen { display: block !important; margin: 0; padding: 0; }
+            .dashboard-container { box-shadow: none; border: 1px solid #000; }
+            .row-ok { background-color: #eee !important; border-left: 2px solid black; }
+        }
     </style>
 </head>
 <body>
 
     <nav class="navbar">
-        <div class="nav-logo" onclick="switchTab('home')">⚡ Suivi Chantier</div>
+        <div class="nav-logo" onclick="goHome()">⚡ SUIVI CHANTIER (Live)</div>
         <div class="nav-actions">
-            <button class="btn-nav active" id="btn-tab-home" onclick="switchTab('home')">📊 En cours</button>
-            <button class="btn-nav" id="btn-tab-archive" onclick="switchTab('archive')">🗂️ Archives</button>
-            <button class="btn-new" onclick="startNewProject()"><span>+</span> Nouveau</button>
+            <button class="btn-nav active" id="nav-home" onclick="goHome()">En cours</button>
+            <button class="btn-nav" id="nav-arch" onclick="goArchive()">Archives</button>
+            <button class="btn-new" onclick="newItem()">+ NOUVEAU</button>
         </div>
     </nav>
 
-    <div id="home-screen" class="screen active">
-        <h2 style="margin-top: 0; color: #334155;">Chantiers Actifs</h2>
-        <div id="projects-list" class="projects-grid">
-            <div class="empty-state">Aucun chantier actif.</div>
-        </div>
+    <div id="screen-home" class="screen active">
+        <div id="grid-projects" class="projects-grid"></div>
     </div>
 
-    <div id="archive-screen" class="screen">
-        <h2 style="margin-top: 0; color: #334155;">Archives par Date</h2>
-        <div id="archive-folders" class="folder-grid"></div>
-        <div id="folder-viewer" class="folder-contents">
-            <h3 id="folder-viewer-title" style="color:var(--primary-color); border-bottom:1px solid #eee; padding-bottom:10px;">Détails Dossier</h3>
-            <div id="folder-projects-list" class="projects-grid"></div>
-        </div>
+    <div id="screen-archive" class="screen">
+        <h3>📂 Archives</h3>
+        <div id="grid-archives" class="projects-grid"></div>
     </div>
 
-    <div id="form-screen" class="screen">
-        <button style="background:none; border:none; text-decoration:underline; cursor:pointer; color:#64748b; margin-bottom:10px;" onclick="goBack()">← Annuler / Retour</button>
-        
+    <div id="screen-form" class="screen">
+        <button onclick="goHome()" style="background:none; border:none; cursor:pointer; font-weight:bold; color:#64748b; margin-bottom:10px;">← Retour Accueil</button>
+
         <div class="dashboard-container">
-            <div class="selection-area">
-                <label>Sélectionner une ligne :</label>
-                <select id="line-select" onchange="updateLineInfo()"></select>
+            <div class="header-bar">
+                <h2 id="display-line-header" style="margin:0; font-size:1.5rem">NOUVEAU CHANTIER</h2>
+                <div id="display-line-sub" style="opacity:0.8">Sélectionnez une ligne</div>
             </div>
 
-            <div class="line-header" id="header-display">
-                <div class="line-info">
-                    <span class="tag" id="display-number">N° ---</span>
-                    <span class="tag" id="display-tension">-- kV</span>
-                    <span id="display-name">Sélectionner une ligne...</span>
-                </div>
-            </div>
-
-            <div class="gauge-section">
-                <div class="gauge-container">
-                    <svg viewBox="0 0 36 36" class="circular-chart" id="main-gauge">
-                        <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                        <path class="circle" stroke-dasharray="0, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                        <text x="18" y="20.35" class="percentage">0%</text>
+            <div style="background:white; padding:15px; display:flex; justify-content:center; border-bottom:1px solid #eee">
+                <div style="width:100px; height:100px; position:relative;">
+                    <svg viewBox="0 0 36 36" class="circular-chart">
+                        <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                        <path class="circle" id="gauge-circle-form" stroke-dasharray="0, 100" stroke="#0055a4" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
                     </svg>
+                    <div id="gauge-text-form" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-weight:bold;">0%</div>
                 </div>
             </div>
 
-            <div class="info-grid">
-                <div class="form-group"><label>CdT Attribué</label><input type="text" id="inp-cdt" class="form-input"></div>
-                <div class="form-group"><label>CdT Suppléant</label><input type="text" id="inp-cdt-sup" class="form-input"></div>
+            <div class="form-grid">
+                <div class="form-group" style="grid-column: span 2">
+                    <label class="form-label">Ligne HTB</label>
+                    <select id="inp-line" class="form-input" onchange="updateHeader()"></select>
+                </div>
                 
-                <div class="form-group">
-                    <label>Numéros OT</label>
-                    <div class="tag-input-container">
-                        <input type="text" id="inp-ot-add" class="form-input" placeholder="Ajouter OT..." style="flex:1">
-                        <button class="tag-add-btn" onclick="addTag('ot')">+</button>
-                    </div>
-                    <div id="list-ot" class="tag-list"></div>
-                </div>
+                <div class="form-group"><label class="form-label">Chargé de Travaux (CdT)</label><input id="inp-cdt" class="form-input"></div>
+                <div class="form-group"><label class="form-label">CdT Suppléant</label><input id="inp-cdt-sup" class="form-input"></div>
 
-                <div class="form-group">
-                    <label>Numéros OI</label>
-                    <div class="tag-input-container">
-                        <input type="text" id="inp-oi-add" class="form-input" placeholder="Ajouter OI..." style="flex:1">
-                        <button class="tag-add-btn" onclick="addTag('oi')">+</button>
-                    </div>
-                    <div id="list-oi" class="tag-list"></div>
-                </div>
+                <div class="form-group"><label class="form-label">Début Chantier</label><input type="date" id="inp-start" class="form-input" onchange="refreshUI()"></div>
+                <div class="form-group"><label class="form-label">Fin Chantier</label><input type="date" id="inp-end" class="form-input" onchange="refreshUI()"></div>
+
+                <div class="form-group"><label class="form-label">Début Consignation</label><input type="date" id="inp-cons-start" class="form-input"></div>
+                <div class="form-group"><label class="form-label">Fin Consignation</label><input type="date" id="inp-cons-end" class="form-input"></div>
 
                 <div class="form-group">
-                    <label>Dates Consignation</label>
-                    <div class="date-row">
-                        <input type="date" id="date-cons-start" class="form-input">
-                        <span class="date-separator">au</span>
-                        <input type="date" id="date-cons-end" class="form-input">
-                    </div>
+                    <label class="form-label">N° OT (Entrée pour ajouter)</label>
+                    <div class="input-group-row"><input id="inp-ot-add" class="form-input" style="flex:1" onkeypress="if(event.key==='Enter') addTag('ot')"><button class="btn-add-tag" onclick="addTag('ot')">+</button></div>
+                    <div id="list-ot" style="margin-top:5px"></div>
                 </div>
-
                 <div class="form-group">
-                    <label>Dates Chantier (Référence pour Alarmes)</label>
-                    <div class="date-row">
-                        <input type="date" id="date-chantier-start" class="form-input" onchange="updateFormAlarms()">
-                        <span class="date-separator">au</span>
-                        <input type="date" id="date-chantier-end" class="form-input">
-                    </div>
-                    
-                    <div class="deplacement-container">
-                        <input type="checkbox" id="chk-deplacement" class="deplacement-checkbox">
-                        <label for="chk-deplacement" style="font-weight:bold; cursor:pointer;">🚗 Déplacement à prévoir</label>
-                    </div>
-                </div>
-                
-                <div class="form-group" style="grid-column: span 2;">
-                    <label style="font-weight: bold; color: var(--primary-color);">Description des Travaux</label>
-                    <textarea id="inp-travaux" class="form-input" style="height: 60px;" placeholder="Ex: Remplacement isolateurs..."></textarea>
+                    <label class="form-label">N° OI (Entrée pour ajouter)</label>
+                    <div class="input-group-row"><input id="inp-oi-add" class="form-input" style="flex:1" onkeypress="if(event.key==='Enter') addTag('oi')"><button class="btn-add-tag" onclick="addTag('oi')">+</button></div>
+                    <div id="list-oi" style="margin-top:5px"></div>
                 </div>
 
-                <div class="form-group" style="grid-column: span 2;">
-                    <label>Lien Dossier / Chemin Réseau</label>
-                    <input type="text" id="inp-link" class="form-input" placeholder="Chemin réseau ou lien web">
+                <div class="form-group" style="grid-column: span 2">
+                    <label class="form-label">Description</label>
+                    <textarea id="inp-desc" class="form-input" rows="2"></textarea>
+                </div>
+
+                <div class="form-group" style="grid-column: span 2">
+                    <label style="cursor:pointer; font-weight:600; color:#d97706">
+                        <input type="checkbox" id="inp-depl"> 🚗 Déplacement à prévoir
+                    </label>
                 </div>
             </div>
 
-            <div class="category-section">
-                <div class="category-header"><h3 class="category-title">1. Matériel Lignes</h3></div>
-                
-                <div class="task-item" id="row-chk-mat-cmd">
-                    <input type="checkbox" id="chk-mat-cmd" class="task-checkbox" onchange="updateGauge(); updateFormAlarms()">
-                    <div class="task-content">
-                        <label for="chk-mat-cmd" class="task-label">Commande du matériel</label>
-                        <div class="task-deadline" id="date-chk-mat-cmd"></div>
-                    </div>
-                </div>
-                <div class="task-item" id="row-chk-mat-recep">
-                    <input type="checkbox" id="chk-mat-recep" class="task-checkbox" onchange="updateGauge(); updateFormAlarms()">
-                    <div class="task-content">
-                        <label for="chk-mat-recep" class="task-label">Réception matériel</label>
-                        <div class="task-deadline" id="date-chk-mat-recep"></div>
-                    </div>
-                </div>
-                <div class="task-item" id="row-chk-mat-charge">
-                    <input type="checkbox" id="chk-mat-charge" class="task-checkbox" onchange="updateGauge(); updateFormAlarms()">
-                    <div class="task-content">
-                        <label for="chk-mat-charge" class="task-label">Chargement matériel</label>
-                        <div class="task-deadline" id="date-chk-mat-charge"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="category-section">
-                <div class="category-header"><h3 class="category-title">2. Planification de l'intervention</h3></div>
-                
-                <div class="task-item" id="row-chk-plan-dt">
-                    <input type="checkbox" id="chk-plan-dt" class="task-checkbox" onchange="updateGauge(); updateFormAlarms()">
-                    <div class="task-content">
-                        <label for="chk-plan-dt" class="task-label">DT/DICT, demande SNCF, autre...</label>
-                        <div class="task-deadline" id="date-chk-plan-dt"></div>
-                    </div>
-                </div>
-                <div class="task-item" id="row-chk-plan-besoin">
-                    <input type="checkbox" id="chk-plan-besoin" class="task-checkbox" onchange="updateGauge(); updateFormAlarms()">
-                    <div class="task-content">
-                        <label for="chk-plan-besoin" class="task-label">Expression de besoins particulier</label>
-                        <div class="task-deadline" id="date-chk-plan-besoin"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="category-section">
-                <div class="category-header"><h3 class="category-title">3. Outillage</h3></div>
-                
-                <div class="task-item" id="row-chk-out-devis">
-                    <input type="checkbox" id="chk-out-devis" class="task-checkbox" onchange="updateGauge(); updateFormAlarms()">
-                    <div class="task-content">
-                        <label for="chk-out-devis" class="task-label">Devis moyen externe (nacelle...)</label>
-                        <div class="task-deadline" id="date-chk-out-devis"></div>
-                    </div>
-                </div>
-                <div class="task-item" id="row-chk-out-verif">
-                    <input type="checkbox" id="chk-out-verif" class="task-checkbox" onchange="updateGauge(); updateFormAlarms()">
-                    <div class="task-content">
-                        <label for="chk-out-verif" class="task-label">Vérification contrôle règlementaires</label>
-                        <div class="task-deadline" id="date-chk-out-verif"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="category-section">
-                <div class="category-header"><h3 class="category-title">4. Ressources</h3></div>
-                
-                <div class="task-item"><label>Durée du chantier</label><input type="text" id="inp-res-duree" class="inline-input"></div>
-                <div class="task-item"><label>Nombre d'agents</label><input type="number" id="inp-res-agents" class="inline-input"></div>
-                
-                <div class="task-item" id="row-chk-res-vehic">
-                    <input type="checkbox" id="chk-res-vehic" class="task-checkbox" onchange="updateGauge(); updateFormAlarms()">
-                    <div class="task-content">
-                        <label for="chk-res-vehic" class="task-label">Véhicule équipe particulier</label>
-                        <div class="task-deadline" id="date-chk-res-vehic"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="category-section">
-                <div class="category-header"><h3 class="category-title">5. Préparation de travail</h3></div>
-                
-                <div class="task-item" id="row-chk-prep-visite">
-                    <input type="checkbox" id="chk-prep-visite" class="task-checkbox" onchange="updateGauge(); updateFormAlarms()">
-                    <div class="task-content">
-                        <label for="chk-prep-visite" class="task-label">Visite sur place</label>
-                        <div class="task-deadline" id="date-chk-prep-visite"></div>
-                    </div>
-                </div>
-                <div class="task-item" id="row-chk-prep-veg">
-                    <input type="checkbox" id="chk-prep-veg" class="task-checkbox" onchange="updateGauge(); updateFormAlarms()">
-                    <div class="task-content">
-                        <label for="chk-prep-veg" class="task-label">Travaux végétation a prévoir</label>
-                        <div class="task-deadline" id="date-chk-prep-veg"></div>
-                    </div>
-                </div>
-                <div class="task-item" id="row-chk-prep-tiers">
-                    <input type="checkbox" id="chk-prep-tiers" class="task-checkbox" onchange="updateGauge(); updateFormAlarms()">
-                    <div class="task-content">
-                        <label for="chk-prep-tiers" class="task-label">Contact tiers</label>
-                        <div class="task-deadline" id="date-chk-prep-tiers"></div>
-                    </div>
-                </div>
-                <div class="task-item" id="row-chk-prep-sign">
-                    <input type="checkbox" id="chk-prep-sign" class="task-checkbox" onchange="updateGauge(); updateFormAlarms()">
-                    <div class="task-content">
-                        <label for="chk-prep-sign" class="task-label">Signature prépa</label>
-                        <div class="task-deadline" id="date-chk-prep-sign"></div>
-                    </div>
-                </div>
-                <div class="task-item" id="row-chk-prep-valtec">
-                    <input type="checkbox" id="chk-prep-valtec" class="task-checkbox" onchange="updateGauge(); updateFormAlarms()">
-                    <div class="task-content">
-                        <label for="chk-prep-valtec" class="task-label">Validation technique</label>
-                        <div class="task-deadline" id="date-chk-prep-valtec"></div>
-                    </div>
-                </div>
-                <div class="task-item" id="row-chk-prep-valhier">
-                    <input type="checkbox" id="chk-prep-valhier" class="task-checkbox" onchange="updateGauge(); updateFormAlarms()">
-                    <div class="task-content">
-                        <label for="chk-prep-valhier" class="task-label">Validation hierarchiques</label>
-                        <div class="task-deadline" id="date-chk-prep-valhier"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="category-section" style="border:none;">
-                <h3 class="category-title" style="margin-top:20px;">Notes</h3>
-                <textarea id="inp-notes" placeholder="Commentaires..."></textarea>
-            </div>
+            <div id="container-tasks-main"></div>
         </div>
 
-        <div class="action-buttons">
-            <button class="btn-archive" type="button" onclick="archiveProject()">🗃️ Archiver</button>
-            <button class="btn-validate" type="button" onclick="saveProject()">💾 Valider (Actif)</button>
+        <div class="footer-sticky">
+            <button class="btn-action btn-arch" onclick="doArchive()">🗃️ Archiver</button>
+            <button class="btn-action btn-other" onclick="goPrepa()">📄 Prépa (Suite)</button>
+            <button class="btn-action btn-save" onclick="save(false)">💾 ENREGISTRER</button>
         </div>
     </div>
 
-    <script>
-        // CONFIGURATION DES DÉLAIS (en mois ou jours avant le début chantier)
-        // unit: 'm' (mois), 'd' (jours)
-        const taskDelays = {
-            'chk-mat-cmd': { amount: 3, unit: 'm' },
-            'chk-mat-recep': { amount: 1, unit: 'm' },
-            'chk-mat-charge': { amount: 1, unit: 'd' },
-            
-            'chk-plan-dt': { amount: 3, unit: 'm' },
-            'chk-plan-besoin': { amount: 3, unit: 'm' },
-            
-            'chk-out-devis': { amount: 3, unit: 'm' },
-            'chk-out-verif': { amount: 2, unit: 'm' },
-            
-            'chk-res-vehic': { amount: 1, unit: 'm' },
-            
-            'chk-prep-visite': { amount: 3, unit: 'm' },
-            'chk-prep-veg': { amount: 1, unit: 'm' },
-            'chk-prep-tiers': { amount: 3, unit: 'm' },
-            'chk-prep-sign': { amount: 1, unit: 'm' },
-            'chk-prep-valtec': { amount: 21, unit: 'd' }, // 3 semaines
-            'chk-prep-valhier': { amount: 14, unit: 'd' } // 2 semaines
+    <div id="screen-prepa" class="screen">
+        <button onclick="switchScreen('screen-form')" style="margin-bottom:10px; cursor:pointer">← Retour</button>
+        <div class="dashboard-container">
+            <div class="header-bar" style="background:#6366f1"><h2>DÉTAILS TECHNIQUES</h2></div>
+            <div id="container-tasks-prepa"></div>
+        </div>
+        <div class="footer-sticky">
+            <button class="btn-action btn-other" onclick="switchScreen('screen-form')">Retour</button>
+            <button class="btn-action btn-save" onclick="save(false)">💾 ENREGISTRER TOUT</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+        // CONFIG UTILISATEUR
+        const firebaseConfig = {
+            apiKey: "AIzaSyDD3isHTYPpXYQg9O0uBRkCGkjtB1JaxB4",
+            authDomain: "suivichantier-b001e.firebaseapp.com",
+            databaseURL: "https://suivichantier-b001e-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "suivichantier-b001e",
+            storageBucket: "suivichantier-b001e.firebasestorage.app",
+            messagingSenderId: "795720545138",
+            appId: "1:795720545138:web:c03aa428dcfacb393563eb"
         };
 
-        const linesDatabase = [
-            { id: "6050", tension: "225 kV", name: "Aubusson - Eguzon" },
-            { id: "6011", tension: "225 kV", name: "Aubusson - Mole" },
-            { id: "6059", tension: "225 kV", name: "Aubusson-Ste Feyre" },
-            { id: "4060", tension: "90 kV", name: "Aurence - Beaubreuil" },
-            { id: "4061", tension: "90 kV", name: "Aurence - Maureix - Z - Magré - Z Mart" },
-            { id: "4062", tension: "90 kV", name: "Aurence - St Martin le Vieux" },
-            { id: "4063", tension: "90 kV", name: "Beaubreuil - Casseaux" },
-            { id: "4064", tension: "90 kV", name: "Beaubreuil - Maureix" },
-            { id: "4023", tension: "90 kV", name: "Beauregard - Donzenac - lez Peygnee" },
-            { id: "4065", tension: "90 kV", name: "Bellac - Isle Jourdain" },
-            { id: "4066", tension: "90 kV", name: "Bellac - Maureix" },
-            { id: "4067", tension: "90 kV", name: "Bonnat - Guéret" },
-            { id: "4008", tension: "90 kV", name: "Borlette - Donzenac 1" },
-            { id: "4015", tension: "90 kV", name: "Borlette - Montignac - Z - Beauregard" },
-            { id: "3080", tension: "63 kV", name: "Borlette - Noailles" },
-            { id: "4006", tension: "90 kV", name: "Borlette - Puypertus" },
-            { id: "4016", tension: "90 kV", name: "Borlette - Donzenac 2" },
-            { id: "4018", tension: "90 kV", name: "Bradacou - Gaucher - Z - Estivaux" },
-            { id: "4068", tension: "90 kV", name: "Bradacou - Repaire c Rouverade" },
-            { id: "4069", tension: "90 kV", name: "Bréjon - Magré" },
-            { id: "4070", tension: "90 kV", name: "Bréjon - Tuquet - Z - Farges" },
-            { id: "6024", tension: "225 kV", name: "Breuil - Chastang 1 - Donzenac" },
-            { id: "7001", tension: "400 kV", name: "Breuil - Marmagne" },
-            { id: "6025", tension: "225 kV", name: "Breuil - Peyrat le Chateau" },
-            { id: "4071", tension: "90 kV", name: "Buelt - La Veytizou" },
-            { id: "4072", tension: "90 kV", name: "Casseaux - Maureix - Z - Martinerie" },
-            { id: "4073", tension: "90 kV", name: "Casseaux - Palais" },
-            { id: "4074", tension: "90 kV", name: "Casseaux - Traverse" },
-            { id: "4075", tension: "90 kV", name: "CGFP - Palais" },
-            { id: "4076", tension: "90 kV", name: "Chabanais - Plaud" },
-            { id: "4077", tension: "90 kV", name: "Champagnac - St Junien" },
-            { id: "4078", tension: "90 kV", name: "Champagnac - St Martin le Vieux" },
-            { id: "4079", tension: "90 kV", name: "Chatelus - Guéret" },
-            { id: "4080", tension: "90 kV", name: "Chatelus - Maureix -Z- Crotte Cadet-Z- Chatre" },
-            { id: "7007", tension: "400 kV", name: "Civaux - Plaud" },
-            { id: "4081", tension: "90 kV", name: "Confolens - St Junien" },
-            { id: "3085", tension: "63 kV", name: "Dégagnac - Gourdon - Dégagnac" },
-            { id: "3086", tension: "63 kV", name: "Dégagnac - St Denis - Catus" },
-            { id: "6039", tension: "225 kV", name: "Donzenac - Ferrouge" },
-            { id: "4007", tension: "90 kV", name: "Donzenac - Gaucher" },
-            { id: "4030", tension: "90 kV", name: "Donzenac - Pont de l'Elle 1" },
-            { id: "4031", tension: "90 kV", name: "Donzenac - Pont de l'Elle 2" },
-            { id: "4029", tension: "90 kV", name: "Donzenac - Saillant" },
-            { id: "4082", tension: "90 kV", name: "Dun le Palestel - Eguzon" },
-            { id: "4005", tension: "90 kV", name: "Egletons - Naves - Eybrix" },
-            { id: "4083", tension: "90 kV", name: "Eguzon - les Vignes E1" },
-            { id: "4084", tension: "90 kV", name: "Eguzon - les Vignes E2" },
-            { id: "6051", tension: "225 kV", name: "Eguzon - Maureix" },
-            { id: "6016", tension: "225 kV", name: "Eguzon - Môle 3" },
-            { id: "6052", tension: "225 kV", name: "Eguzon - Montluçon" },
-            { id: "7008", tension: "400 kV", name: "Eguzon - Plaud" },
-            { id: "7004", tension: "400 kV", name: "Eguzon - Rueyres" },
-            { id: "6053", tension: "225 kV", name: "Eguzon - St Feyre" },
-            { id: "3082", tension: "63 kV", name: "Ferouge - Gignac" },
-            { id: "3084", tension: "63 kV", name: "Ferouge - Gourdon - La Mothe Fenelon" },
-            { id: "3027", tension: "63 kV", name: "Ferouge - Sarlat" },
-            { id: "3037", tension: "63 kV", name: "Ferouge - Souillac" },
-            { id: "6038", tension: "225 kV", name: "Ferrouge - Talamet" },
-            { id: "3081", tension: "63 kV", name: "Gignac - Noailles" },
-            { id: "3083", tension: "63 kV", name: "Gourdon - Souillac - La Mothe Fenelon" },
-            { id: "4085", tension: "90 kV", name: "Guéret - Lavaud" },
-            { id: "4086", tension: "90 kV", name: "Guéret - St Feyre 1" },
-            { id: "4087", tension: "90 kV", name: "Guéret - St Feyre 2" },
-            { id: "4088", tension: "90 kV", name: "Juniat - Maureix" },
-            { id: "4089", tension: "90 kV", name: "Juniat - Peyrilhac" },
-            { id: "4090", tension: "90 kV", name: "La Côte - la Souterraine E1" },
-            { id: "4091", tension: "90 kV", name: "La Côte - les Vignes E1" },
-            { id: "4092", tension: "90 kV", name: "La Côte - les Vignes E2 - Z - BonniChaud" },
-            { id: "4093", tension: "90 kV", name: "La Côte - Ville / Grange E2 - Z - L'Age" },
-            { id: "4094", tension: "90 kV", name: "La Souterraine - ville sous Grange E1" },
-            { id: "4095", tension: "90 kV", name: "Lavaud - Mansat" },
-            { id: "4016", tension: "90 kV", name: "Lubersac - Saillant" },
-            { id: "4047", tension: "90 kV", name: "Lubersac - Traverse" },
-            { id: "4097", tension: "90 kV", name: "Magnanels - La Souterraine" },
-            { id: "4098", tension: "90 kV", name: "Mansat - Peyrat le Chateau" },
-            { id: "4099", tension: "90 kV", name: "Maureix - Le Palais" },
-            { id: "4100", tension: "90 kV", name: "Maureix - Peyrat - Z - Montlarron" },
-            { id: "6054", tension: "225 kV", name: "Maureix - Peyrat le Château" },
-            { id: "4101", tension: "90 kV", name: "Maureix - St Léonard" },
-            { id: "4102", tension: "90 kV", name: "Maureix - St Marc" },
-            { id: "4103", tension: "90 kV", name: "Maureix - Ville sous Grange E1" },
-            { id: "4104", tension: "90 kV", name: "Maureix - Ville sous Grange E2" },
-            { id: "6001", tension: "225 kV", name: "Môle - St Feyre" },
-            { id: "4105", tension: "90 kV", name: "Monceaux - La Veytizou" },
-            { id: "4106", tension: "90 kV", name: "Monceaux - Peyrat le Château" },
-            { id: "4110", tension: "90 kV", name: "Monceaux - Treignac 1" },
-            { id: "4107", tension: "90 kV", name: "Monceaux - Treignac 2" },
-            { id: "4010", tension: "90 kV", name: "Naves - Tulle" },
-            { id: "4109", tension: "90 kV", name: "Peyrat - St Sétiers - Z - Faux" },
-            { id: "4096", tension: "90 kV", name: "Peyrilhac - St Junien" },
-            { id: "4111", tension: "90 kV", name: "Plaud - St Junien 1" },
-            { id: "4112", tension: "90 kV", name: "Plaud - St Junien 2" },
-            { id: "4113", tension: "90 kV", name: "Plaud - Tannin Z Gorre" },
-            { id: "4033", tension: "90 kV", name: "Puypertus - Tulle" },
-            { id: "4113", tension: "90 kV", name: "Repaire - Tuquet" },
-            { id: "4114", tension: "90 kV", name: "St Junien - Tannin Gorre 6" },
-            { id: "4115", tension: "90 kV", name: "St Léonard - La Veytizou" },
-            { id: "4116", tension: "90 kV", name: "St Yrieix - La Traverse" }
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // DONNEES STATIQUES
+        const dbLignes = [
+            {id:"6050",t:"225 kV",n:"Aubusson - Eguzon"},{id:"6011",t:"225 kV",n:"Aubusson - Mole"},{id:"6059",t:"225 kV",n:"Aubusson-Ste Feyre"},
+            {id:"4060",t:"90 kV",n:"Aurence - Beaubeuil"},{id:"4061",t:"90 kV",n:"Aurence - Maureix"},{id:"4062",t:"90 kV",n:"Aurence - St Martin"},
+            {id:"4063",t:"90 kV",n:"Beaubreuil - Casseaux"},{id:"4064",t:"90 kV",n:"Beaubreuil - Maureix"},{id:"4023",t:"90 kV",n:"Beauregard - Donzenac"},
+            {id:"4065",t:"90 kV",n:"Bellac - Isle Jourdain"},{id:"4066",t:"90 kV",n:"Bellac - Maureix"},{id:"4067",t:"90 kV",n:"Bonnat - Guéret"},
+            {id:"4008",t:"90 kV",n:"Borlette - Donzenac 1"},{id:"4015",t:"90 kV",n:"Borlette - Montignac"},{id:"3080",t:"63 kV",n:"Borlette - Noailles"},
+            {id:"4006",t:"90 kV",n:"Borlette - Puypertus"},{id:"4016",t:"90 kV",n:"Borlette - Donzenac 2"},{id:"4018",t:"90 kV",n:"Bradacou - Gaucher"},
+            {id:"4068",t:"90 kV",n:"Bradacou - Repaire"},{id:"4069",t:"90 kV",n:"Bréjon - Magré"},{id:"4070",t:"90 kV",n:"Bréjon - Tuquet"},
+            {id:"6024",t:"225 kV",n:"Breuil - Chastang"},{id:"7001",t:"400 kV",n:"Breuil - Marmagne"},{id:"6025",t:"225 kV",n:"Breuil - Peyrat"},
+            {id:"4071",t:"90 kV",n:"Buelt - La Veytizou"},{id:"4072",t:"90 kV",n:"Casseaux - Maureix"},{id:"4073",t:"90 kV",n:"Casseaux - Palais"},
+            {id:"4074",t:"90 kV",n:"Casseaux - Traverse"},{id:"4075",t:"90 kV",n:"CGFP - Palais"},{id:"4076",t:"90 kV",n:"Chabanais - Plaud"},
+            {id:"4077",t:"90 kV",n:"Champagnac - St Junien"},{id:"4078",t:"90 kV",n:"Champagnac - St Martin"},{id:"4079",t:"90 kV",n:"Chatelus - Guéret"},
+            {id:"4080",t:"90 kV",n:"Chatelus - Maureix"},{id:"7007",t:"400 kV",n:"Civaux - Plaud"},{id:"4081",t:"90 kV",n:"Confolens - St Junien"},
+            {id:"3085",t:"63 kV",n:"Dégagnac - Gourdon"},{id:"3086",t:"63 kV",n:"Dégagnac - St Denis"},{id:"6039",t:"225 kV",n:"Donzenac - Ferrouge"},
+            {id:"4007",t:"90 kV",n:"Donzenac - Gaucher"},{id:"4030",t:"90 kV",n:"Donzenac - Pont Elle 1"},{id:"4031",t:"90 kV",n:"Donzenac - Pont Elle 2"},
+            {id:"4029",t:"90 kV",n:"Donzenac - Saillant"},{id:"4082",t:"90 kV",n:"Dun - Eguzon"},{id:"4005",t:"90 kV",n:"Egletons - Naves"},
+            {id:"4083",t:"90 kV",n:"Eguzon - Vignes 1"},{id:"4084",t:"90 kV",n:"Eguzon - Vignes 2"},{id:"6051",t:"225 kV",n:"Eguzon - Maureix"},
+            {id:"6016",t:"225 kV",n:"Eguzon - Môle 3"},{id:"6052",t:"225 kV",n:"Eguzon - Montluçon"},{id:"7008",t:"400 kV",n:"Eguzon - Plaud"},
+            {id:"7004",t:"400 kV",n:"Eguzon - Rueyres"},{id:"6053",t:"225 kV",n:"Eguzon - St Feyre"},{id:"3082",t:"63 kV",n:"Ferouge - Gignac"},
+            {id:"3084",t:"63 kV",n:"Ferouge - Gourdon"},{id:"3027",t:"63 kV",n:"Ferouge - Sarlat"},{id:"3037",t:"63 kV",n:"Ferouge - Souillac"},
+            {id:"6038",t:"225 kV",n:"Ferrouge - Talamet"},{id:"3081",t:"63 kV",n:"Gignac - Noailles"},{id:"3083",t:"63 kV",n:"Gourdon - Souillac"},
+            {id:"4085",t:"90 kV",n:"Guéret - Lavaud"},{id:"4086",t:"90 kV",n:"Guéret - St Feyre 1"},{id:"4087",t:"90 kV",n:"Guéret - St Feyre 2"},
+            {id:"4088",t:"90 kV",n:"Juniat - Maureix"},{id:"4089",t:"90 kV",n:"Juniat - Peyrilhac"},{id:"4090",t:"90 kV",n:"La Côte - Souterraine"},
+            {id:"4091",t:"90 kV",n:"La Côte - Vignes 1"},{id:"4092",t:"90 kV",n:"La Côte - Vignes 2"},{id:"4093",t:"90 kV",n:"La Côte - Ville"},
+            {id:"4094",t:"90 kV",n:"Souterraine - Ville"},{id:"4095",t:"90 kV",n:"Lavaud - Mansat"},{id:"4016",t:"90 kV",n:"Lubersac - Saillant"},
+            {id:"4047",t:"90 kV",n:"Lubersac - Traverse"},{id:"4097",t:"90 kV",n:"Magnanels - Souterraine"},{id:"4098",t:"90 kV",n:"Mansat - Peyrat"},
+            {id:"4099",t:"90 kV",n:"Maureix - Le Palais"},{id:"4100",t:"90 kV",n:"Maureix - Peyrat"},{id:"6054",t:"225 kV",n:"Maureix - Peyrat 2"},
+            {id:"4101",t:"90 kV",n:"Maureix - St Léonard"},{id:"4102",t:"90 kV",n:"Maureix - St Marc"},{id:"4103",t:"90 kV",n:"Maureix - Ville 1"},
+            {id:"4104",t:"90 kV",n:"Maureix - Ville 2"},{id:"6001",t:"225 kV",n:"Môle - St Feyre"},{id:"4105",t:"90 kV",n:"Monceaux - Veytizou"},
+            {id:"4106",t:"90 kV",n:"Monceaux - Peyrat"},{id:"4110",t:"90 kV",n:"Monceaux - Treignac 1"},{id:"4107",t:"90 kV",n:"Monceaux - Treignac 2"},
+            {id:"4010",t:"90 kV",n:"Naves - Tulle"},{id:"4109",t:"90 kV",n:"Peyrat - St Sétiers"},{id:"4096",t:"90 kV",n:"Peyrilhac - St Junien"},
+            {id:"4111",t:"90 kV",n:"Plaud - St Junien 1"},{id:"4112",t:"90 kV",n:"Plaud - St Junien 2"},{id:"4113",t:"90 kV",n:"Plaud - Tannin"},
+            {id:"4033",t:"90 kV",n:"Puypertus - Tulle"},{id:"4113",t:"90 kV",n:"Repaire - Tuquet"},{id:"4114",t:"90 kV",n:"St Junien - Tannin"},
+            {id:"4115",t:"90 kV",n:"St Léonard - Veytizou"},{id:"4116",t:"90 kV",n:"St Yrieix - Traverse"}
+        ];
+
+        const confLog = [
+            {cat:"1. MATÉRIEL LIGNES", t:[
+                {id:"m1",l:"Commande du matériel",d:90},
+                {id:"m2",l:"Réception matériel",d:30},
+                {id:"m3",l:"Chargement matériel",d:1}
+            ]},
+            {cat:"2. PLANIFICATION DE L'INTERVENTION", t:[
+                {id:"p1",l:"DT/DICT, demande SNCF, autre...",d:90},
+                {id:"p2",l:"Expression de besoins particulier (MALT, RH...)",d:90}
+            ]},
+            {cat:"3. OUTILLAGE", t:[
+                {id:"o1",l:"Devis moyen externe (nacelle...)",d:90},
+                {id:"o2",l:"Vérification contrôle règlementaires engins",d:60}
+            ]},
+            {cat:"4. RESSOURCES", t:[
+                {id:"r_dur",l:"Durée du chantier", type:'input'},
+                {id:"r_agt",l:"Nombre d'agents", type:'input'},
+                {id:"r_veh",l:"Véhicule équipe particulier (nacelle, treuil...)",d:30}
+            ]},
+            {cat:"5. PRÉPARATION DE TRAVAIL", t:[
+                {id:"pr1",l:"Visite sur place",d:90},
+                {id:"pr2",l:"Travaux végétation à prévoir",d:30},
+                {id:"pr3",l:"Contact tiers",d:90},
+                {id:"pr4",l:"Signature prépa",d:30},
+                {id:"pr5",l:"Validation technique",d:21},
+                {id:"pr6",l:"Validation hierarchiques",d:14}
+            ]}
+        ];
+        const confPrep = [
+            {cat:"DOCUMENTS TECHNIQUES", t:[{id:"d1",l:"NIP",d:7},{id:"d2",l:"Constat Adéquation",d:0},{id:"d3",l:"Mode Opératoire",d:0},{id:"d4",l:"Calculs",d:0},{id:"d5",l:"PPE",d:0},{id:"d6",l:"MALT/CC",d:0},{id:"d7",l:"Liste Matériel",d:0},{id:"d8",l:"Liste Outillage",d:0}]}
         ];
 
         let projects = [];
-        let currentEditingId = null;
-        let currentOTs = [];
-        let currentOIs = [];
+        let curId = null;
+        let states = {};
+        let ots = []; let ois = [];
 
-        // --- CALCOLS DE DATE & ALARMES ---
-        function calculateDeadline(startDateStr, delayObj) {
-            if (!startDateStr) return null;
-            const startDate = new Date(startDateStr);
-            const deadline = new Date(startDate);
+        // INIT
+        window.onload = () => {
+            // Populate select
+            const sel = document.getElementById('inp-line');
+            sel.innerHTML = '<option value="">-- Choisir une ligne --</option>';
+            dbLignes.sort((a,b)=>a.id.localeCompare(b.id)).forEach(l => { sel.innerHTML += `<option value="${l.id}">${l.id} - ${l.n}</option>`; });
+            
+            buildForm(); 
+            // renderHome sera appelé par le listener Firebase
+        };
 
-            if (delayObj.unit === 'm') {
-                deadline.setMonth(deadline.getMonth() - delayObj.amount);
-            } else if (delayObj.unit === 'd') {
-                deadline.setDate(deadline.getDate() - delayObj.amount);
-            }
-            return deadline;
+        // --- ECOUTE DATABASE FIREBASE ---
+        const dbRef = ref(db, 'chantiers');
+        onValue(dbRef, (snapshot) => {
+            const data = snapshot.val();
+            // Convertir objet Firebase en tableau JS
+            projects = data ? Object.values(data) : [];
+            // Mettre à jour l'affichage si on est sur l'accueil ou archive
+            if(document.getElementById('screen-home').classList.contains('active')) renderHome();
+            if(document.getElementById('screen-archive').classList.contains('active')) renderGrid('grid-archives', true);
+        });
+
+        // --- CONSTRUCTION FORMULAIRE ---
+        function buildForm() {
+            const c = document.getElementById('container-tasks-main'); c.innerHTML = '';
+            confLog.forEach(grp => {
+                let html = `<div class="category-header">${grp.cat}</div>`;
+                grp.t.forEach(task => {
+                    let actionHtml = '';
+                    if(task.type === 'input') {
+                        actionHtml = `<input class="input-manual" id="val-${task.id}" placeholder="..." onchange="refreshUI()">`;
+                    } else {
+                        actionHtml = `
+                        <div class="toggle-switch">
+                            <button class="btn-toggle" id="btn-no-${task.id}" onclick="set('${task.id}','no')">NON</button>
+                            <button class="btn-toggle" id="btn-yes-${task.id}" onclick="set('${task.id}','yes')">OUI</button>
+                        </div>`;
+                    }
+
+                    html += `
+                    <div class="task-row row-neutral" id="row-${task.id}">
+                        <div class="task-name">${task.l}</div>
+                        <div class="task-deadline" id="dead-${task.id}"></div>
+                        <div class="task-actions">${actionHtml}</div>
+                    </div>`;
+                });
+                c.innerHTML += html;
+            });
+            const c2 = document.getElementById('container-tasks-prepa'); c2.innerHTML = '';
+            confPrep.forEach(grp => {
+                let html = `<div class="category-header">${grp.cat}</div>`;
+                grp.t.forEach(task => {
+                    html += `
+                    <div class="task-row row-neutral" id="row-${task.id}">
+                        <div class="task-name">${task.l}</div>
+                        <div class="task-deadline" id="dead-${task.id}"></div>
+                        <div class="task-actions">
+                            <div class="toggle-switch">
+                                <button class="btn-toggle" id="btn-no-${task.id}" onclick="set('${task.id}','no')">NON</button>
+                                <button class="btn-toggle" id="btn-yes-${task.id}" onclick="set('${task.id}','yes')">OUI</button>
+                            </div>
+                        </div>
+                    </div>`;
+                });
+                c2.innerHTML += html;
+            });
         }
 
-        // Met à jour les couleurs dans le formulaire
-        function updateFormAlarms() {
-            const startDateStr = document.getElementById('date-chantier-start').value;
-            const today = new Date();
-            // On reset l'heure pour comparer juste les dates
-            today.setHours(0,0,0,0);
+        // --- LOGIQUE ---
+        function set(tid, val) { states[tid] = (states[tid] === val) ? null : val; refreshUI(); }
+        function addTag(type) { const v = document.getElementById('inp-'+type+'-add').value.trim(); if(v) { (type==='ot'?ots:ois).push(v); document.getElementById('inp-'+type+'-add').value=''; renderTags(type); }}
+        function renderTags(type) { document.getElementById('list-'+type).innerHTML = (type==='ot'?ots:ois).map((v,i)=>`<span class="tag-pill">${v}<span onclick="removeTag('${type}',${i})" style="cursor:pointer;margin-left:5px">×</span></span>`).join(''); }
+        function removeTag(type,i) { if(type==='ot')ots.splice(i,1);else ois.splice(i,1); renderTags(type); }
 
-            for (const [taskId, delayObj] of Object.entries(taskDelays)) {
-                const row = document.getElementById(`row-${taskId}`);
-                const checkbox = document.getElementById(taskId);
-                const deadlineText = document.getElementById(`date-${taskId}`);
-                
-                if (!row || !checkbox) continue;
+        function refreshUI() {
+            const start = document.getElementById('inp-start').value;
+            const today = new Date(); today.setHours(0,0,0,0);
+            let doneCount = 0; let totalCount = 0;
 
-                // Reset classes
-                row.classList.remove('alarm-red', 'alarm-yellow', 'status-ok');
-                deadlineText.innerHTML = "";
-
-                if (checkbox.checked) {
-                    row.classList.add('status-ok');
-                    continue;
+            const processTask = (t) => {
+                if(t.type === 'input') {
+                    const inp = document.getElementById('val-'+t.id);
+                    const row = document.getElementById('row-'+t.id);
+                    if(inp && row) {
+                        if(inp.value && inp.value.trim() !== "") { row.className = 'task-row row-ok'; doneCount++; } 
+                        else { row.className = 'task-row row-neutral'; }
+                    }
+                    totalCount++;
+                    return;
                 }
+                const s = states[t.id];
+                const row = document.getElementById('row-'+t.id);
+                const deadEl = document.getElementById('dead-'+t.id);
+                const bY = document.getElementById('btn-yes-'+t.id);
+                const bN = document.getElementById('btn-no-'+t.id);
+                
+                if(!row) return;
 
-                if (!startDateStr) continue; // Pas de date de chantier, pas d'alarme
+                row.className = 'task-row row-neutral';
+                deadEl.textContent = '';
+                bY.classList.remove('active-yes'); bN.classList.remove('active-no');
+                
+                if(s === 'yes') bY.classList.add('active-yes');
+                if(s === 'no') bN.classList.add('active-no');
 
-                const deadline = calculateDeadline(startDateStr, delayObj);
-                const formattedDeadline = deadline.toLocaleDateString('fr-FR');
-                deadlineText.textContent = `Date butoir : ${formattedDeadline}`;
-
-                // Logique alarme
-                if (today > deadline) {
-                    row.classList.add('alarm-red');
-                    deadlineText.innerHTML += ` <span class="alarm-text" style="color:var(--danger-color)">⚠️ RETARD</span>`;
-                } else {
-                    // Calcul 1 mois avant deadline pour le jaune
-                    const warningDate = new Date(deadline);
-                    warningDate.setMonth(warningDate.getMonth() - 1);
-                    
-                    if (today >= warningDate && today <= deadline) {
-                        row.classList.add('alarm-yellow');
-                        deadlineText.innerHTML += ` <span class="alarm-text" style="color:#d97706">⚠️ À faire bientôt</span>`;
+                if(s) {
+                    row.classList.add('row-ok'); doneCount++;
+                } else if(start && t.d) {
+                    const d = new Date(start); d.setDate(d.getDate() - t.d);
+                    deadEl.textContent = `Butoir : ${d.toLocaleDateString()}`;
+                    if(today > d) row.classList.add('row-late');
+                    else {
+                        let warn = new Date(d);
+                        if(t.d >= 30) warn.setMonth(warn.getMonth()-1); else warn.setDate(warn.getDate()-5);
+                        if(today >= warn) row.classList.add('row-warn');
                     }
                 }
-            }
-        }
-
-        // Calcule le statut global d'un projet pour la carte (Retourne 'red', 'yellow' ou 'green')
-        function getProjectStatusColor(project) {
-            if (!project.dateChantierStart) return 'green'; // Pas de date, on considère vert
-            
-            const today = new Date();
-            today.setHours(0,0,0,0);
-            
-            let hasYellow = false;
-
-            for (const [taskId, delayObj] of Object.entries(taskDelays)) {
-                // Si la tâche est cochée, on ignore
-                if (project.checks && project.checks[taskId]) continue;
-
-                const deadline = calculateDeadline(project.dateChantierStart, delayObj);
-                
-                // Rouge : Retard
-                if (today > deadline) {
-                    return 'red'; // Priorité absolue au rouge
-                }
-
-                // Jaune : Warning (1 mois avant)
-                const warningDate = new Date(deadline);
-                warningDate.setMonth(warningDate.getMonth() - 1);
-                
-                if (today >= warningDate && today <= deadline) {
-                    hasYellow = true;
-                }
-            }
-
-            return hasYellow ? 'yellow' : 'green';
-        }
-
-        // --- NAVIGATION & LOGIQUE ---
-        function switchTab(tabName) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.querySelectorAll('.btn-nav').forEach(b => b.classList.remove('active'));
-            if (tabName === 'home') {
-                document.getElementById('home-screen').classList.add('active');
-                document.getElementById('btn-tab-home').classList.add('active');
-                renderHomeProjects();
-            } else if (tabName === 'archive') {
-                document.getElementById('archive-screen').classList.add('active');
-                document.getElementById('btn-tab-archive').classList.add('active');
-                renderArchiveFolders();
-            }
-        }
-        
-        function startNewProject() {
-            currentEditingId = null;
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById('form-screen').classList.add('active');
-            resetForm();
-        }
-
-        function goBack() { switchTab('home'); currentEditingId = null; }
-
-        function resetForm() {
-            document.getElementById('line-select').value = "";
-            document.querySelectorAll('#form-screen input, #form-screen textarea').forEach(i => i.value = "");
-            document.querySelectorAll('#form-screen input[type="checkbox"]').forEach(i => i.checked = false);
-            currentOTs = [];
-            currentOIs = [];
-            renderTags('ot');
-            renderTags('oi');
-            populateSelect();
-            updateLineInfo();
-            updateGauge();
-            updateFormAlarms(); // Reset couleurs
-        }
-
-        function addTag(type) {
-            const input = document.getElementById(`inp-${type}-add`);
-            const val = input.value.trim();
-            if(val) {
-                if(type === 'ot') currentOTs.push(val); else currentOIs.push(val);
-                input.value = "";
-                renderTags(type);
-            }
-        }
-        function removeTag(type, index) {
-            if(type === 'ot') currentOTs.splice(index, 1); else currentOIs.splice(index, 1);
-            renderTags(type);
-        }
-        function renderTags(type) {
-            const list = document.getElementById(`list-${type}`);
-            const data = type === 'ot' ? currentOTs : currentOIs;
-            list.innerHTML = '';
-            data.forEach((item, index) => {
-                const tag = document.createElement('div');
-                tag.className = 'tag-pill';
-                tag.innerHTML = `${item} <span class="tag-remove" onclick="removeTag('${type}', ${index})">×</span>`;
-                list.appendChild(tag);
-            });
-        }
-
-        function populateSelect() {
-            const select = document.getElementById('line-select');
-            if (select.children.length > 1) return;
-            linesDatabase.forEach(line => {
-                const option = document.createElement('option');
-                option.value = line.id;
-                option.textContent = `${line.id} - ${line.name}`;
-                select.appendChild(option);
-            });
-        }
-
-        function updateLineInfo() {
-            const select = document.getElementById('line-select');
-            const selectedLine = linesDatabase.find(l => l.id === select.value);
-            const header = document.getElementById('header-display');
-            if (selectedLine) {
-                document.getElementById('display-number').textContent = `N° ${selectedLine.id}`;
-                document.getElementById('display-tension').textContent = selectedLine.tension;
-                document.getElementById('display-name').textContent = selectedLine.name;
-                header.style.opacity = "1";
-                header.style.backgroundColor = "var(--primary-color)";
-            } else {
-                document.getElementById('display-number').textContent = "N° ---";
-                document.getElementById('display-tension').textContent = "-- kV";
-                document.getElementById('display-name').textContent = "Sélectionner une ligne...";
-                header.style.opacity = "0.5";
-            }
-        }
-
-        function updateGauge() {
-            const checkboxes = document.querySelectorAll('#form-screen .task-checkbox');
-            let completed = 0;
-            let checksState = {};
-            checkboxes.forEach(box => { 
-                checksState[box.id] = box.checked;
-                if (box.checked) completed++; 
-            });
-            const percentage = checkboxes.length === 0 ? 0 : Math.round((completed / checkboxes.length) * 100);
-            document.querySelector('#main-gauge .percentage').textContent = `${percentage}%`;
-            document.querySelector('#main-gauge .circle').setAttribute('stroke-dasharray', `${percentage}, 100`);
-            document.querySelector('#main-gauge .circle').style.stroke = percentage === 100 ? "var(--success-color)" : "var(--primary-color)";
-            return { percentage, checksState };
-        }
-
-        function formatDateRange(start, end) {
-            if(!start && !end) return "";
-            if(start && !end) return `Du ${formatDateFr(start)}`;
-            if(!start && end) return `Jusqu'au ${formatDateFr(end)}`;
-            return `Du ${formatDateFr(start)} au ${formatDateFr(end)}`;
-        }
-        function formatDateFr(dateStr) {
-            if(!dateStr) return "";
-            const [y, m, d] = dateStr.split('-');
-            return `${d}/${m}/${y}`;
-        }
-
-        function saveProject(isArchive = false) {
-            const select = document.getElementById('line-select');
-            if (!select.value) { alert("Merci de sélectionner une ligne."); return; }
-            
-            const gaugeData = updateGauge();
-            
-            const dConsStart = document.getElementById('date-cons-start').value;
-            const dConsEnd = document.getElementById('date-cons-end').value;
-            const dChantStart = document.getElementById('date-chantier-start').value;
-            const dChantEnd = document.getElementById('date-chantier-end').value;
-
-            const projectData = {
-                uniqueId: currentEditingId || Date.now(),
-                status: isArchive ? 'archived' : 'active',
-                lineId: select.value,
-                lineName: document.getElementById('display-name').textContent,
-                lineNumber: document.getElementById('display-number').textContent,
-                cdt: document.getElementById('inp-cdt').value,
-                cdtSup: document.getElementById('inp-cdt-sup').value,
-                ots: [...currentOTs],
-                ois: [...currentOIs],
-                dateConsStart: dConsStart,
-                dateConsEnd: dConsEnd,
-                dateChantierStart: dChantStart,
-                dateChantierEnd: dChantEnd,
-                displayDateCons: formatDateRange(dConsStart, dConsEnd),
-                displayDateChantier: formatDateRange(dChantStart, dChantEnd),
-                deplacement: document.getElementById('chk-deplacement').checked,
-                duree: document.getElementById('inp-res-duree').value,
-                agents: document.getElementById('inp-res-agents').value,
-                notes: document.getElementById('inp-notes').value,
-                folderLink: document.getElementById('inp-link').value,
-                travaux: document.getElementById('inp-travaux').value,
-                progress: gaugeData.percentage,
-                checks: gaugeData.checksState
+                totalCount++;
             };
 
-            if (currentEditingId) {
-                const index = projects.findIndex(p => p.uniqueId === currentEditingId);
-                if(index !== -1) projects[index] = projectData;
-            } else {
-                projects.push(projectData);
+            [...confLog.flatMap(x=>x.t), ...confPrep.flatMap(x=>x.t)].forEach(processTask);
+
+            const pct = totalCount ? Math.round((doneCount/totalCount)*100) : 0;
+            document.getElementById('gauge-text-form').textContent = pct + '%';
+            document.getElementById('gauge-circle-form').setAttribute('stroke-dasharray', `${pct}, 100`);
+            document.getElementById('gauge-circle-form').setAttribute('stroke', pct===100?'#10b981':'#0055a4');
+        }
+
+        function updateHeader() {
+            const v = document.getElementById('inp-line').value;
+            const l = dbLignes.find(x=>x.id===v);
+            if(l) {
+                document.getElementById('display-line-header').textContent = `${l.t} - ${l.n}`.toUpperCase();
+                document.getElementById('display-line-sub').textContent = `Code Liaison: ${l.id}`;
+            }
+        }
+        function switchScreen(id) { document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+        function goHome() { switchScreen('screen-home'); renderHome(); }
+        function goArchive() { switchScreen('screen-archive'); renderGrid('grid-archives', true); }
+        function goPrepa() { switchScreen('screen-prepa'); refreshUI(); }
+
+        // --- SAUVEGARDE SUR FIREBASE ---
+        function save(arch) {
+            try {
+                const lineId = document.getElementById('inp-line').value;
+                if(!lineId) { alert("Selectionnez une ligne"); return; }
+                const l = dbLignes.find(x=>x.id===lineId);
+
+                // Input manuels (Securisé)
+                const manualData = {};
+                confLog.forEach(g => g.t.forEach(t => {
+                    if(t.type==='input') {
+                        const el = document.getElementById('val-'+t.id);
+                        manualData[t.id] = el ? el.value : "";
+                    }
+                }));
+
+                // Deplacement (Securisé)
+                const elDepl = document.getElementById('inp-depl');
+                const isDepl = elDepl ? elDepl.checked : false;
+
+                const allT = [...confLog.flatMap(x=>x.t), ...confPrep.flatMap(x=>x.t)];
+                let done = 0;
+                allT.forEach(t => {
+                    if(t.type==='input') { if(manualData[t.id]) done++; }
+                    else { if(states[t.id]) done++; }
+                });
+                const pct = allT.length ? Math.round((done/allT.length)*100) : 0;
+
+                const pid = curId || Date.now();
+
+                const p = {
+                    id: pid,
+                    archived: arch,
+                    lid: lineId, lname: l.n, lcode: l.t,
+                    cdt: document.getElementById('inp-cdt').value,
+                    cdtSup: document.getElementById('inp-cdt-sup').value,
+                    start: document.getElementById('inp-start').value,
+                    end: document.getElementById('inp-end').value,
+                    consStart: document.getElementById('inp-cons-start').value,
+                    consEnd: document.getElementById('inp-cons-end').value,
+                    ots: [...ots], ois: [...ois],
+                    pct: pct,
+                    states: {...states},
+                    manual: manualData,
+                    desc: document.getElementById('inp-desc').value,
+                    depl: isDepl
+                };
+                
+                // ENVOI FIREBASE
+                set(ref(db, 'chantiers/' + pid), p)
+                .then(() => {
+                    if(arch) goArchive(); 
+                    else {
+                        alert("Enregistré et Partagé !");
+                        goHome();
+                    }
+                })
+                .catch((e) => alert("Erreur Firebase: " + e));
+
+            } catch (err) {
+                console.error(err);
+                alert("Erreur JS: " + err.message);
+            }
+        }
+
+        function load(id) {
+            const p = projects.find(x=>x.id===Number(id)) || projects.find(x=>x.id===String(id));
+            if(!p) return;
+            curId = p.id; states = p.states || {}; ots = p.ots||[]; ois = p.ois||[];
+            
+            document.getElementById('inp-line').value = p.lid;
+            document.getElementById('inp-cdt').value = p.cdt;
+            document.getElementById('inp-cdt-sup').value = p.cdtSup||'';
+            document.getElementById('inp-start').value = p.start;
+            document.getElementById('inp-end').value = p.end;
+            document.getElementById('inp-cons-start').value = p.consStart||'';
+            document.getElementById('inp-cons-end').value = p.consEnd||'';
+            document.getElementById('inp-desc').value = p.desc;
+            
+            const elDepl = document.getElementById('inp-depl');
+            if(elDepl) elDepl.checked = p.depl || false;
+            
+            if(p.manual) {
+                Object.keys(p.manual).forEach(k => {
+                    const el = document.getElementById('val-'+k);
+                    if(el) el.value = p.manual[k];
+                });
             }
 
-            if(isArchive) switchTab('archive'); else switchTab('home');
+            updateHeader(); renderTags('ot'); renderTags('oi'); refreshUI(); switchScreen('screen-form');
         }
 
-        function editProject(projectId) {
-            currentEditingId = projectId;
-            const project = projects.find(p => p.uniqueId === projectId);
-            if(!project) return;
-
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById('form-screen').classList.add('active');
-            populateSelect();
-
-            document.getElementById('line-select').value = project.lineId;
-            updateLineInfo();
-            document.getElementById('inp-cdt').value = project.cdt || "";
-            document.getElementById('inp-cdt-sup').value = project.cdtSup || "";
-            
-            currentOTs = project.ots || [];
-            currentOIs = project.ois || [];
-            renderTags('ot');
-            renderTags('oi');
-
-            document.getElementById('date-cons-start').value = project.dateConsStart || "";
-            document.getElementById('date-cons-end').value = project.dateConsEnd || "";
-            document.getElementById('date-chantier-start').value = project.dateChantierStart || "";
-            document.getElementById('date-chantier-end').value = project.dateChantierEnd || "";
-            
-            document.getElementById('chk-deplacement').checked = project.deplacement || false;
-            document.getElementById('inp-res-duree').value = project.duree || "";
-            document.getElementById('inp-res-agents').value = project.agents || "";
-            document.getElementById('inp-notes').value = project.notes || "";
-            document.getElementById('inp-link').value = project.folderLink || "";
-            document.getElementById('inp-travaux').value = project.travaux || "";
-
-            const checkboxes = document.querySelectorAll('#form-screen .task-checkbox');
-            checkboxes.forEach(box => { box.checked = project.checks[box.id] || false; });
-            
-            updateGauge();
-            updateFormAlarms(); // Calculer les alarmes à l'ouverture
+        function newItem() {
+            curId = null; states = {}; ots=[]; ois=[];
+            document.querySelectorAll('input,textarea,select').forEach(i=>i.value='');
+            const elDepl = document.getElementById('inp-depl');
+            if(elDepl) elDepl.checked = false;
+            document.getElementById('display-line-header').textContent = "NOUVEAU CHANTIER";
+            refreshUI(); switchScreen('screen-form');
         }
 
-        function archiveProject() { if(confirm("Archiver ce chantier ?")) saveProject(true); }
+        function renderHome() { renderGrid('grid-projects', false); }
+        function renderGrid(domId, isArch) {
+            const d = document.getElementById(domId); d.innerHTML = '';
+            const lst = projects.filter(p=>!!p.archived === isArch);
+            if(!lst.length) { d.innerHTML='<div style="text-align:center;color:#999">Aucun dossier</div>'; return; }
 
-        function createProjectCard(p) {
-            const card = document.createElement('div');
-            card.className = `project-card`;
-            card.onclick = () => editProject(p.uniqueId);
-            
-            // Calcul statut alarme pour la carte
-            const status = getProjectStatusColor(p);
-            card.classList.add(`status-${status}`);
-            
-            const strokeColor = p.progress === 100 ? '#10b981' : '#0055a4';
-            let folderBtn = p.folderLink ? `<div style="margin-top:10px;"><button class="btn-folder-card" onclick="openLink('${p.folderLink.replace(/\\/g, '\\\\')}', event)">📁 Dossier</button></div>` : '';
-            let travauxTxt = p.travaux ? `<div class="card-travaux">📝 ${p.travaux}</div>` : '';
-            let deplacementBadge = p.deplacement ? `<div class="badge-deplacement">🚗 Déplacement</div>` : '';
-            let otDisplay = p.ots && p.ots.length ? `OT: ${p.ots.join(', ')}` : "OT: N/A";
+            const today = new Date(); today.setHours(0,0,0,0);
 
-            card.innerHTML = `
-                <div class="card-header">
-                    <div style="flex:1">
-                        <span class="card-line-name">${p.lineName}</span>
-                        <div class="card-meta">${p.lineNumber}</div>
-                    </div>
-                    <div class="status-dot dot-${status}" title="Statut planning"></div>
-                </div>
-                <div class="card-body">
-                    <div class="card-info-block">
-                        <div class="card-info-item">👤 <strong>CdT:</strong> ${p.cdt || "N/A"}</div>
-                        <div class="card-info-item">🔢 <strong>${otDisplay}</strong></div>
-                        <div class="card-info-item">📅 <strong>Consig:</strong> ${p.displayDateCons || "N/A"}</div>
-                        ${deplacementBadge}
-                        ${travauxTxt}
-                        ${folderBtn}
+            lst.forEach(p => {
+                let alertsHtml = '';
+                const allT = [...confLog.flatMap(x=>x.t), ...confPrep.flatMap(x=>x.t)];
+                let globalStatus = 'green';
+                
+                if(p.start) {
+                    allT.forEach(t => {
+                        if(t.type === 'input') return;
+                        if(p.states[t.id]) return;
+                        if(!t.d) return;
+
+                        const due = new Date(p.start); due.setDate(due.getDate() - t.d);
+                        if(today > due) {
+                            globalStatus = 'red';
+                            alertsHtml += `<div class="alert-item alert-red">⚠️ ${t.l}</div>`;
+                        } else {
+                            let warn = new Date(due);
+                            if(t.d >= 30) warn.setMonth(warn.getMonth()-1); else warn.setDate(warn.getDate()-5);
+                            if(today >= warn) {
+                                if(globalStatus !== 'red') globalStatus = 'yellow';
+                                alertsHtml += `<div class="alert-item alert-orange">🕒 ${t.l}</div>`;
+                            }
+                        }
+                    });
+                }
+                if(alertsHtml) alertsHtml = `<div class="card-alerts">${alertsHtml}</div>`;
+
+                const borderClass = globalStatus==='red'?'card-red':(globalStatus==='yellow'?'card-yellow':'card-green');
+                const gaugeColor = p.pct===100 ? '#10b981' : (globalStatus==='red' ? '#ef4444' : '#0055a4');
+
+                const card = document.createElement('div');
+                card.className = `project-card ${borderClass}`;
+                card.onclick = () => load(p.id);
+                card.innerHTML = `
+                    <div style="padding-right:70px">
+                        <div class="card-title">${p.lcode} - ${p.lname}</div>
+                        <div class="card-dates">📅 Du ${p.start?new Date(p.start).toLocaleDateString():'?'} au ${p.end?new Date(p.end).toLocaleDateString():'?'}</div>
+                        <div class="card-dates">👤 ${p.cdt||'-'}</div>
+                        ${alertsHtml}
                     </div>
                     <div class="mini-gauge">
                         <svg viewBox="0 0 36 36" class="circular-chart">
-                            <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                            <path class="circle" stroke-dasharray="${p.progress}, 100" stroke="${strokeColor}" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                            <text x="18" y="20.35" class="percentage" style="font-size:0.6em;">${p.progress}%</text>
+                            <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                            <path class="circle" stroke-dasharray="${p.pct}, 100" stroke="${gaugeColor}" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
                         </svg>
+                        <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:0.8rem; font-weight:bold">${p.pct}%</div>
                     </div>
-                </div>
-            `;
-            return card;
-        }
-
-        function renderHomeProjects() {
-            const list = document.getElementById('projects-list');
-            list.innerHTML = '';
-            const activeProjects = projects.filter(p => p.status !== 'archived');
-            if (activeProjects.length === 0) list.innerHTML = '<div class="empty-state">Aucun chantier actif.</div>';
-            else activeProjects.forEach(p => list.appendChild(createProjectCard(p)));
-        }
-
-        function renderArchiveFolders() {
-            const list = document.getElementById('archive-folders');
-            document.getElementById('folder-viewer').style.display = 'none';
-            list.innerHTML = '';
-            const archivedProjects = projects.filter(p => p.status === 'archived');
-            if (archivedProjects.length === 0) { list.innerHTML = '<div class="empty-state">Aucune archive.</div>'; return; }
-
-            const groups = {};
-            archivedProjects.forEach(p => {
-                const dateKey = p.dateChantierStart ? formatDateFr(p.dateChantierStart) : "Date inconnue";
-                if (!groups[dateKey]) groups[dateKey] = [];
-                groups[dateKey].push(p);
+                `;
+                d.appendChild(card);
             });
-
-            for (const [date, group] of Object.entries(groups)) {
-                const folder = document.createElement('div');
-                folder.className = 'folder-card';
-                folder.onclick = () => {
-                    const viewer = document.getElementById('folder-viewer');
-                    document.getElementById('folder-viewer-title').textContent = `Archives du ${date}`;
-                    const plist = document.getElementById('folder-projects-list');
-                    plist.innerHTML = '';
-                    group.forEach(p => plist.appendChild(createProjectCard(p)));
-                    viewer.style.display = 'block';
-                    viewer.scrollIntoView({ behavior: 'smooth' });
-                };
-                folder.innerHTML = `<div style="font-size:2rem;">📁</div><div style="font-weight:bold;">${date}</div><div style="font-size:0.8rem;color:#b45309;">${group.length} chantier(s)</div>`;
-                list.appendChild(folder);
-            }
         }
+        
+        function doArchive() { if(confirm("Archiver ?")) save(true); }
 
-        function openLink(link, event) {
-            event.stopPropagation();
-            if (link.startsWith('http')) window.open(link, '_blank');
-            else prompt("Copiez ce chemin local :", link);
-        }
+        // EXPOSE FUNCTIONS TO WINDOW FOR HTML BUTTONS
+        window.save = save;
+        window.load = load;
+        window.goHome = goHome;
+        window.goArchive = goArchive;
+        window.goPrepa = goPrepa;
+        window.newItem = newItem;
+        window.doArchive = doArchive;
+        window.set = set;
+        window.refreshUI = refreshUI;
+        window.addTag = addTag;
+        window.removeTag = removeTag;
+        window.updateHeader = updateHeader;
+        window.switchScreen = switchScreen;
     </script>
 </body>
 </html>
