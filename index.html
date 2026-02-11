@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Suivi Chantier - LIVE (Version Universelle)</title>
+    <title>Suivi Chantier - LIVE (Déplacement & Desc)</title>
     
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
@@ -46,13 +46,17 @@
         .card-red { border-left: 6px solid #ef4444; }
 
         .card-header { display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; }
-        .card-title { font-weight: 700; color: var(--primary); font-size: 1.1rem; }
+        .card-title { font-weight: 700; color: var(--primary); font-size: 1.1rem; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
         .card-dates { font-size: 0.9rem; color: #64748b; margin-top: 5px; display:flex; gap:5px; align-items:center;}
         
+        /* NOUVEAUX STYLES AJOUTÉS */
+        .badge-depl { background-color: #fef3c7; color: #d97706; font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; border: 1px solid #fcd34d; font-weight: bold; display: inline-flex; align-items: center; gap: 4px; }
+        .card-desc { margin-top: 10px; font-size: 0.9rem; color: #475569; background: #f8fafc; padding: 8px; border-radius: 6px; border-left: 3px solid #cbd5e1; font-style: italic; }
+
         .mini-gauge { width: 60px; height: 60px; position: absolute; top: 20px; right: 20px; }
 
         /* ALERTES SUR ACCUEIL */
-        .card-alerts { margin-top: 15px; padding-top: 10px; border-top: 1px dashed #e2e8f0; font-size: 0.8rem; }
+        .card-alerts { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #e2e8f0; font-size: 0.8rem; }
         .alert-item { display: flex; align-items: center; gap: 5px; margin-bottom: 3px; font-weight: 600; }
         .alert-red { color: #dc2626; }
         .alert-orange { color: #d97706; }
@@ -214,7 +218,7 @@
     </div>
 
     <script>
-        // --- 1. CONFIGURATION FIREBASE (Mode Compatibilité - Plus Robuste) ---
+        // --- 1. CONFIGURATION FIREBASE ---
         const firebaseConfig = {
             apiKey: "AIzaSyDD3isHTYPpXYQg9O0uBRkCGkjtB1JaxB4",
             authDomain: "suivichantier-b001e.firebaseapp.com",
@@ -225,7 +229,7 @@
             appId: "1:795720545138:web:c03aa428dcfacb393563eb"
         };
 
-        // Initialisation Firebase (Globale)
+        // Initialisation Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
@@ -610,9 +614,15 @@
                 
                 card.innerHTML = `
                     <div style="padding-right:70px">
-                        <div class="card-title">${p.lcode} - ${p.lname}</div>
+                        <div class="card-title">
+                            ${p.lcode} - ${p.lname}
+                            ${p.depl ? '<span class="badge-depl">🚗 Déplacement</span>' : ''}
+                        </div>
                         <div class="card-dates">📅 Du ${p.start?new Date(p.start).toLocaleDateString():'?'} au ${p.end?new Date(p.end).toLocaleDateString():'?'}</div>
                         <div class="card-dates">👤 ${p.cdt||'-'}</div>
+                        
+                        <div class="card-desc">📝 ${p.desc || 'Aucune description'}</div>
+
                         ${alertsHtml}
                     </div>
                     <div class="mini-gauge">
