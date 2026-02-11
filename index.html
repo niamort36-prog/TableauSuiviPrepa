@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Suivi Chantier - LIVE (Déplacement & Desc)</title>
+    <title>Suivi Chantier - LIVE (Trié par Date)</title>
     
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
@@ -49,7 +49,7 @@
         .card-title { font-weight: 700; color: var(--primary); font-size: 1.1rem; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
         .card-dates { font-size: 0.9rem; color: #64748b; margin-top: 5px; display:flex; gap:5px; align-items:center;}
         
-        /* NOUVEAUX STYLES AJOUTÉS */
+        /* STYLES SPÉCIAUX */
         .badge-depl { background-color: #fef3c7; color: #d97706; font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; border: 1px solid #fcd34d; font-weight: bold; display: inline-flex; align-items: center; gap: 4px; }
         .card-desc { margin-top: 10px; font-size: 0.9rem; color: #475569; background: #f8fafc; padding: 8px; border-radius: 6px; border-left: 3px solid #cbd5e1; font-style: italic; }
 
@@ -563,11 +563,22 @@
             refreshUI(); switchScreen('screen-form');
         }
 
-        // --- 10. AFFICHAGE DES GRILLES ---
+        // --- 10. AFFICHAGE DES GRILLES (TRI PAR DATE) ---
         function renderHome() { renderGrid('grid-projects', false); }
         function renderGrid(domId, isArch) {
             const d = document.getElementById(domId); d.innerHTML = '';
-            const lst = projects.filter(p=>!!p.archived === isArch);
+            
+            // 1. Filtrer (Archive ou non)
+            // 2. Trier par Date de commencement (Ascendant: plus vieux/proche en premier)
+            const lst = projects
+                .filter(p => !!p.archived === isArch)
+                .sort((a, b) => {
+                    // Si pas de date, on met à la fin
+                    if (!a.start) return 1;
+                    if (!b.start) return -1;
+                    // Comparaison de dates
+                    return new Date(a.start) - new Date(b.start);
+                });
             
             if(!lst.length) { 
                 d.innerHTML='<div style="text-align:center;color:#999;grid-column:1/-1;padding:20px;">Aucun dossier trouvé</div>'; 
@@ -642,4 +653,3 @@
     </script>
 </body>
 </html>
-
