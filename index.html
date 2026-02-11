@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Suivi Chantier - LIVE Firebase (Fonctionnel)</title>
+    <title>Suivi Chantier - LIVE (Version Universelle)</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
+
     <style>
         :root {
             --primary: #0f172a;
@@ -209,11 +213,8 @@
         </div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
-
-        // CONFIG UTILISATEUR
+    <script>
+        // --- 1. CONFIGURATION FIREBASE (Mode Compatibilité - Plus Robuste) ---
         const firebaseConfig = {
             apiKey: "AIzaSyDD3isHTYPpXYQg9O0uBRkCGkjtB1JaxB4",
             authDomain: "suivichantier-b001e.firebaseapp.com",
@@ -224,10 +225,11 @@
             appId: "1:795720545138:web:c03aa428dcfacb393563eb"
         };
 
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
+        // Initialisation Firebase (Globale)
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
-        // DONNEES STATIQUES
+        // --- 2. DONNEES STATIQUES ---
         const dbLignes = [
             {id:"6050",t:"225 kV",n:"Aubusson - Eguzon"},{id:"6011",t:"225 kV",n:"Aubusson - Mole"},{id:"6059",t:"225 kV",n:"Aubusson-Ste Feyre"},
             {id:"4060",t:"90 kV",n:"Aurence - Beaubeuil"},{id:"4061",t:"90 kV",n:"Aurence - Maureix"},{id:"4062",t:"90 kV",n:"Aurence - St Martin"},
@@ -296,30 +298,32 @@
             {cat:"DOCUMENTS TECHNIQUES", t:[{id:"d1",l:"NIP",d:7},{id:"d2",l:"Constat Adéquation",d:0},{id:"d3",l:"Mode Opératoire",d:0},{id:"d4",l:"Calculs",d:0},{id:"d5",l:"PPE",d:0},{id:"d6",l:"MALT/CC",d:0},{id:"d7",l:"Liste Matériel",d:0},{id:"d8",l:"Liste Outillage",d:0}]}
         ];
 
+        // --- 3. VARIABLES ET INITIALISATION ---
         let projects = [];
         let curId = null;
         let states = {};
         let ots = []; let ois = [];
 
-        // INIT
         window.onload = () => {
             const sel = document.getElementById('inp-line');
             sel.innerHTML = '<option value="">-- Choisir une ligne --</option>';
             dbLignes.sort((a,b)=>a.id.localeCompare(b.id)).forEach(l => { sel.innerHTML += `<option value="${l.id}">${l.id} - ${l.n}</option>`; });
             buildForm(); 
+            // L'écoute Firebase ci-dessous mettra à jour l'affichage automatiquement
         };
 
-        // --- FIREBASE LISTEN ---
-        const dbRef = ref(db, 'chantiers');
-        onValue(dbRef, (snapshot) => {
+        // --- 4. ECOUTE TEMPS REEL FIREBASE ---
+        db.ref('chantiers').on('value', (snapshot) => {
             const data = snapshot.val();
+            // Convertir les objets firebase en tableau
             projects = data ? Object.values(data) : [];
-            // Update l'écran actif
+            
+            // Rafraîchir l'écran actif
             if(document.getElementById('screen-home').classList.contains('active')) renderHome();
             if(document.getElementById('screen-archive').classList.contains('active')) renderGrid('grid-archives', true);
         });
 
-        // --- FORM BUILDING ---
+        // --- 5. CONSTRUCTION DU FORMULAIRE (DOM) ---
         function buildForm() {
             const c = document.getElementById('container-tasks-main'); c.innerHTML = '';
             confLog.forEach(grp => {
@@ -365,7 +369,7 @@
             });
         }
 
-        // --- UI LOGIC ---
+        // --- 6. GESTION DE L'INTERFACE (Tags, Refresh, Nav) ---
         function set(tid, val) { states[tid] = (states[tid] === val) ? null : val; refreshUI(); }
         function addTag(type) { const v = document.getElementById('inp-'+type+'-add').value.trim(); if(v) { (type==='ot'?ots:ois).push(v); document.getElementById('inp-'+type+'-add').value=''; renderTags(type); }}
         function renderTags(type) { document.getElementById('list-'+type).innerHTML = (type==='ot'?ots:ois).map((v,i)=>`<span class="tag-pill">${v}<span onclick="removeTag('${type}',${i})" style="cursor:pointer;margin-left:5px">×</span></span>`).join(''); }
@@ -438,13 +442,15 @@
         function goArchive() { switchScreen('screen-archive'); renderGrid('grid-archives', true); }
         function goPrepa() { switchScreen('screen-prepa'); refreshUI(); }
 
-        // --- SAVE TO FIREBASE ---
+        // --- 7. FONCTION DE SAUVEGARDE (Vers Firebase) ---
         function save(arch) {
             try {
+                // Validation de base
                 const lineId = document.getElementById('inp-line').value;
                 if(!lineId) { alert("Veuillez sélectionner une ligne HTB."); return; }
                 const l = dbLignes.find(x=>x.id===lineId);
-                
+
+                // Récupération des inputs manuels
                 const manualData = {};
                 confLog.forEach(g => g.t.forEach(t => {
                     if(t.type==='input') {
@@ -453,9 +459,11 @@
                     }
                 }));
 
+                // Checkbox Déplacement (Sécurisé)
                 const elDepl = document.getElementById('inp-depl');
                 const isDepl = elDepl ? elDepl.checked : false;
 
+                // Calcul Avancement Global
                 const allT = [...confLog.flatMap(x=>x.t), ...confPrep.flatMap(x=>x.t)];
                 let done = 0;
                 allT.forEach(t => {
@@ -463,11 +471,12 @@
                     else { if(states[t.id]) done++; }
                 });
                 const pct = allT.length ? Math.round((done/allT.length)*100) : 0;
-                
-                // USE EXISTING ID or NEW
+
+                // ID Unique
                 const pid = curId || Date.now();
                 curId = pid;
 
+                // Objet Données
                 const p = {
                     id: pid,
                     archived: arch,
@@ -486,25 +495,28 @@
                     depl: isDepl
                 };
 
-                // PUSH TO FIREBASE
-                set(ref(db, 'chantiers/' + pid), p)
+                // ENVOI VERS FIREBASE
+                db.ref('chantiers/' + pid).set(p)
                 .then(() => {
                     if(arch) goArchive(); 
                     else {
-                        alert("Chantier enregistré sur le Cloud !");
+                        alert("✅ Chantier sauvegardé sur le Cloud !");
                         goHome();
                     }
                 })
-                .catch(e => alert("Erreur Firebase: " + e));
+                .catch((e) => {
+                    alert("Erreur Firebase : " + e.message);
+                });
 
             } catch (err) {
                 console.error(err);
-                alert("Erreur: " + err.message);
+                alert("Erreur Script : " + err.message);
             }
         }
 
+        // --- 8. CHARGEMENT D'UN DOSSIER ---
         function load(id) {
-            // Convertir en number ou string selon le besoin pour trouver l'ID
+            // Recherche flexible (nombre ou chaine)
             const p = projects.find(x => x.id == id);
             if(!p) return;
             
@@ -513,7 +525,7 @@
             ots = p.ots || []; 
             ois = p.ois || [];
             
-            // Remplissage des champs
+            // Remplissage Formulaire
             document.getElementById('inp-line').value = p.lid;
             document.getElementById('inp-cdt').value = p.cdt;
             document.getElementById('inp-cdt-sup').value = p.cdtSup||'';
@@ -536,6 +548,7 @@
             updateHeader(); renderTags('ot'); renderTags('oi'); refreshUI(); switchScreen('screen-form');
         }
 
+        // --- 9. NOUVEAU DOSSIER ---
         function newItem() {
             curId = null; states = {}; ots=[]; ois=[];
             document.querySelectorAll('input,textarea,select').forEach(i=>i.value='');
@@ -546,11 +559,16 @@
             refreshUI(); switchScreen('screen-form');
         }
 
+        // --- 10. AFFICHAGE DES GRILLES ---
         function renderHome() { renderGrid('grid-projects', false); }
         function renderGrid(domId, isArch) {
             const d = document.getElementById(domId); d.innerHTML = '';
             const lst = projects.filter(p=>!!p.archived === isArch);
-            if(!lst.length) { d.innerHTML='<div style="text-align:center;color:#999;grid-column:1/-1">Aucun dossier</div>'; return; }
+            
+            if(!lst.length) { 
+                d.innerHTML='<div style="text-align:center;color:#999;grid-column:1/-1;padding:20px;">Aucun dossier trouvé</div>'; 
+                return; 
+            }
 
             const today = new Date(); today.setHours(0,0,0,0);
 
@@ -586,8 +604,9 @@
 
                 const card = document.createElement('div');
                 card.className = `project-card ${borderClass}`;
-                // Pour que le onclick fonctionne, on passe par une fonction globale
-                card.setAttribute('onclick', `load('${p.id}')`);
+                
+                // IMPORTANT: Appel direct via onclick HTML standard
+                card.onclick = function() { load(p.id); };
                 
                 card.innerHTML = `
                     <div style="padding-right:70px">
@@ -608,23 +627,8 @@
             });
         }
         
-        function doArchive() { if(confirm("Archiver ?")) save(true); }
+        function doArchive() { if(confirm("Archiver ce chantier ?")) save(true); }
 
-        // --- IMPORTANT : EXPOSITION DES FONCTIONS GLOBALES ---
-        // C'est ce bloc qui permet aux boutons HTML (onclick="...") de voir les fonctions du module
-        window.save = save;
-        window.load = load;
-        window.goHome = goHome;
-        window.goArchive = goArchive;
-        window.goPrepa = goPrepa;
-        window.newItem = newItem;
-        window.doArchive = doArchive;
-        window.set = set;
-        window.refreshUI = refreshUI;
-        window.addTag = addTag;
-        window.removeTag = removeTag;
-        window.updateHeader = updateHeader;
-        window.switchScreen = switchScreen;
     </script>
 </body>
 </html>
