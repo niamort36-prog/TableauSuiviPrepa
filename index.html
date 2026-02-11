@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Suivi Chantier - LIVE (Trié par Date)</title>
+    <title>Suivi Chantier - LIVE (Final)</title>
     
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
@@ -52,6 +52,29 @@
         /* STYLES SPÉCIAUX */
         .badge-depl { background-color: #fef3c7; color: #d97706; font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; border: 1px solid #fcd34d; font-weight: bold; display: inline-flex; align-items: center; gap: 4px; }
         .card-desc { margin-top: 10px; font-size: 0.9rem; color: #475569; background: #f8fafc; padding: 8px; border-radius: 6px; border-left: 3px solid #cbd5e1; font-style: italic; }
+
+        /* BOUTON SUPPRESSION (NOUVEAU) */
+        .btn-delete {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            width: 24px;
+            height: 24px;
+            background-color: #ef4444;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+            line-height: 1;
+            cursor: pointer;
+            z-index: 100;
+            transition: background 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .btn-delete:hover { background-color: #dc2626; transform: scale(1.1); }
 
         .mini-gauge { width: 60px; height: 60px; position: absolute; top: 20px; right: 20px; }
 
@@ -518,7 +541,22 @@
             }
         }
 
-        // --- 8. CHARGEMENT D'UN DOSSIER ---
+        // --- 8. NOUVELLE FONCTION : SUPPRESSION (Uniquement Archives) ---
+        function deleteProject(id, event) {
+            // Empêche le clic de se propager à la carte (qui l'ouvrirait)
+            event.stopPropagation();
+            
+            if(confirm("⚠️ ATTENTION : Voulez-vous supprimer DÉFINITIVEMENT ce chantier ?")) {
+                db.ref('chantiers/' + id).remove()
+                .then(() => {
+                    // La suppression sera détectée automatiquement par le listener Firebase
+                    // qui rafraîchira la grille.
+                })
+                .catch(e => alert("Erreur suppression: " + e.message));
+            }
+        }
+
+        // --- 9. CHARGEMENT D'UN DOSSIER ---
         function load(id) {
             // Recherche flexible (nombre ou chaine)
             const p = projects.find(x => x.id == id);
@@ -552,7 +590,7 @@
             updateHeader(); renderTags('ot'); renderTags('oi'); refreshUI(); switchScreen('screen-form');
         }
 
-        // --- 9. NOUVEAU DOSSIER ---
+        // --- 10. NOUVEAU DOSSIER ---
         function newItem() {
             curId = null; states = {}; ots=[]; ois=[];
             document.querySelectorAll('input,textarea,select').forEach(i=>i.value='');
@@ -563,20 +601,17 @@
             refreshUI(); switchScreen('screen-form');
         }
 
-        // --- 10. AFFICHAGE DES GRILLES (TRI PAR DATE) ---
+        // --- 11. AFFICHAGE DES GRILLES (TRI PAR DATE) ---
         function renderHome() { renderGrid('grid-projects', false); }
         function renderGrid(domId, isArch) {
             const d = document.getElementById(domId); d.innerHTML = '';
             
-            // 1. Filtrer (Archive ou non)
-            // 2. Trier par Date de commencement (Ascendant: plus vieux/proche en premier)
+            // TRI PAR DATE (Ascendant)
             const lst = projects
                 .filter(p => !!p.archived === isArch)
                 .sort((a, b) => {
-                    // Si pas de date, on met à la fin
                     if (!a.start) return 1;
                     if (!b.start) return -1;
-                    // Comparaison de dates
                     return new Date(a.start) - new Date(b.start);
                 });
             
@@ -617,13 +652,18 @@
                 const borderClass = globalStatus==='red'?'card-red':(globalStatus==='yellow'?'card-yellow':'card-green');
                 const gaugeColor = p.pct===100 ? '#10b981' : (globalStatus==='red' ? '#ef4444' : '#0055a4');
 
+                // BOUTON SUPPRESSION (Uniquement si Archive)
+                let deleteBtn = '';
+                if(isArch) {
+                    deleteBtn = `<div class="btn-delete" onclick="deleteProject('${p.id}', event)">×</div>`;
+                }
+
                 const card = document.createElement('div');
                 card.className = `project-card ${borderClass}`;
-                
-                // IMPORTANT: Appel direct via onclick HTML standard
                 card.onclick = function() { load(p.id); };
                 
                 card.innerHTML = `
+                    ${deleteBtn}
                     <div style="padding-right:70px">
                         <div class="card-title">
                             ${p.lcode} - ${p.lname}
