@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Suivi Chantier - LIVE Firebase</title>
+    <title>Suivi Chantier - LIVE Firebase (Fonctionnel)</title>
     <style>
         :root {
             --primary: #0f172a;
@@ -303,27 +303,23 @@
 
         // INIT
         window.onload = () => {
-            // Populate select
             const sel = document.getElementById('inp-line');
             sel.innerHTML = '<option value="">-- Choisir une ligne --</option>';
             dbLignes.sort((a,b)=>a.id.localeCompare(b.id)).forEach(l => { sel.innerHTML += `<option value="${l.id}">${l.id} - ${l.n}</option>`; });
-            
             buildForm(); 
-            // renderHome sera appelé par le listener Firebase
         };
 
-        // --- ECOUTE DATABASE FIREBASE ---
+        // --- FIREBASE LISTEN ---
         const dbRef = ref(db, 'chantiers');
         onValue(dbRef, (snapshot) => {
             const data = snapshot.val();
-            // Convertir objet Firebase en tableau JS
             projects = data ? Object.values(data) : [];
-            // Mettre à jour l'affichage si on est sur l'accueil ou archive
+            // Update l'écran actif
             if(document.getElementById('screen-home').classList.contains('active')) renderHome();
             if(document.getElementById('screen-archive').classList.contains('active')) renderGrid('grid-archives', true);
         });
 
-        // --- CONSTRUCTION FORMULAIRE ---
+        // --- FORM BUILDING ---
         function buildForm() {
             const c = document.getElementById('container-tasks-main'); c.innerHTML = '';
             confLog.forEach(grp => {
@@ -369,7 +365,7 @@
             });
         }
 
-        // --- LOGIQUE ---
+        // --- UI LOGIC ---
         function set(tid, val) { states[tid] = (states[tid] === val) ? null : val; refreshUI(); }
         function addTag(type) { const v = document.getElementById('inp-'+type+'-add').value.trim(); if(v) { (type==='ot'?ots:ois).push(v); document.getElementById('inp-'+type+'-add').value=''; renderTags(type); }}
         function renderTags(type) { document.getElementById('list-'+type).innerHTML = (type==='ot'?ots:ois).map((v,i)=>`<span class="tag-pill">${v}<span onclick="removeTag('${type}',${i})" style="cursor:pointer;margin-left:5px">×</span></span>`).join(''); }
@@ -442,14 +438,13 @@
         function goArchive() { switchScreen('screen-archive'); renderGrid('grid-archives', true); }
         function goPrepa() { switchScreen('screen-prepa'); refreshUI(); }
 
-        // --- SAUVEGARDE SUR FIREBASE ---
+        // --- SAVE TO FIREBASE ---
         function save(arch) {
             try {
                 const lineId = document.getElementById('inp-line').value;
-                if(!lineId) { alert("Selectionnez une ligne"); return; }
+                if(!lineId) { alert("Veuillez sélectionner une ligne HTB."); return; }
                 const l = dbLignes.find(x=>x.id===lineId);
-
-                // Input manuels (Securisé)
+                
                 const manualData = {};
                 confLog.forEach(g => g.t.forEach(t => {
                     if(t.type==='input') {
@@ -458,7 +453,6 @@
                     }
                 }));
 
-                // Deplacement (Securisé)
                 const elDepl = document.getElementById('inp-depl');
                 const isDepl = elDepl ? elDepl.checked : false;
 
@@ -469,8 +463,10 @@
                     else { if(states[t.id]) done++; }
                 });
                 const pct = allT.length ? Math.round((done/allT.length)*100) : 0;
-
+                
+                // USE EXISTING ID or NEW
                 const pid = curId || Date.now();
+                curId = pid;
 
                 const p = {
                     id: pid,
@@ -489,29 +485,35 @@
                     desc: document.getElementById('inp-desc').value,
                     depl: isDepl
                 };
-                
-                // ENVOI FIREBASE
+
+                // PUSH TO FIREBASE
                 set(ref(db, 'chantiers/' + pid), p)
                 .then(() => {
                     if(arch) goArchive(); 
                     else {
-                        alert("Enregistré et Partagé !");
+                        alert("Chantier enregistré sur le Cloud !");
                         goHome();
                     }
                 })
-                .catch((e) => alert("Erreur Firebase: " + e));
+                .catch(e => alert("Erreur Firebase: " + e));
 
             } catch (err) {
                 console.error(err);
-                alert("Erreur JS: " + err.message);
+                alert("Erreur: " + err.message);
             }
         }
 
         function load(id) {
-            const p = projects.find(x=>x.id===Number(id)) || projects.find(x=>x.id===String(id));
+            // Convertir en number ou string selon le besoin pour trouver l'ID
+            const p = projects.find(x => x.id == id);
             if(!p) return;
-            curId = p.id; states = p.states || {}; ots = p.ots||[]; ois = p.ois||[];
             
+            curId = p.id; 
+            states = p.states || {}; 
+            ots = p.ots || []; 
+            ois = p.ois || [];
+            
+            // Remplissage des champs
             document.getElementById('inp-line').value = p.lid;
             document.getElementById('inp-cdt').value = p.cdt;
             document.getElementById('inp-cdt-sup').value = p.cdtSup||'';
@@ -539,6 +541,7 @@
             document.querySelectorAll('input,textarea,select').forEach(i=>i.value='');
             const elDepl = document.getElementById('inp-depl');
             if(elDepl) elDepl.checked = false;
+            
             document.getElementById('display-line-header').textContent = "NOUVEAU CHANTIER";
             refreshUI(); switchScreen('screen-form');
         }
@@ -547,7 +550,7 @@
         function renderGrid(domId, isArch) {
             const d = document.getElementById(domId); d.innerHTML = '';
             const lst = projects.filter(p=>!!p.archived === isArch);
-            if(!lst.length) { d.innerHTML='<div style="text-align:center;color:#999">Aucun dossier</div>'; return; }
+            if(!lst.length) { d.innerHTML='<div style="text-align:center;color:#999;grid-column:1/-1">Aucun dossier</div>'; return; }
 
             const today = new Date(); today.setHours(0,0,0,0);
 
@@ -559,7 +562,7 @@
                 if(p.start) {
                     allT.forEach(t => {
                         if(t.type === 'input') return;
-                        if(p.states[t.id]) return;
+                        if(p.states && p.states[t.id]) return;
                         if(!t.d) return;
 
                         const due = new Date(p.start); due.setDate(due.getDate() - t.d);
@@ -583,7 +586,9 @@
 
                 const card = document.createElement('div');
                 card.className = `project-card ${borderClass}`;
-                card.onclick = () => load(p.id);
+                // Pour que le onclick fonctionne, on passe par une fonction globale
+                card.setAttribute('onclick', `load('${p.id}')`);
+                
                 card.innerHTML = `
                     <div style="padding-right:70px">
                         <div class="card-title">${p.lcode} - ${p.lname}</div>
@@ -605,7 +610,8 @@
         
         function doArchive() { if(confirm("Archiver ?")) save(true); }
 
-        // EXPOSE FUNCTIONS TO WINDOW FOR HTML BUTTONS
+        // --- IMPORTANT : EXPOSITION DES FONCTIONS GLOBALES ---
+        // C'est ce bloc qui permet aux boutons HTML (onclick="...") de voir les fonctions du module
         window.save = save;
         window.load = load;
         window.goHome = goHome;
