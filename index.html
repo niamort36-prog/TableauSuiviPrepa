@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Suivi Chantier - LIVE (Final)</title>
+    <title>Suivi Chantiers (Commentaires)</title>
     
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
@@ -53,24 +53,16 @@
         .badge-depl { background-color: #fef3c7; color: #d97706; font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; border: 1px solid #fcd34d; font-weight: bold; display: inline-flex; align-items: center; gap: 4px; }
         .card-desc { margin-top: 10px; font-size: 0.9rem; color: #475569; background: #f8fafc; padding: 8px; border-radius: 6px; border-left: 3px solid #cbd5e1; font-style: italic; }
 
-        /* BOUTON SUPPRESSION (NOUVEAU) */
+        /* BOUTON SUPPRESSION */
         .btn-delete {
             position: absolute;
-            top: 5px;
-            right: 5px;
-            width: 24px;
-            height: 24px;
-            background-color: #ef4444;
-            color: white;
+            top: 5px; right: 5px;
+            width: 24px; height: 24px;
+            background-color: #ef4444; color: white;
             border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 1.2rem;
-            line-height: 1;
-            cursor: pointer;
-            z-index: 100;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold; font-size: 1.2rem; line-height: 1;
+            cursor: pointer; z-index: 100;
             transition: background 0.2s;
             box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
@@ -207,7 +199,7 @@
                 </div>
 
                 <div class="form-group" style="grid-column: span 2">
-                    <label class="form-label">Description</label>
+                    <label class="form-label">Description (Travaux prévus)</label>
                     <textarea id="inp-desc" class="form-input" rows="2"></textarea>
                 </div>
 
@@ -219,6 +211,16 @@
             </div>
 
             <div id="container-tasks-main"></div>
+
+            <div class="dashboard-container" style="margin-top: 20px; border-color: #94a3b8;">
+                <div class="header-bar" style="background: #475569;">
+                    <h3 style="margin:0; font-size:1.1rem;">💬 COMMENTAIRES INTERNES</h3>
+                </div>
+                <div style="padding: 20px;">
+                    <textarea id="inp-comments" class="form-input" rows="5" placeholder="Notes, remarques, problèmes rencontrés (Invisible sur l'accueil)..." style="width:100%; box-sizing:border-box;"></textarea>
+                </div>
+            </div>
+
         </div>
 
         <div class="footer-sticky">
@@ -301,20 +303,20 @@
             ]},
             {cat:"2. PLANIFICATION DE L'INTERVENTION", t:[
                 {id:"p1",l:"DT/DICT, demande SNCF, autre...",d:90},
-                {id:"p2",l:"Expression de besoins particulier (MALT en poste, RH...)",d:90}
+                {id:"p2",l:"Expression de besoins particulier (MALT, RH...)",d:90}
             ]},
             {cat:"3. OUTILLAGE", t:[
                 {id:"o1",l:"Devis moyen externe (nacelle...)",d:90},
-                {id:"o2",l:"Vérification contrôle règlementaires engins spéciaux",d:60}
+                {id:"o2",l:"Vérification contrôle règlementaires engins",d:60}
             ]},
             {cat:"4. RESSOURCES", t:[
                 {id:"r_dur",l:"Durée du chantier", type:'input'},
                 {id:"r_agt",l:"Nombre d'agents", type:'input'},
-                {id:"r_veh",l:"Véhicule équipe particulier (nacelle, grue, treuil...)",d:30}
+                {id:"r_veh",l:"Véhicule équipe particulier (nacelle, treuil...)",d:30}
             ]},
             {cat:"5. PRÉPARATION DE TRAVAIL", t:[
                 {id:"pr1",l:"Visite sur place",d:90},
-                {id:"pr2",l:"Travaux végétation à prévoir (accès, zone de travaiol...)",d:30},
+                {id:"pr2",l:"Travaux végétation à prévoir",d:30},
                 {id:"pr3",l:"Contact tiers",d:90},
                 {id:"pr4",l:"Signature prépa",d:30},
                 {id:"pr5",l:"Validation technique",d:21},
@@ -490,6 +492,9 @@
                 const elDepl = document.getElementById('inp-depl');
                 const isDepl = elDepl ? elDepl.checked : false;
 
+                // NOUVEAU: Récupération des Commentaires
+                const commentsVal = document.getElementById('inp-comments').value;
+
                 // Calcul Avancement Global
                 const allT = [...confLog.flatMap(x=>x.t), ...confPrep.flatMap(x=>x.t)];
                 let done = 0;
@@ -519,6 +524,7 @@
                     states: {...states},
                     manual: manualData,
                     desc: document.getElementById('inp-desc').value,
+                    comments: commentsVal, // Ajout du commentaire à l'objet
                     depl: isDepl
                 };
 
@@ -541,17 +547,11 @@
             }
         }
 
-        // --- 8. NOUVELLE FONCTION : SUPPRESSION (Uniquement Archives) ---
+        // --- 8. FONCTION SUPPRESSION (Uniquement Archives) ---
         function deleteProject(id, event) {
-            // Empêche le clic de se propager à la carte (qui l'ouvrirait)
             event.stopPropagation();
-            
             if(confirm("⚠️ ATTENTION : Voulez-vous supprimer DÉFINITIVEMENT ce chantier ?")) {
                 db.ref('chantiers/' + id).remove()
-                .then(() => {
-                    // La suppression sera détectée automatiquement par le listener Firebase
-                    // qui rafraîchira la grille.
-                })
                 .catch(e => alert("Erreur suppression: " + e.message));
             }
         }
@@ -577,6 +577,9 @@
             document.getElementById('inp-cons-end').value = p.consEnd||'';
             document.getElementById('inp-desc').value = p.desc;
             
+            // CHARGEMENT COMMENTAIRES
+            document.getElementById('inp-comments').value = p.comments || '';
+
             const elDepl = document.getElementById('inp-depl');
             if(elDepl) elDepl.checked = p.depl || false;
             
@@ -693,4 +696,3 @@
     </script>
 </body>
 </html>
-
