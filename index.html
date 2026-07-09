@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Suivi Chantier - LIVE (Liens Cliquables)</title>
+    <title>Suivi Chantier - LIVE (Création Paniers)</title>
     
+    <!-- IMPORT FIREBASE (VERSION UNIVERSELLE) -->
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
 
@@ -84,10 +85,14 @@
         .form-label { font-size: 0.8rem; font-weight: 700; color: #475569; text-transform: uppercase; }
         .form-input { padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95rem; }
 
-        /* INPUT ET BOUTON LIEN DOSSIER */
+        /* INPUTS SPÉCIFIQUES */
         .input-folder { width: 140px; font-size: 0.85rem; padding: 6px; border: 1px solid #94a3b8; border-radius: 4px; background: #f8fafc; }
         .btn-open-link { background: var(--accent); color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 1rem; margin-left: 5px; margin-right: 15px; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
         .btn-open-link:hover { background: #0284c7; }
+        
+        /* ZONE DE TEXTE POUR LE NOM DU PANIER */
+        .input-panier { width: 180px; font-size: 0.85rem; padding: 6px 10px; border: 1px solid var(--accent); border-radius: 4px; background: #f0f9ff; margin-right: 15px; transition: border 0.2s; }
+        .input-panier:focus { outline: none; border-color: #0284c7; box-shadow: 0 0 0 2px rgba(14,165,233,0.2); }
 
         /* TAGS */
         .input-group-row { display: flex; gap: 5px; }
@@ -106,7 +111,7 @@
         .task-name { flex: 2; font-weight: 600; font-size: 0.95rem; color: #334155; }
         .task-deadline { flex: 1; font-size: 0.9rem; font-weight: bold; color: #b91c1c; text-align: center; background: rgba(255,255,255,0.5); padding: 5px; border-radius: 4px; }
         
-        /* FORCER L'ALIGNEMENT DES BOUTONS OUI/NON SUR LA MÊME LIGNE */
+        /* ALIGNEMENT DES BOUTONS */
         .task-actions { flex: 1; display: flex; justify-content: flex-end; align-items: center; flex-wrap: nowrap; }
         .toggle-switch { display: flex; flex-direction: row; flex-wrap: nowrap; gap: 5px; }
         .btn-toggle { border: 1px solid #94a3b8; background: white; padding: 8px 16px; border-radius: 4px; font-weight: bold; color: #64748b; cursor: pointer; white-space: nowrap; }
@@ -151,15 +156,18 @@
         </div>
     </nav>
 
+    <!-- ACCUEIL -->
     <div id="screen-home" class="screen active">
         <div id="grid-projects" class="projects-grid"></div>
     </div>
 
+    <!-- ARCHIVES -->
     <div id="screen-archive" class="screen">
         <h3>📂 Archives</h3>
         <div id="grid-archives" class="projects-grid"></div>
     </div>
 
+    <!-- FORMULAIRE -->
     <div id="screen-form" class="screen">
         <button onclick="goHome()" style="background:none; border:none; cursor:pointer; font-weight:bold; color:#64748b; margin-bottom:10px;">← Retour Accueil</button>
 
@@ -219,6 +227,7 @@
 
             <div id="container-tasks-main"></div>
 
+            <!-- ZONE COMMENTAIRES -->
             <div class="dashboard-container" style="margin-top: 20px; border-color: #94a3b8;">
                 <div class="header-bar" style="background: #475569;">
                     <h3 style="margin:0; font-size:1.1rem;">💬 COMMENTAIRES INTERNES</h3>
@@ -236,6 +245,7 @@
         </div>
     </div>
 
+    <!-- PAGE 2 : PREPA -->
     <div id="screen-prepa" class="screen">
         <button onclick="switchScreen('screen-form')" style="margin-bottom:10px; cursor:pointer">← Retour</button>
         <div class="dashboard-container">
@@ -248,6 +258,7 @@
         </div>
     </div>
 
+    <!-- LOGIQUE PRINCIPALE -->
     <script>
         // --- 1. CONFIGURATION FIREBASE ---
         const firebaseConfig = {
@@ -324,6 +335,7 @@
                 {id:"pr1",l:"Visite sur place",d:90},
                 {id:"pr2",l:"Travaux végétation à prévoir",d:30},
                 {id:"pr3",l:"Contact tiers",d:90},
+                {id:"pr_crea_panier",l:"Création de paniers",d:7, extraInput:"Nom du panier..."}, // NOUVELLE LIGNE
                 {id:"pr_panier",l:"Attribution des paniers",d:7},
                 {id:"pr4",l:"Signature prépa",d:30},
                 {id:"pr5",l:"Validation technique",d:21},
@@ -378,7 +390,14 @@
                     if(task.type === 'input') {
                         actionHtml = `<input class="input-manual" id="val-${task.id}" placeholder="..." onchange="refreshUI()">`;
                     } else {
+                        // NOUVEAU : Champ de texte optionnel pour la création de panier
+                        let textInputHtml = '';
+                        if(task.extraInput) {
+                            textInputHtml = `<input type="text" class="input-panier" id="text-${task.id}" placeholder="${task.extraInput}">`;
+                        }
+
                         actionHtml = `
+                        ${textInputHtml}
                         <div class="toggle-switch">
                             <button class="btn-toggle" id="btn-no-${task.id}" onclick="set('${task.id}','no')">NON</button>
                             <button class="btn-toggle" id="btn-yes-${task.id}" onclick="set('${task.id}','yes')">OUI</button>
@@ -400,7 +419,7 @@
                 let html = `<div class="category-header">${grp.cat}</div>`;
                 grp.t.forEach(task => {
                     
-                    // NOUVEAU : Champ de lien + Bouton pour Ouvrir
+                    // Champ de lien + Bouton pour Ouvrir (Déjà existant)
                     let linkHtml = '';
                     if (['d3', 'd4', 'd5'].includes(task.id)) {
                         linkHtml = `
@@ -434,15 +453,21 @@
         function removeTag(type,i) { if(type==='ot')ots.splice(i,1);else ois.splice(i,1); renderTags(type); }
 
         function openLink(id) {
-            let val = document.getElementById('link-' + id).value;
+            let val = document.getElementById('link-' + id).value.trim();
+            val = val.replace(/^["']|["']$/g, '');
+
             if (!val) {
                 alert("Veuillez d'abord saisir un lien ou un chemin de dossier.");
                 return;
             }
-            // Formatage pour ouvrir les dossiers Windows correctement
-            if (val.match(/^[a-zA-Z]:\\/) && !val.startsWith('file:///')) {
+
+            if (val.match(/^[a-zA-Z]:/)) {
                 val = 'file:///' + val.replace(/\\/g, '/');
+                if (window.location.protocol.startsWith('http')) {
+                    alert("⚠️ INFO SÉCURITÉ NAVIGATEUR :\n\nVous êtes sur un site internet (" + window.location.protocol + "). Les navigateurs modernes (Chrome, Edge...) bloquent par sécurité l'ouverture de dossiers de votre ordinateur (K:\\) depuis un site web.\n\nPour que cela s'ouvre, vous devez lancer cette application en cliquant sur le fichier HTML depuis votre ordinateur, ou utiliser une extension de navigateur qui autorise les liens 'file:///'.");
+                }
             }
+
             window.open(val, '_blank');
         }
 
@@ -530,6 +555,15 @@
                     }
                 }));
 
+                // Récupération des Textes Extras (Nom du panier)
+                const extraTexts = {};
+                confLog.forEach(g => g.t.forEach(t => {
+                    if(t.extraInput) {
+                        const el = document.getElementById('text-'+t.id);
+                        if(el) extraTexts[t.id] = el.value;
+                    }
+                }));
+
                 // Checkbox Déplacement (Sécurisé)
                 const elDepl = document.getElementById('inp-depl');
                 const isDepl = elDepl ? elDepl.checked : false;
@@ -572,10 +606,11 @@
                     pct: pct,
                     states: {...states},
                     manual: manualData,
+                    extraTexts: extraTexts, // Ajout des textes additionnels (Nom de panier)
                     desc: document.getElementById('inp-desc').value,
                     comments: commentsVal,
                     depl: isDepl,
-                    folderLinks: fLinks // Ajout des liens à l'objet
+                    folderLinks: fLinks
                 };
 
                 // ENVOI VERS FIREBASE
@@ -635,6 +670,14 @@
                 const el = document.getElementById('link-' + linkId);
                 if(el) {
                     el.value = (p.folderLinks && p.folderLinks[linkId]) ? p.folderLinks[linkId] : '';
+                }
+            });
+
+            // CHARGEMENT EXTRA TEXTS (Nom du panier)
+            confLog.forEach(g => g.t.forEach(t => {
+                if(t.extraInput) {
+                    const el = document.getElementById('text-'+t.id);
+                    if(el) el.value = (p.extraTexts && p.extraTexts[t.id]) ? p.extraTexts[t.id] : '';
                 }
             });
 
@@ -733,6 +776,7 @@
                         <div class="card-dates">📅 Du ${p.start?new Date(p.start).toLocaleDateString():'?'} au ${p.end?new Date(p.end).toLocaleDateString():'?'}</div>
                         <div class="card-dates">👤 ${p.cdt||'-'}</div>
                         
+                        <!-- DESCRIPTION -->
                         <div class="card-desc">📝 ${p.desc || 'Aucune description'}</div>
 
                         ${alertsHtml}
