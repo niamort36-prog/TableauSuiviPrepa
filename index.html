@@ -132,11 +132,61 @@
         .circle { fill: none; stroke-width: 2.8; stroke-linecap: round; transition: stroke-dasharray 0.6s ease; }
         .percentage { fill: #0f172a; font-family: sans-serif; font-weight: bold; font-size: 0.5em; text-anchor: middle; }
 
+        .btn-print { background: #0f172a; color: white; }
+
+        /* ==================================================================
+           IMPRESSION — Feuille A3 PAYSAGE (420 x 297 mm).
+           La fiche n'occupe QUE LA MOITIÉ DROITE, au format A4 portrait
+           (210 x 297 mm). En pliant l'A3 en son centre on obtient un
+           porte-document avec la fiche chantier en couverture.
+           ================================================================== */
+        #print-sheet { display: none; }
+
+        /* Trait de pli au centre — supprimer cette règle pour l'enlever */
+        #print-sheet .pp-fold {
+            position: absolute; top: 0; left: 210mm; height: 297mm;
+            border-left: 0.2mm dashed #c7c7c7;
+        }
+
+        #print-sheet .pp-page {
+            position: absolute; top: 0; left: 210mm;
+            width: 210mm; height: 297mm;
+            box-sizing: border-box; padding: 10mm;
+            overflow: hidden;
+        }
+        #print-sheet .pp-scale { transform-origin: top left; display: flow-root; }
+
+        /* --- Version compacte de la fiche, pour tenir sur l'A4 --- */
+        #print-sheet .dashboard-container { box-shadow: none; border: 1px solid #94a3b8; margin: 0; }
+        #print-sheet .header-bar { padding: 8px 12px; }
+        #print-sheet .header-bar h2 { font-size: 15px !important; }
+        #print-sheet .pp-sub { font-size: 10px; }
+
+        #print-sheet .form-grid { padding: 10px 12px; gap: 8px 14px; }
+        #print-sheet .form-label { font-size: 7.5px; }
+        #print-sheet .form-input { padding: 3px 5px; font-size: 10.5px; }
+        #print-sheet .pp-val { background: #fff; min-height: 19px; line-height: 1.3; }
+        #print-sheet .pp-val.pp-multi { white-space: pre-wrap; min-height: 32px; }
+        #print-sheet .tag-pill { font-size: 9.5px; padding: 1px 7px; }
+
+        #print-sheet .category-header { padding: 4px 12px; font-size: 10px; }
+        #print-sheet .task-row { padding: 4px 12px; gap: 8px; }
+        #print-sheet .task-name { font-size: 10px; }
+        #print-sheet .task-deadline { font-size: 9px; padding: 2px; }
+        #print-sheet .btn-toggle { padding: 2px 9px; font-size: 8.5px; }
+        #print-sheet .pp-comments { margin-top: 8px !important; }
+        #print-sheet .pp-comments .header-bar h3 { font-size: 11px !important; }
+        #print-sheet .pp-comments > div:last-child { padding: 8px 12px !important; }
+
         @media print {
-            .navbar, .footer-sticky, .btn-add-tag, .tag-remove, .btn-open-link { display: none !important; }
-            .screen { display: block !important; margin: 0; padding: 0; }
-            .dashboard-container { box-shadow: none; border: 1px solid #000; }
-            .row-ok { background-color: #eee !important; border-left: 2px solid black; }
+            @page { size: A3 landscape; margin: 0; }
+            html, body { width: 420mm; height: 297mm; margin: 0; padding: 0; background: #fff; overflow: hidden; }
+            body > *:not(#print-sheet) { display: none !important; }
+            #print-sheet {
+                display: block; position: relative;
+                width: 420mm; height: 297mm; overflow: hidden;
+            }
+            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
     </style>
 </head>
@@ -166,10 +216,10 @@
         <div class="dashboard-container">
             <div class="header-bar">
                 <h2 id="display-line-header" style="margin:0; font-size:1.5rem">NOUVEAU CHANTIER</h2>
-                <div id="display-line-sub" style="opacity:0.8">Sélectionnez une ligne</div>
+                <div id="display-line-sub" class="pp-sub" style="opacity:0.8">Sélectionnez une ligne</div>
             </div>
 
-            <div style="background:white; padding:15px; display:flex; justify-content:center; border-bottom:1px solid #eee">
+            <div id="form-gauge-block" style="background:white; padding:15px; display:flex; justify-content:center; border-bottom:1px solid #eee">
                 <div style="width:100px; height:100px; position:relative;">
                     <svg viewBox="0 0 36 36" class="circular-chart">
                         <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
@@ -232,6 +282,7 @@
         <div class="footer-sticky">
             <button class="btn-action btn-arch" onclick="doArchive()">🗃️ Archiver</button>
             <button class="btn-action btn-other" onclick="goPrepa()">📄 Prépa (Suite)</button>
+            <button class="btn-action btn-print" onclick="printSheet()">🖨️ Imprimer A3</button>
             <button class="btn-action btn-save" onclick="save(false)">💾 ENREGISTRER</button>
         </div>
     </div>
@@ -247,6 +298,9 @@
             <button class="btn-action btn-save" onclick="save(false)">💾 ENREGISTRER TOUT</button>
         </div>
     </div>
+
+    <!-- Feuille A3 générée à l'impression (voir buildPrintSheet) -->
+    <div id="print-sheet" aria-hidden="true"></div>
 
     <script>
         // --- 1. CONFIGURATION FIREBASE ---
@@ -761,6 +815,105 @@
         }
         
         function doArchive() { if(confirm("Archiver ce chantier ?")) save(true); }
+
+        // --- 12. FICHE IMPRIMABLE A3 ---------------------------------------
+        // Reproduit la page chantier sur la MOITIÉ DROITE d'un A3 paysage,
+        // au format A4 portrait. Plié en son centre, l'A3 devient un
+        // porte-document avec la fiche en couverture.
+
+        function fmtDatePrint(v) {
+            if(!v) return '';
+            const d = new Date(v);
+            return isNaN(d.getTime()) ? v : d.toLocaleDateString('fr-FR');
+        }
+
+        function buildPrintSheet() {
+            const sheet = document.getElementById('print-sheet');
+            const src = document.querySelector('#screen-form > .dashboard-container');
+            if(!src) return;
+
+            const clone = src.cloneNode(true);
+
+            // a) Figer les valeurs saisies.
+            //    cloneNode() ne recopie PAS ce que l'utilisateur a tapé
+            //    (c'est une propriété, pas un attribut) : on relit l'original.
+            //    Les deux listes ont la même structure, donc le même ordre.
+            const srcCtrls = src.querySelectorAll('input, select, textarea');
+            const dstCtrls = clone.querySelectorAll('input, select, textarea');
+            srcCtrls.forEach((s, i) => {
+                const d = dstCtrls[i];
+                if(!d) return;
+                let out;
+                if(s.type === 'checkbox') {
+                    out = document.createElement('span');
+                    out.textContent = s.checked ? '☑' : '☐';
+                } else {
+                    out = document.createElement('div');
+                    out.className = 'form-input pp-val';
+                    if(s.tagName === 'SELECT') {
+                        out.textContent = s.selectedIndex >= 0 ? s.options[s.selectedIndex].text : '';
+                    } else if(s.tagName === 'TEXTAREA') {
+                        out.classList.add('pp-multi');
+                        out.textContent = s.value;
+                    } else if(s.type === 'date') {
+                        out.textContent = fmtDatePrint(s.value);
+                    } else {
+                        out.textContent = s.value;
+                    }
+                }
+                d.replaceWith(out);
+            });
+
+            // b) Éléments inutiles sur papier
+            const g = clone.querySelector('#form-gauge-block');
+            if(g) g.remove();                                              // jauge de progression
+            clone.querySelectorAll('.input-group-row').forEach(e => e.remove()); // champs + bouton "+"
+            clone.querySelectorAll('.tag-pill span').forEach(e => e.remove());   // croix de suppression des tags
+            clone.querySelectorAll('.form-label').forEach(e => {
+                e.textContent = e.textContent.replace(/\s*\(Entrée pour ajouter\)/i, '');
+            });
+
+            // c) Commentaires internes : imprimés seulement s'ils sont remplis
+            const com = clone.querySelector('.dashboard-container');
+            if(com) {
+                if(document.getElementById('inp-comments').value.trim()) com.classList.add('pp-comments');
+                else com.remove();
+            }
+
+            // d) Purger les id pour ne pas les dupliquer dans le document
+            clone.querySelectorAll('[id]').forEach(e => e.removeAttribute('id'));
+
+            // e) Monter la feuille
+            sheet.innerHTML = '<div class="pp-fold"></div><div class="pp-page"><div class="pp-scale"></div></div>';
+            const page = sheet.querySelector('.pp-page');
+            const scaler = sheet.querySelector('.pp-scale');
+            scaler.appendChild(clone);
+
+            // f) Ajuster l'échelle pour tenir exactement sur la hauteur A4.
+            //    La feuille est display:none hors impression : on la rend
+            //    visible hors-champ le temps de la mesure.
+            sheet.style.cssText = 'display:block; position:fixed; top:0; left:-10000px; width:420mm; height:297mm;';
+            const cs = getComputedStyle(page);
+            const availW = page.clientWidth  - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+            const availH = page.clientHeight - parseFloat(cs.paddingTop)  - parseFloat(cs.paddingBottom);
+            scaler.style.transform = 'none';
+            scaler.style.width = availW + 'px';
+            const k = Math.min(1, availH / scaler.scrollHeight);
+            scaler.style.transform = 'scale(' + k + ')';
+            sheet.style.cssText = '';
+        }
+
+        function printSheet() {
+            if(!document.getElementById('inp-line').value) {
+                alert("Veuillez sélectionner une ligne HTB avant d'imprimer.");
+                return;
+            }
+            buildPrintSheet();
+            window.print();
+        }
+
+        // Ctrl+P doit produire la même feuille que le bouton
+        window.addEventListener('beforeprint', buildPrintSheet);
 
     </script>
 </body>
