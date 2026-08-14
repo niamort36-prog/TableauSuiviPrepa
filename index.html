@@ -173,8 +173,22 @@
         #print-sheet .task-row { padding: 4px 12px; gap: 8px; }
         #print-sheet .task-name { font-size: 10px; }
         #print-sheet .task-deadline { font-size: 9px; padding: 2px; }
-        #print-sheet .btn-toggle { padding: 2px 9px; font-size: 8.5px; }
+
+        /* OUI/NON remplacés par des cases à cocher */
+        #print-sheet .pp-opts { white-space: nowrap; }
+        #print-sheet .pp-opt {
+            display: inline-flex; align-items: center; gap: 3px;
+            margin-left: 12px; font-size: 9px; font-weight: 700; color: #334155;
+        }
+        #print-sheet .pp-box {
+            display: inline-block; width: 10px; height: 10px;
+            border: 1px solid #475569; border-radius: 2px; background: #fff;
+            line-height: 9px; text-align: center;
+            font-size: 9px; font-weight: 900; color: #0f172a;
+        }
+
         #print-sheet .pp-comments { margin-top: 8px !important; }
+        #print-sheet .pp-comments .pp-multi { min-height: 58px; }
         #print-sheet .pp-comments .header-bar h3 { font-size: 11px !important; }
         #print-sheet .pp-comments > div:last-child { padding: 8px 12px !important; }
 
@@ -873,23 +887,47 @@
                 e.textContent = e.textContent.replace(/\s*\(Entrée pour ajouter\)/i, '');
             });
 
-            // c) Commentaires internes : imprimés seulement s'ils sont remplis
-            const com = clone.querySelector('.dashboard-container');
-            if(com) {
-                if(document.getElementById('inp-comments').value.trim()) com.classList.add('pp-comments');
-                else com.remove();
+            // c) Dates butoir sur TOUTES les tâches, y compris celles déjà
+            //    validées (à l'écran elles disparaissent une fois cochées).
+            const startVal = document.getElementById('inp-start').value;
+            if(startVal) {
+                confLog.flatMap(x => x.t).forEach(t => {
+                    if(!t.d) return;
+                    const cell = clone.querySelector('#dead-' + t.id);
+                    if(!cell) return;
+                    const dd = new Date(startVal);
+                    dd.setDate(dd.getDate() - t.d);
+                    cell.textContent = 'Butoir : ' + dd.toLocaleDateString('fr-FR');
+                });
             }
 
-            // d) Purger les id pour ne pas les dupliquer dans le document
+            // d) Boutons OUI/NON -> cases à cocher, celle retenue est cochée
+            clone.querySelectorAll('.toggle-switch').forEach(sw => {
+                const no  = sw.querySelector('.active-no')  ? '✓' : '';
+                const yes = sw.querySelector('.active-yes') ? '✓' : '';
+                const wrap = document.createElement('div');
+                wrap.className = 'pp-opts';
+                wrap.innerHTML =
+                    '<span class="pp-opt"><span class="pp-box">' + no  + '</span>NON</span>' +
+                    '<span class="pp-opt"><span class="pp-box">' + yes + '</span>OUI</span>';
+                sw.replaceWith(wrap);
+            });
+
+            // e) Commentaires internes : toujours imprimés, même vides, pour
+            //    laisser de la place aux annotations manuscrites.
+            const com = clone.querySelector('.dashboard-container');
+            if(com) com.classList.add('pp-comments');
+
+            // f) Purger les id pour ne pas les dupliquer dans le document
             clone.querySelectorAll('[id]').forEach(e => e.removeAttribute('id'));
 
-            // e) Monter la feuille
+            // g) Monter la feuille
             sheet.innerHTML = '<div class="pp-fold"></div><div class="pp-page"><div class="pp-scale"></div></div>';
             const page = sheet.querySelector('.pp-page');
             const scaler = sheet.querySelector('.pp-scale');
             scaler.appendChild(clone);
 
-            // f) Ajuster l'échelle pour tenir exactement sur la hauteur A4.
+            // h) Ajuster l'échelle pour tenir exactement sur la hauteur A4.
             //    La feuille est display:none hors impression : on la rend
             //    visible hors-champ le temps de la mesure.
             sheet.style.cssText = 'display:block; position:fixed; top:0; left:-10000px; width:420mm; height:297mm;';
