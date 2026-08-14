@@ -134,6 +134,19 @@
 
         .btn-print { background: #0f172a; color: white; }
 
+        /* --- ECRAN OPTIONS : gestion du referentiel des lignes --- */
+        .opt-add { display: grid; grid-template-columns: 170px 150px 1fr auto; gap: 15px; padding: 20px; align-items: end; }
+        .btn-add-ligne { background: var(--primary); color: white; border: none; padding: 11px 24px; border-radius: 6px; cursor: pointer; font-weight: bold; white-space: nowrap; }
+        .btn-add-ligne:hover { background: #1e293b; }
+        .opt-cat { background: #e2e8f0; padding: 8px 20px; font-weight: 800; color: var(--primary); font-size: 0.85rem; border-top: 1px solid #ccc; }
+        .opt-row { display: flex; align-items: center; gap: 14px; padding: 9px 20px; border-bottom: 1px solid #e2e8f0; }
+        .opt-row:hover { background: #f8fafc; }
+        .opt-id { flex: 0 0 60px; font-weight: 800; color: var(--primary); }
+        .opt-n { flex: 1; font-size: 0.95rem; }
+        .opt-used { font-size: 0.75rem; color: #64748b; background: #f1f5f9; border-radius: 10px; padding: 2px 8px; white-space: nowrap; }
+        .btn-del-ligne { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; border-radius: 6px; padding: 5px 12px; cursor: pointer; font-weight: bold; white-space: nowrap; }
+        .btn-del-ligne:hover { background: #ef4444; color: white; }
+
         /* ==================================================================
            IMPRESSION — Feuille A3 PAYSAGE (420 x 297 mm).
            La fiche n'occupe QUE LA MOITIÉ DROITE, au format A4 portrait
@@ -211,6 +224,7 @@
         <div class="nav-actions">
             <button class="btn-nav active" id="nav-home" onclick="goHome()">En cours</button>
             <button class="btn-nav" id="nav-arch" onclick="goArchive()">Archives</button>
+            <button class="btn-nav" id="nav-opt" onclick="goOptions()">⚙️ Options</button>
             <button class="btn-new" onclick="newItem()">+ NOUVEAU</button>
         </div>
     </nav>
@@ -222,6 +236,41 @@
     <div id="screen-archive" class="screen">
         <h3>📂 Archives</h3>
         <div id="grid-archives" class="projects-grid"></div>
+    </div>
+
+    <div id="screen-options" class="screen">
+        <h3>⚙️ Gestion des lignes HTB</h3>
+
+        <div class="dashboard-container">
+            <div class="header-bar" style="background:#6366f1">
+                <h3 style="margin:0; font-size:1.1rem">➕ AJOUTER UNE LIGNE</h3>
+            </div>
+            <div class="opt-add">
+                <div class="form-group">
+                    <label class="form-label">Domaine de tension</label>
+                    <select id="opt-t" class="form-input"></select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Code</label>
+                    <input id="opt-id" class="form-input" placeholder="ex : 4080" onkeypress="if(event.key==='Enter') addLigne()">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Nom de la ligne</label>
+                    <input id="opt-n" class="form-input" placeholder="ex : Chatelus - Maureix" onkeypress="if(event.key==='Enter') addLigne()">
+                </div>
+                <button class="btn-add-ligne" onclick="addLigne()">+ Ajouter</button>
+            </div>
+        </div>
+
+        <div class="dashboard-container">
+            <div class="header-bar">
+                <h3 style="margin:0; font-size:1.1rem">📋 LIGNES ENREGISTRÉES (<span id="opt-count">0</span>)</h3>
+            </div>
+            <div style="padding:15px 20px; border-bottom:1px solid var(--border)">
+                <input id="opt-filter" class="form-input" placeholder="🔍 Filtrer par code ou par nom..." oninput="renderLignes()" style="width:100%">
+            </div>
+            <div id="opt-list"></div>
+        </div>
     </div>
 
     <div id="screen-form" class="screen">
@@ -333,7 +382,10 @@
         const db = firebase.database();
 
          // --- 2. DONNEES STATIQUES ---
-        const dbLignes = [
+        // Référentiel d'origine. Il sert uniquement de valeur initiale :
+        // au premier lancement il est copié dans Firebase (noeud "lignes"),
+        // qui devient ensuite la seule source de vérité. Voir la section 4b.
+        const LIGNES_DEFAUT = [
             {id:"6050",t:"225 kV",n:"Aubusson - Eguzon"},{id:"6011",t:"225 kV",n:"Aubusson - Mole"},{id:"6059",t:"225 kV",n:"Aubusson-Ste Feyre"},
             {id:"4060",t:"90 kV",n:"Aurence - Beaubeuil"},{id:"4061",t:"90 kV",n:"Aurence - Maureix - Z - Magré - Z Mart"},{id:"4062",t:"90 kV",n:"Aurence - St Martin le Vieux"},
             {id:"4063",t:"90 kV",n:"Beaubreuil - Casseaux"},{id:"4064",t:"90 kV",n:"Beaubreuil - Maureix"},{id:"4023",t:"90 kV",n:"Beauregard - Donzenac - les Poygnes"},
@@ -368,6 +420,9 @@
             {id:"4033",t:"90 kV",n:"Puypertus - Tulle"},{id:"4113",t:"90 kV",n:"Repaire - Tuquet"},{id:"4114",t:"90 kV",n:"St Junien - Tannin Gorre 6"},
             {id:"4115",t:"90 kV",n:"St Léonard - Veytizou"},{id:"4116",t:"90 kV",n:"St Yrieix - Traverse"},{id:"xxxx",t:"225 kV",n:"Lannemezan - Pragneres"}
         ];
+
+        // Référentiel vivant, remplacé par le contenu de Firebase
+        let dbLignes = LIGNES_DEFAUT.slice();
 
         const confLog = [
             {cat:"1. MATÉRIEL LIGNES", t:[
@@ -418,11 +473,10 @@
         let ots = []; let ois = [];
 
         window.onload = () => {
-            const sel = document.getElementById('inp-line');
-            sel.innerHTML = '<option value="">-- Choisir une ligne --</option>';
-            dbLignes.sort((a,b)=>a.id.localeCompare(b.id)).forEach(l => { sel.innerHTML += `<option value="${l.id}">${l.id} - ${l.n}</option>`; });
-            buildForm(); 
-            // L'écoute Firebase ci-dessous mettra à jour l'affichage automatiquement
+            fillLineSelect();
+            fillTensionSelect();
+            buildForm();
+            // Les écoutes Firebase ci-dessous mettent à jour l'affichage automatiquement
         };
 
         // --- 4. ECOUTE TEMPS REEL FIREBASE ---
@@ -434,6 +488,30 @@
             // Rafraîchir l'écran actif
             if(document.getElementById('screen-home').classList.contains('active')) renderHome();
             if(document.getElementById('screen-archive').classList.contains('active')) renderGrid('grid-archives', true);
+            if(document.getElementById('screen-options').classList.contains('active')) renderLignes();
+        });
+
+        // --- 4b. REFERENTIEL DES LIGNES (temps réel) ---
+        let seedTente = false;
+        db.ref('lignes').on('value', (snapshot) => {
+            const data = snapshot.val();
+
+            // Premier lancement : on recopie le référentiel d'origine dans
+            // Firebase. L'écoute se redéclenche ensuite avec les données.
+            if(!data) {
+                if(seedTente) return;
+                seedTente = true;
+                const seed = {};
+                LIGNES_DEFAUT.forEach(l => { seed[l.id] = { id: l.id, t: l.t, n: l.n }; });
+                db.ref('lignes').set(seed)
+                  .catch(e => alert("Impossible d'initialiser la liste des lignes : " + e.message));
+                return;
+            }
+
+            dbLignes = Object.values(data);
+            fillLineSelect();
+            fillTensionSelect();
+            if(document.getElementById('screen-options').classList.contains('active')) renderLignes();
         });
 
         // --- 5. CONSTRUCTION DU FORMULAIRE (DOM) ---
@@ -587,9 +665,16 @@
                 document.getElementById('display-line-sub').textContent = `Code Liaison: ${l.id}`;
             }
         }
-        function switchScreen(id) { document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+        function switchScreen(id) {
+            document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            // Onglet actif dans la barre du haut (aucun sur la fiche chantier)
+            const onglet = { 'screen-home':'nav-home', 'screen-archive':'nav-arch', 'screen-options':'nav-opt' }[id];
+            ['nav-home','nav-arch','nav-opt'].forEach(n => document.getElementById(n).classList.toggle('active', n === onglet));
+        }
         function goHome() { switchScreen('screen-home'); renderHome(); }
         function goArchive() { switchScreen('screen-archive'); renderGrid('grid-archives', true); }
+        function goOptions() { switchScreen('screen-options'); fillTensionSelect(); renderLignes(); }
         function goPrepa() { switchScreen('screen-prepa'); refreshUI(); }
 
         // --- 7. FONCTION DE SAUVEGARDE (Vers Firebase) ---
@@ -598,7 +683,8 @@
                 // Validation de base
                 const lineId = document.getElementById('inp-line').value;
                 if(!lineId) { alert("Veuillez sélectionner une ligne HTB."); return; }
-                const l = dbLignes.find(x=>x.id===lineId);
+                // Repli si la ligne vient d'être supprimée du référentiel
+                const l = dbLignes.find(x=>x.id===lineId) || { t:'', n:lineId };
 
                 // Récupération des inputs manuels
                 const manualData = {};
@@ -697,6 +783,13 @@
             ois = p.ois || [];
             
             // Remplissage Formulaire
+            // Si la ligne a été retirée du référentiel depuis, on la réinjecte
+            // en mémoire (pas dans Firebase) pour que le chantier reste
+            // lisible et réenregistrable.
+            if(p.lid && !dbLignes.some(x => x.id === p.lid)) {
+                dbLignes.push({ id: p.lid, t: p.lcode || '', n: p.lname || p.lid, ghost: true });
+                fillLineSelect();
+            }
             document.getElementById('inp-line').value = p.lid;
             document.getElementById('inp-cdt').value = p.cdt;
             document.getElementById('inp-cdt-sup').value = p.cdtSup||'';
@@ -830,7 +923,107 @@
         
         function doArchive() { if(confirm("Archiver ce chantier ?")) save(true); }
 
-        // --- 12. FICHE IMPRIMABLE A3 ---------------------------------------
+        // --- 12. GESTION DU REFERENTIEL DES LIGNES (écran Options) ---------
+
+        function esc(v) {
+            return String(v == null ? '' : v).replace(/[&<>"']/g, c =>
+                ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+        }
+
+        // Tri par niveau de tension croissant, puis par code
+        function sortLignes(a, b) {
+            return ((parseInt(a.t) || 0) - (parseInt(b.t) || 0))
+                || String(a.id).localeCompare(String(b.id));
+        }
+
+        function fillLineSelect() {
+            const sel = document.getElementById('inp-line');
+            if(!sel) return;
+            const cur = sel.value;
+            sel.innerHTML = '<option value="">-- Choisir une ligne --</option>' +
+                dbLignes.slice()
+                    .sort((a,b) => String(a.id).localeCompare(String(b.id)))
+                    .map(l => `<option value="${esc(l.id)}">${esc(l.id + ' - ' + l.n + (l.ghost ? ' (ligne supprimée)' : ''))}</option>`)
+                    .join('');
+            if(cur) sel.value = cur;
+        }
+
+        function fillTensionSelect() {
+            const sel = document.getElementById('opt-t');
+            if(!sel) return;
+            const cur = sel.value;
+            const all = [...new Set(['63 kV','90 kV','225 kV','400 kV', ...dbLignes.map(l => l.t).filter(Boolean)])]
+                .sort((a,b) => (parseInt(a) || 0) - (parseInt(b) || 0));
+            sel.innerHTML = all.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
+            if(cur && all.includes(cur)) sel.value = cur;
+        }
+
+        function renderLignes() {
+            const c = document.getElementById('opt-list');
+            if(!c) return;
+            document.getElementById('opt-count').textContent = dbLignes.length;
+
+            const q = document.getElementById('opt-filter').value.trim().toLowerCase();
+            const lst = dbLignes
+                .filter(l => !q || (l.id + ' ' + l.n).toLowerCase().includes(q))
+                .sort(sortLignes);
+
+            if(!lst.length) {
+                c.innerHTML = '<div style="padding:25px;text-align:center;color:#999">Aucune ligne ne correspond au filtre</div>';
+                return;
+            }
+
+            let html = '', dernierT = null;
+            lst.forEach(l => {
+                if(l.t !== dernierT) {
+                    html += `<div class="opt-cat">${esc(l.t || 'Domaine non renseigné')}</div>`;
+                    dernierT = l.t;
+                }
+                const nb = projects.filter(p => p.lid === l.id).length;
+                html += `<div class="opt-row">
+                    <span class="opt-id">${esc(l.id)}</span>
+                    <span class="opt-n">${esc(l.n)}</span>
+                    ${nb ? `<span class="opt-used">${nb} chantier${nb > 1 ? 's' : ''}</span>` : ''}
+                    <button class="btn-del-ligne" onclick="deleteLigne('${esc(l.id)}')">🗑 Supprimer</button>
+                </div>`;
+            });
+            c.innerHTML = html;
+        }
+
+        function addLigne() {
+            const t  = document.getElementById('opt-t').value;
+            const id = document.getElementById('opt-id').value.trim();
+            const n  = document.getElementById('opt-n').value.trim();
+
+            if(!t || !id || !n) { alert("Domaine de tension, code et nom sont tous les trois obligatoires."); return; }
+            // Le code sert de clé dans Firebase : jeu de caractères restreint
+            if(!/^[A-Za-z0-9_-]+$/.test(id)) { alert("Le code ne peut contenir que des lettres, des chiffres, - et _"); return; }
+            const doublon = dbLignes.find(x => x.id === id);
+            if(doublon) { alert(`Le code ${id} est déjà utilisé par : ${doublon.n}`); return; }
+
+            db.ref('lignes/' + id).set({ id: id, t: t, n: n })
+              .then(() => {
+                  document.getElementById('opt-id').value = '';
+                  document.getElementById('opt-n').value = '';
+                  document.getElementById('opt-id').focus();
+              })
+              .catch(e => alert("Erreur d'enregistrement : " + e.message));
+        }
+
+        function deleteLigne(id) {
+            const l = dbLignes.find(x => x.id === id);
+            const nb = projects.filter(p => p.lid === id).length;
+            let msg = `Supprimer la ligne ${id} — ${l ? l.n : ''} ?`;
+            if(nb) {
+                msg += `\n\n⚠️ ${nb} chantier(s) utilisent cette ligne.`
+                     + `\nIls ne seront PAS supprimés et garderont le nom déjà enregistré,`
+                     + `\nmais la ligne ne sera plus proposée pour les nouveaux chantiers.`;
+            }
+            if(!confirm(msg)) return;
+            db.ref('lignes/' + id).remove().catch(e => alert("Erreur de suppression : " + e.message));
+        }
+
+        // --- 13. FICHE IMPRIMABLE A3 ---------------------------------------
         // Reproduit la page chantier sur la MOITIÉ DROITE d'un A3 paysage,
         // au format A4 portrait. Plié en son centre, l'A3 devient un
         // porte-document avec la fiche en couverture.
