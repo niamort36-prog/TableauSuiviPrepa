@@ -148,6 +148,83 @@
         .btn-del-ligne:hover { background: #ef4444; color: white; }
 
         /* ==================================================================
+           ECRAN LOGISTIQUE & TERRAIN (partageable en lecture seule)
+           ================================================================== */
+        .btn-logi { background: #0f766e; color: white; }
+
+        .subtabs { display: flex; background: #f1f5f9; border-bottom: 2px solid var(--border); overflow-x: auto; }
+        .subtab { flex: 1; min-width: 150px; background: transparent; border: none; border-bottom: 3px solid transparent; padding: 14px 18px; font-size: 0.95rem; font-weight: 700; color: #64748b; cursor: pointer; white-space: nowrap; }
+        .subtab:hover { background: #e2e8f0; }
+        .subtab.active { color: var(--primary); border-bottom-color: var(--accent); background: white; }
+        .subpane { padding: 20px; }
+
+        .lg-block { border: 1px solid var(--border); border-radius: 10px; margin-bottom: 20px; overflow: hidden; }
+        .lg-head { background: #f8fafc; padding: 12px 16px; font-weight: 800; color: var(--primary); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .lg-body { padding: 16px; }
+        .lg-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
+
+        .lg-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px dashed #e2e8f0; }
+        .lg-row:last-child { border-bottom: none; }
+        .lg-row input { padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; }
+        .lg-name { flex: 1; min-width: 0; }
+        .lg-nights { width: 90px; text-align: center; }
+        .lg-part { width: 115px; text-align: right; font-weight: 700; color: var(--primary); white-space: nowrap; }
+
+        .btn-mini { background: var(--primary); color: white; border: none; border-radius: 6px; padding: 8px 14px; font-weight: bold; cursor: pointer; white-space: nowrap; }
+        .btn-mini.ghost { background: #e2e8f0; color: #475569; padding: 5px 11px; font-size: 0.8rem; }
+        .btn-x { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; border-radius: 6px; padding: 6px 10px; cursor: pointer; font-weight: bold; white-space: nowrap; }
+        .btn-x:hover { background: #ef4444; color: white; }
+
+        .lg-total { background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 12px 16px; margin-top: 14px; }
+        .lg-total-line { display: flex; justify-content: space-between; gap: 15px; padding: 3px 0; font-size: 0.95rem; }
+        .lg-total-line b { color: #065f46; white-space: nowrap; }
+        .lg-warn { background: #fef3c7; border: 1px solid #fcd34d; color: #92400e; border-radius: 8px; padding: 10px 14px; font-size: 0.9rem; }
+        .lg-vide { color: #94a3b8; padding: 8px 0; }
+
+        /* PI */
+        .pi-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; }
+        .pi-row:last-child { border-bottom: none; }
+        .pi-row input { padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; }
+        .pi-lib { flex: 0 0 200px; }
+        .pi-coord { flex: 1; min-width: 190px; }
+        .btn-waze { background: #33ccff; color: #062b36; border: none; border-radius: 6px; padding: 8px 14px; font-weight: 800; cursor: pointer; }
+        .btn-maps { background: #34a853; color: white; border: none; border-radius: 6px; padding: 8px 14px; font-weight: 800; cursor: pointer; }
+        .btn-waze:disabled, .btn-maps:disabled { opacity: 0.35; cursor: not-allowed; }
+
+        /* Technique */
+        .eq-card { border: 1px solid #94a3b8; border-radius: 10px; margin-bottom: 18px; overflow: hidden; }
+        .eq-head { background: var(--primary); color: white; padding: 12px 16px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .eq-head input { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.35); color: white; padding: 7px 10px; border-radius: 6px; font-weight: 700; }
+        .eq-head input::placeholder { color: rgba(255,255,255,0.6); }
+        .eq-body { padding: 14px 16px; }
+        .eq-sect { font-size: 0.78rem; font-weight: 800; text-transform: uppercase; color: #475569; letter-spacing: 0.05em; margin: 16px 0 8px; display: flex; align-items: center; gap: 10px; }
+        .eq-sect:first-child { margin-top: 0; }
+
+        .sup-card { border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 8px; padding: 12px; margin-bottom: 10px; background: #fbfdff; }
+        .sup-top { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+        .sup-top input { padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; }
+        .sup-num { width: 120px; font-weight: 800; }
+        .sup-terre { flex: 1; min-width: 170px; }
+        .eff-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; }
+        .eff-cell { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+        .eff-lab { font-size: 0.66rem; font-weight: 800; color: #64748b; text-transform: uppercase; }
+        .eff-cell input { padding: 7px; border: 1px solid #cbd5e1; border-radius: 6px; text-align: center; width: 100%; box-sizing: border-box; }
+        .sup-com { width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; }
+        .sup-com-ro { background: #f8fafc; border-left: 3px solid #cbd5e1; padding: 8px 10px; border-radius: 4px; font-style: italic; }
+
+        .ro-val { display: inline-block; padding: 6px 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; font-weight: 600; color: #0f172a; }
+        .ro-eff { font-weight: 800; color: #0f172a; padding: 5px 0; }
+
+        /* Mode partage : on ne laisse voir que cet écran, sans rien de modifiable */
+        body.partage .navbar, body.partage .footer-sticky, body.partage .logi-back { display: none !important; }
+        body.partage { padding-bottom: 20px; }
+        .share-banner { background: #0f766e; color: white; padding: 14px 20px; text-align: center; font-weight: 700; border-radius: 10px; margin-bottom: 15px; }
+        .share-banner small { display: block; opacity: 0.8; font-weight: 400; margin-top: 4px; }
+    </style>
+
+    <!-- Feuille A3 isolée : cette balise est retirée en mode partage (fin de script) -->
+    <style id="print-a3">
+        /* ==================================================================
            IMPRESSION — Feuille A3 PAYSAGE (420 x 297 mm).
            La fiche n'occupe QUE LA MOITIÉ DROITE, au format A4 portrait
            (210 x 297 mm). En pliant l'A3 en son centre on obtient un
@@ -344,7 +421,8 @@
 
         <div class="footer-sticky">
             <button class="btn-action btn-arch" onclick="doArchive()">🗃️ Archiver</button>
-            <button class="btn-action btn-other" onclick="goPrepa()">📄 Prépa (Suite)</button>
+            <button class="btn-action btn-other" onclick="goPrepa()">📄 Prépa</button>
+            <button class="btn-action btn-logi" onclick="goLogi()">🏕️ Logistique</button>
             <button class="btn-action btn-print" onclick="printSheet()">🖨️ Imprimer A3</button>
             <button class="btn-action btn-save" onclick="save(false)">💾 ENREGISTRER</button>
         </div>
@@ -358,6 +436,40 @@
         </div>
         <div class="footer-sticky">
             <button class="btn-action btn-other" onclick="switchScreen('screen-form')">Retour</button>
+            <button class="btn-action btn-save" onclick="save(false)">💾 ENREGISTRER TOUT</button>
+        </div>
+    </div>
+
+    <div id="screen-logi" class="screen">
+        <div class="logi-back">
+            <button onclick="switchScreen('screen-form')" style="background:none; border:none; cursor:pointer; font-weight:bold; color:#64748b; margin-bottom:10px;">← Retour à la fiche</button>
+        </div>
+
+        <div id="share-banner" class="share-banner" style="display:none">
+            🔒 Vue partagée — lecture seule
+            <small>Ces informations sont consultables mais ne peuvent pas être modifiées depuis ce lien.</small>
+        </div>
+
+        <div class="dashboard-container">
+            <div class="header-bar" style="background:#0f766e">
+                <h2 id="logi-title" style="margin:0; font-size:1.3rem">LOGISTIQUE &amp; TERRAIN</h2>
+                <div id="logi-sub" style="opacity:0.8"></div>
+            </div>
+
+            <div class="subtabs">
+                <button class="subtab active" data-t="gite" onclick="showSub('gite')">🏕️ Gîte / Courses</button>
+                <button class="subtab" data-t="pi" onclick="showSub('pi')">📍 PI</button>
+                <button class="subtab" data-t="tech" onclick="showSub('tech')">🔧 Technique</button>
+            </div>
+
+            <div id="sub-gite" class="subpane"></div>
+            <div id="sub-pi" class="subpane" style="display:none"></div>
+            <div id="sub-tech" class="subpane" style="display:none"></div>
+        </div>
+
+        <div class="footer-sticky">
+            <button class="btn-action btn-other" onclick="switchScreen('screen-form')">← Retour</button>
+            <button class="btn-action btn-logi" onclick="copierLienPartage()">🔗 Lien de partage</button>
             <button class="btn-action btn-save" onclick="save(false)">💾 ENREGISTRER TOUT</button>
         </div>
     </div>
@@ -380,6 +492,13 @@
         // Initialisation Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
+
+        // --- 1b. MODE PARTAGE ---
+        // index.html?partage=<id> : on n'affiche que l'écran Logistique &
+        // Terrain, en lecture seule. Tout le reste de l'application est masqué.
+        const PARTAGE_ID = new URLSearchParams(location.search).get('partage');
+        const PARTAGE = !!PARTAGE_ID;
+        let partageProjet = null;
 
          // --- 2. DONNEES STATIQUES ---
         // Référentiel d'origine. Il sert uniquement de valeur initiale :
@@ -472,7 +591,20 @@
         let states = {};
         let ots = []; let ois = [];
 
+        // Écran Logistique & Terrain (hors calcul d'avancement)
+        function logiVide() {
+            return {
+                gite:    { payeur:'', montant:'', pers: [] },   // pers : {nom, nuits}
+                courses: { payeur:'', montant:'', pers: [] }    // pers : {nom}
+            };
+        }
+        let logi = logiVide();
+        let piList = [];    // {lib, coord}
+        let equipes = [];   // {nom, membres[], pylones[], portees[]}
+        let subActif = 'gite';
+
         window.onload = () => {
+            if(PARTAGE) return;   // la vue partagée se construit seule (fin de script)
             fillLineSelect();
             fillTensionSelect();
             buildForm();
@@ -480,7 +612,8 @@
         };
 
         // --- 4. ECOUTE TEMPS REEL FIREBASE ---
-        db.ref('chantiers').on('value', (snapshot) => {
+        // Inutile en mode partage : on ne charge que le chantier concerné.
+        if(!PARTAGE) db.ref('chantiers').on('value', (snapshot) => {
             const data = snapshot.val();
             // Convertir les objets firebase en tableau
             projects = data ? Object.values(data) : [];
@@ -493,7 +626,7 @@
 
         // --- 4b. REFERENTIEL DES LIGNES (temps réel) ---
         let seedTente = false;
-        db.ref('lignes').on('value', (snapshot) => {
+        if(!PARTAGE) db.ref('lignes').on('value', (snapshot) => {
             const data = snapshot.val();
 
             // Premier lancement : on recopie le référentiel d'origine dans
@@ -740,7 +873,11 @@
                     desc: document.getElementById('inp-desc').value,
                     comments: commentsVal,
                     depl: isDepl,
-                    folderLinks: fLinks // Ajout des liens à l'objet
+                    folderLinks: fLinks, // Ajout des liens à l'objet
+                    // Logistique & Terrain (n'entre pas dans le calcul de pct)
+                    logi: logi,
+                    pi: piList,
+                    tech: { equipes: equipes }
                 };
 
                 // ENVOI VERS FIREBASE
@@ -777,10 +914,13 @@
             const p = projects.find(x => x.id == id);
             if(!p) return;
             
-            curId = p.id; 
-            states = p.states || {}; 
-            ots = p.ots || []; 
+            curId = p.id;
+            states = p.states || {};
+            ots = p.ots || [];
             ois = p.ois || [];
+            logi = normLogi(p.logi);
+            piList = p.pi || [];
+            equipes = normEquipes(p.tech && p.tech.equipes);
             
             // Remplissage Formulaire
             // Si la ligne a été retirée du référentiel depuis, on la réinjecte
@@ -826,6 +966,7 @@
         // --- 10. NOUVEAU DOSSIER ---
         function newItem() {
             curId = null; states = {}; ots=[]; ois=[];
+            logi = logiVide(); piList = []; equipes = []; subActif = 'gite';
             document.querySelectorAll('input,textarea,select').forEach(i=>i.value='');
             const elDepl = document.getElementById('inp-depl');
             if(elDepl) elDepl.checked = false;
@@ -1023,7 +1164,359 @@
             db.ref('lignes/' + id).remove().catch(e => alert("Erreur de suppression : " + e.message));
         }
 
-        // --- 13. FICHE IMPRIMABLE A3 ---------------------------------------
+        // --- 13. LOGISTIQUE & TERRAIN --------------------------------------
+        // Trois sous-onglets rattachés au chantier, partageables en lecture
+        // seule via ?partage=<id>. Aucune de ces données n'entre dans le
+        // calcul d'avancement : refreshUI ne parcourt que confLog et confPrep.
+
+        function num(v) { const n = parseFloat(String(v).replace(',', '.')); return isNaN(n) ? 0 : n; }
+        function eur(v) {
+            const n = parseFloat(String(v).replace(',', '.'));
+            return isNaN(n) ? '—' : n.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' €';
+        }
+
+        // --- Normalisation des données relues depuis Firebase -------------
+        // Firebase ne stocke ni les chaînes vides ni les tableaux vides :
+        // on remet systématiquement une structure complète.
+        function normLogi(x) {
+            const v = logiVide();
+            if(!x) return v;
+            ['gite','courses'].forEach(k => {
+                const s = x[k] || {};
+                v[k].payeur  = s.payeur || '';
+                v[k].montant = (s.montant || s.montant === 0) ? s.montant : '';
+                v[k].pers    = (s.pers || []).map(p => ({
+                    nom:   p.nom || '',
+                    nuits: (p.nuits || p.nuits === 0) ? p.nuits : ''
+                }));
+            });
+            return v;
+        }
+        function normSup(s) {
+            return { num:s.num||'', terre:s.terre||'', ev:s.ev||'', ehd:s.ehd||'',
+                     ehg:s.ehg||'', eld:s.eld||'', elg:s.elg||'', com:s.com||'' };
+        }
+        function normEquipes(x) {
+            return (x || []).map(e => ({
+                nom:     e.nom || '',
+                membres: e.membres || [],
+                pylones: (e.pylones || []).map(normSup),
+                portees: (e.portees || []).map(normSup)
+            }));
+        }
+
+        // --- Navigation ----------------------------------------------------
+        function goLogi() { switchScreen('screen-logi'); renderLogi(); }
+
+        function showSub(t) {
+            subActif = t;
+            ['gite','pi','tech'].forEach(x => {
+                document.getElementById('sub-'+x).style.display = (x === t) ? 'block' : 'none';
+            });
+            document.querySelectorAll('.subtab').forEach(b => b.classList.toggle('active', b.dataset.t === t));
+        }
+
+        function renderLogi() {
+            let titre, sous;
+            if(PARTAGE && partageProjet) {
+                titre = `${partageProjet.lcode || ''} - ${partageProjet.lname || ''}`.trim();
+                sous  = `Du ${fmtDatePrint(partageProjet.start) || '?'} au ${fmtDatePrint(partageProjet.end) || '?'} — CdT ${partageProjet.cdt || '—'}`;
+            } else {
+                const l = dbLignes.find(x => x.id === document.getElementById('inp-line').value);
+                titre = l ? `${l.t} - ${l.n}` : 'LOGISTIQUE & TERRAIN';
+                sous  = "Ces onglets n'entrent pas dans le calcul d'avancement";
+            }
+            document.getElementById('logi-title').textContent = titre.toUpperCase();
+            document.getElementById('logi-sub').textContent = sous;
+
+            renderGite(); renderPI(); renderTech();
+            showSub(subActif);
+        }
+
+        // --- Onglet Gîte / Courses -----------------------------------------
+        // Gîte : répartition au prorata des nuits. Courses : parts égales.
+        function partDe(k, i) {
+            const d = logi[k], m = num(d.montant);
+            if(k === 'gite') {
+                const totN = d.pers.reduce((s,p) => s + num(p.nuits), 0);
+                return totN ? m * num(d.pers[i].nuits) / totN : 0;
+            }
+            return d.pers.length ? m / d.pers.length : 0;
+        }
+
+        function selPayeur(k, ro) {
+            const d = logi[k];
+            if(ro) return `<span class="ro-val">${esc(d.payeur) || '—'}</span>`;
+            const noms = d.pers.map(p => p.nom).filter(Boolean);
+            if(!noms.length) return `<div class="lg-warn">Ajoutez d'abord les personnes présentes</div>`;
+            return `<select class="form-input" onchange="setPayeur('${k}', this.value)">
+                <option value="">-- Qui a payé --</option>
+                ${noms.map(n => `<option value="${esc(n)}" ${n === d.payeur ? 'selected' : ''}>${esc(n)}</option>`).join('')}
+            </select>`;
+        }
+
+        function persRows(k, ro) {
+            const d = logi[k];
+            if(!d.pers.length) return '<div class="lg-vide">Aucune personne enregistrée</div>';
+            const avecNuits = (k === 'gite');
+            return d.pers.map((p, i) => `<div class="lg-row">
+                ${ro ? `<span class="lg-name"><b>${esc(p.nom) || '—'}</b></span>`
+                     : `<input class="lg-name" placeholder="Nom" value="${esc(p.nom)}" onchange="setPersNom('${k}',${i},this.value)">`}
+                ${!avecNuits ? '' : (ro
+                     ? `<span class="lg-nights">${num(p.nuits)} nuit${num(p.nuits) > 1 ? 's' : ''}</span>`
+                     : `<input class="lg-nights" type="number" min="0" step="1" placeholder="nuits" value="${esc(p.nuits)}" oninput="setPersNuits('${k}',${i},this.value)">`)}
+                <span class="lg-part" id="part-${k}-${i}">${eur(partDe(k,i))}</span>
+                ${ro ? '' : `<button class="btn-x" onclick="delPers('${k}',${i})">🗑</button>`}
+            </div>`).join('');
+        }
+
+        function totaux(k) {
+            const d = logi[k], m = num(d.montant);
+            const infos = [];
+            if(k === 'gite') {
+                const totN = d.pers.reduce((s,p) => s + num(p.nuits), 0);
+                infos.push(['Nuitées totales', totN || '—']);
+                infos.push(['Coût par nuitée', totN ? eur(m / totN) : '—']);
+            } else {
+                infos.push(['Personnes', d.pers.length || '—']);
+                infos.push(['Part par personne', d.pers.length ? eur(m / d.pers.length) : '—']);
+            }
+
+            let regl = '';
+            if(m > 0 && !d.payeur) {
+                regl = `<div style="margin-top:10px"><div class="lg-warn">Indiquez qui a payé pour calculer le règlement.</div></div>`;
+            } else if(m > 0 && d.payeur) {
+                const dus = d.pers
+                    .map((p, i) => ({ nom: p.nom, part: partDe(k, i) }))
+                    .filter(x => x.nom && x.nom !== d.payeur && x.part > 0.004);
+                if(dus.length) {
+                    regl = `<div style="margin-top:10px;padding-top:10px;border-top:1px solid #a7f3d0">
+                        <div style="font-weight:800;color:#065f46;margin-bottom:5px">Règlement</div>
+                        ${dus.map(x => `<div class="lg-total-line"><span>${esc(x.nom)} doit à ${esc(d.payeur)}</span><b>${eur(x.part)}</b></div>`).join('')}
+                    </div>`;
+                }
+            }
+
+            return `<div class="lg-total" id="tot-${k}">
+                <div class="lg-total-line"><span>Montant total payé</span><b>${eur(m)}</b></div>
+                ${infos.map(([a,b]) => `<div class="lg-total-line"><span>${a}</span><b>${b}</b></div>`).join('')}
+                ${regl}
+            </div>`;
+        }
+
+        function blocDepense(k, titre, ro) {
+            const d = logi[k];
+            let actions = '';
+            if(!ro) {
+                actions = `<span style="display:flex;gap:8px;flex-wrap:wrap">
+                    ${k === 'courses' ? `<button class="btn-mini ghost" onclick="copierPersGite()">Reprendre les personnes du gîte</button>` : ''}
+                    <button class="btn-mini" onclick="addPers('${k}')">+ Ajouter une personne</button>
+                </span>`;
+            }
+            return `<div class="lg-block">
+                <div class="lg-head"><span>${titre}</span>${actions}</div>
+                <div class="lg-body">
+                    <div class="lg-grid2">
+                        <div class="form-group"><label class="form-label">Qui a payé</label>${selPayeur(k, ro)}</div>
+                        <div class="form-group"><label class="form-label">Montant total payé (€)</label>
+                            ${ro ? `<span class="ro-val">${eur(d.montant)}</span>`
+                                 : `<input class="form-input" type="number" step="0.01" min="0" placeholder="0,00" value="${esc(d.montant)}" oninput="setMontant('${k}', this.value)">`}
+                        </div>
+                    </div>
+                    ${persRows(k, ro)}
+                    ${totaux(k)}
+                </div>
+            </div>`;
+        }
+
+        function renderGite() {
+            const ro = PARTAGE;
+            document.getElementById('sub-gite').innerHTML =
+                  blocDepense('gite',    '🏕️ Gîte — hébergement (au prorata des nuits)', ro)
+                + blocDepense('courses', '🛒 Courses — ravitaillement (à parts égales)',  ro);
+        }
+
+        // Recalcule les montants sans reconstruire le panneau : évite de
+        // perdre le focus pendant la frappe.
+        function majTotaux(k) {
+            logi[k].pers.forEach((p, i) => {
+                const el = document.getElementById(`part-${k}-${i}`);
+                if(el) el.textContent = eur(partDe(k, i));
+            });
+            const t = document.getElementById('tot-' + k);
+            if(t) t.outerHTML = totaux(k);
+        }
+
+        function setMontant(k, v)      { logi[k].montant = v; majTotaux(k); }
+        function setPayeur(k, v)       { logi[k].payeur  = v; majTotaux(k); }
+        function setPersNuits(k, i, v) { logi[k].pers[i].nuits = v; majTotaux(k); }
+        function setPersNom(k, i, v) {
+            const ancien = logi[k].pers[i].nom;
+            logi[k].pers[i].nom = v;
+            if(logi[k].payeur === ancien) logi[k].payeur = v;   // suivre le renommage
+            renderGite();
+        }
+        function addPers(k) {
+            logi[k].pers.push(k === 'gite' ? { nom:'', nuits:'' } : { nom:'' });
+            renderGite();
+        }
+        function delPers(k, i) {
+            if(logi[k].payeur === logi[k].pers[i].nom) logi[k].payeur = '';
+            logi[k].pers.splice(i, 1);
+            renderGite();
+        }
+        function copierPersGite() {
+            logi.courses.pers = logi.gite.pers.map(p => ({ nom: p.nom }));
+            if(!logi.courses.payeur) logi.courses.payeur = logi.gite.payeur;
+            renderGite();
+        }
+
+        // --- Onglet PI ------------------------------------------------------
+        function renderPI() {
+            const ro = PARTAGE;
+            let h = `<div class="lg-block">
+                <div class="lg-head"><span>📍 Points d'intérêt — rassemblement, pylônes, accès</span>
+                ${ro ? '' : '<button class="btn-mini" onclick="addPI()">+ Ajouter un point</button>'}</div>
+                <div class="lg-body">`;
+
+            if(!piList.length) {
+                h += '<div class="lg-vide">Aucun point enregistré</div>';
+            } else {
+                h += piList.map((p, i) => {
+                    const cible = (p.coord || '').trim();
+                    return `<div class="pi-row">
+                        ${ro ? `<span class="pi-lib"><b>${esc(p.lib) || '—'}</b></span>`
+                             : `<input class="pi-lib" placeholder="Libellé (ex : Rassemblement)" value="${esc(p.lib)}" onchange="setPI(${i},'lib',this.value)">`}
+                        ${ro ? `<span class="pi-coord">${esc(cible) || '—'}</span>`
+                             : `<input class="pi-coord" placeholder="45.8234, 1.2612 ou une adresse" value="${esc(cible)}" onchange="setPI(${i},'coord',this.value)">`}
+                        <button class="btn-waze" onclick="ouvrirNav(${i},'waze')" ${cible ? '' : 'disabled'}>Waze</button>
+                        <button class="btn-maps" onclick="ouvrirNav(${i},'maps')" ${cible ? '' : 'disabled'}>Maps</button>
+                        ${ro ? '' : `<button class="btn-x" onclick="delPI(${i})">🗑</button>`}
+                    </div>`;
+                }).join('');
+            }
+
+            h += `</div></div>`;
+            if(!ro) h += `<div class="lg-warn">Coordonnées décimales séparées par une virgule (45.8234, 1.2612), ou une adresse en toutes lettres. La virgule décimale française est acceptée.</div>`;
+            document.getElementById('sub-pi').innerHTML = h;
+        }
+
+        function ouvrirNav(i, app) {
+            const v = (piList[i].coord || '').trim();
+            if(!v) return;
+            // lat/lon décimaux, séparateur virgule ou point-virgule
+            const m = v.match(/^\s*(-?\d+(?:[.,]\d+)?)\s*[,;]\s*(-?\d+(?:[.,]\d+)?)\s*$/);
+            let url;
+            if(m) {
+                const lat = m[1].replace(',', '.'), lon = m[2].replace(',', '.');
+                url = (app === 'waze')
+                    ? `https://waze.com/ul?ll=${lat},${lon}&navigate=yes`
+                    : `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
+            } else {
+                const q = encodeURIComponent(v);
+                url = (app === 'waze')
+                    ? `https://waze.com/ul?q=${q}&navigate=yes`
+                    : `https://www.google.com/maps/search/?api=1&query=${q}`;
+            }
+            window.open(url, '_blank');
+        }
+
+        function addPI()            { piList.push({ lib:'', coord:'' }); renderPI(); }
+        function setPI(i, c, v)     { piList[i][c] = v; if(c === 'coord') renderPI(); }
+        function delPI(i)           { piList.splice(i, 1); renderPI(); }
+
+        // --- Onglet Technique -----------------------------------------------
+        const EFFORTS = [['ev','Vertical'],['ehd','Horiz. droite'],['ehg','Horiz. gauche'],
+                         ['eld','Long. droite'],['elg','Long. gauche']];
+
+        function supportsHtml(ei, type, ro) {
+            const lst = equipes[ei][type] || [];
+            const mot = (type === 'portees') ? 'portée enregistrée' : 'pylône enregistré';
+            if(!lst.length) return `<div class="lg-vide">Aucun${type === 'portees' ? 'e' : ''} ${mot}</div>`;
+
+            return lst.map((s, si) => `<div class="sup-card">
+                <div class="sup-top">
+                    ${ro ? `<span class="ro-val"><b>${esc(s.num) || '—'}</b></span>`
+                         : `<input class="sup-num" placeholder="${type === 'portees' ? '71 - 72' : 'N° 71'}" value="${esc(s.num)}" onchange="setSup(${ei},'${type}',${si},'num',this.value)">`}
+                    ${ro ? `<span class="ro-val">Terre : ${esc(s.terre) || '—'}</span>`
+                         : `<input class="sup-terre" placeholder="Solution de terre retenue" value="${esc(s.terre)}" onchange="setSup(${ei},'${type}',${si},'terre',this.value)">`}
+                    <div style="flex:1"></div>
+                    ${ro ? '' : `<button class="btn-x" onclick="delSup(${ei},'${type}',${si})">🗑</button>`}
+                </div>
+                <div class="eff-grid">
+                    ${EFFORTS.map(([k, lab]) => `<div class="eff-cell">
+                        <span class="eff-lab">${lab} (daN)</span>
+                        ${ro ? `<span class="ro-eff">${s[k] !== '' && s[k] != null ? esc(s[k]) + ' daN' : '—'}</span>`
+                             : `<input type="number" step="1" placeholder="0" value="${esc(s[k])}" onchange="setSup(${ei},'${type}',${si},'${k}',this.value)">`}
+                    </div>`).join('')}
+                </div>
+                ${ro ? (s.com ? `<div class="sup-com-ro">${esc(s.com)}</div>` : '')
+                     : `<input class="sup-com" placeholder="Tâche à effectuer / remarque" value="${esc(s.com)}" onchange="setSup(${ei},'${type}',${si},'com',this.value)">`}
+            </div>`).join('');
+        }
+
+        function renderTech() {
+            const ro = PARTAGE;
+            let h = `<div class="lg-block">
+                <div class="lg-head"><span>🔧 Équipes, pylônes et portées</span>
+                ${ro ? '' : '<button class="btn-mini" onclick="addEquipe()">+ Nouvelle équipe</button>'}</div>
+                <div class="lg-body">`;
+
+            if(!equipes.length) {
+                h += '<div class="lg-vide">Aucune équipe créée</div>';
+            } else {
+                h += equipes.map((e, ei) => `<div class="eq-card">
+                    <div class="eq-head">
+                        ${ro ? `<b style="font-size:1.05rem">${esc(e.nom) || 'Équipe sans nom'}</b>`
+                             : `<input placeholder="Nom de l'équipe" value="${esc(e.nom)}" onchange="setEq(${ei},'nom',this.value)">`}
+                        <div style="flex:1"></div>
+                        ${ro ? '' : `<button class="btn-x" onclick="delEquipe(${ei})">🗑 Supprimer l'équipe</button>`}
+                    </div>
+                    <div class="eq-body">
+                        <div class="eq-sect">Membres ${ro ? '' : `<button class="btn-mini ghost" onclick="addMembre(${ei})">+ Ajouter</button>`}</div>
+                        <div>${e.membres.length
+                            ? e.membres.map((m, mi) => `<span class="tag-pill">${esc(m)}${ro ? '' : `<span onclick="delMembre(${ei},${mi})" style="cursor:pointer;margin-left:5px">×</span>`}</span>`).join('')
+                            : '<span class="lg-vide">Aucun membre</span>'}</div>
+
+                        <div class="eq-sect">Pylônes ${ro ? '' : `<button class="btn-mini ghost" onclick="addSup(${ei},'pylones')">+ Ajouter un pylône</button>`}</div>
+                        ${supportsHtml(ei, 'pylones', ro)}
+
+                        <div class="eq-sect">Portées ${ro ? '' : `<button class="btn-mini ghost" onclick="addSup(${ei},'portees')">+ Ajouter une portée</button>`}</div>
+                        ${supportsHtml(ei, 'portees', ro)}
+                    </div>
+                </div>`).join('');
+            }
+
+            h += '</div></div>';
+            document.getElementById('sub-tech').innerHTML = h;
+        }
+
+        function addEquipe()    { equipes.push({ nom:'', membres:[], pylones:[], portees:[] }); renderTech(); }
+        function setEq(ei,c,v)  { equipes[ei][c] = v; }
+        function delEquipe(ei)  { if(confirm("Supprimer cette équipe et tout son contenu ?")) { equipes.splice(ei,1); renderTech(); } }
+        function addMembre(ei)  { const n = prompt("Nom du membre :"); if(n && n.trim()) { equipes[ei].membres.push(n.trim()); renderTech(); } }
+        function delMembre(ei,mi) { equipes[ei].membres.splice(mi,1); renderTech(); }
+        function addSup(ei,type)  { equipes[ei][type].push(normSup({})); renderTech(); }
+        function setSup(ei,type,si,c,v) { equipes[ei][type][si][c] = v; }
+        function delSup(ei,type,si)     { equipes[ei][type].splice(si,1); renderTech(); }
+
+        // --- Lien de partage --------------------------------------------------
+        function copierLienPartage() {
+            if(!curId) { alert("Enregistrez d'abord le chantier : le lien de partage a besoin de son identifiant."); return; }
+            const url = location.origin + location.pathname + '?partage=' + curId;
+            const msg = "🔗 Lien de partage copié :\n\n" + url
+                      + "\n\nLa personne qui l'ouvre ne verra que ces trois onglets, en lecture seule."
+                      + "\n\n⚠️ Pensez à enregistrer vos dernières modifications, le lien affiche ce qui est en base.";
+            if(navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(url)
+                    .then(() => alert(msg))
+                    .catch(() => prompt("Copiez ce lien :", url));
+            } else {
+                prompt("Copiez ce lien :", url);
+            }
+        }
+
+        // --- 14. FICHE IMPRIMABLE A3 ---------------------------------------
         // Reproduit la page chantier sur la MOITIÉ DROITE d'un A3 paysage,
         // au format A4 portrait. Plié en son centre, l'A3 devient un
         // porte-document avec la fiche en couverture.
@@ -1144,7 +1637,34 @@
         }
 
         // Ctrl+P doit produire la même feuille que le bouton
-        window.addEventListener('beforeprint', buildPrintSheet);
+        if(!PARTAGE) window.addEventListener('beforeprint', buildPrintSheet);
+
+        // --- 15. AMORCAGE DE LA VUE PARTAGEE --------------------------------
+        if(PARTAGE) {
+            document.body.classList.add('partage');
+            // La feuille A3 ne s'applique pas ici : on retire sa feuille de
+            // style pour que Ctrl+P imprime simplement la page affichée.
+            const styleA3 = document.getElementById('print-a3');
+            if(styleA3) styleA3.remove();
+            document.getElementById('share-banner').style.display = 'block';
+
+            db.ref('chantiers/' + PARTAGE_ID).on('value', (snap) => {
+                const p = snap.val();
+                switchScreen('screen-logi');
+                if(!p) {
+                    document.querySelector('#screen-logi .dashboard-container').innerHTML =
+                        '<div style="padding:40px;text-align:center">'
+                      + '<h2 style="color:#b91c1c">Chantier introuvable</h2>'
+                      + '<p>Ce lien de partage ne correspond à aucun chantier enregistré.</p></div>';
+                    return;
+                }
+                partageProjet = p;
+                logi    = normLogi(p.logi);
+                piList  = p.pi || [];
+                equipes = normEquipes(p.tech && p.tech.equipes);
+                renderLogi();
+            });
+        }
 
     </script>
 </body>
