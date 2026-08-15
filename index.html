@@ -228,6 +228,122 @@
         body.partage { padding-bottom: 20px; }
         .share-banner { background: #0f766e; color: white; padding: 14px 20px; text-align: center; font-weight: 700; border-radius: 10px; margin-bottom: 15px; }
         .share-banner small { display: block; opacity: 0.8; font-weight: 400; margin-top: 4px; }
+
+        /* ==================================================================
+           MISES EN PAGE — PC, téléphone portrait et téléphone paysage.
+           Toutes les règles adaptatives sont cadrées sur "screen" : la
+           feuille A3 (balise <style id="print-a3"> plus bas) doit rester
+           strictement indépendante de la largeur de l'écran.
+           ================================================================== */
+        *, *::before, *::after { box-sizing: border-box; }
+        html { -webkit-text-size-adjust: 100%; }
+        img, svg { max-width: 100%; }
+
+        .span-2 { grid-column: span 2; }
+        .card-body { padding-right: 70px; }
+        .card-desc { overflow-wrap: anywhere; }
+        /* min() : la carte ne peut jamais être plus large que la colonne */
+        .projects-grid { grid-template-columns: repeat(auto-fill, minmax(min(360px, 100%), 1fr)); }
+
+        /* --- Tablette et grand téléphone en paysage --- */
+        @media screen and (max-width: 1000px) {
+            .screen { margin: 15px auto; padding: 0 14px; }
+            .opt-add { grid-template-columns: 150px 130px 1fr auto; gap: 12px; padding: 16px; }
+        }
+
+        /* --- Téléphone --- */
+        @media screen and (max-width: 760px) {
+            .navbar { padding: 10px 12px; flex-wrap: wrap; gap: 9px; }
+            .nav-logo { font-size: 1rem; flex: 1 1 100%; }
+            .nav-actions { width: 100%; gap: 6px; }
+            .nav-actions > button { flex: 1; padding: 9px 4px; font-size: 0.8rem; }
+
+            .project-card { padding: 15px; }
+            .card-body { padding-right: 54px; }
+            .mini-gauge { width: 46px; height: 46px; top: 13px; right: 13px; }
+            .card-title { font-size: 0.98rem; }
+
+            .header-bar { padding: 15px 13px; }
+            .header-bar h2 { font-size: 1.1rem !important; }
+            .form-grid { grid-template-columns: 1fr; gap: 14px; padding: 16px; }
+            .span-2 { grid-column: span 1; }   /* sinon une 2e colonne implicite se crée */
+            .input-group-row { flex-wrap: wrap; }
+
+            .category-header { padding: 9px 13px; font-size: 0.88rem; }
+            .task-row { flex-wrap: wrap; gap: 9px; padding: 12px 13px; }
+            .task-name { flex: 1 1 100%; }
+            .task-deadline { flex: 0 0 auto; text-align: left; font-size: 0.8rem; }
+            .task-actions { flex: 1 1 auto; flex-wrap: wrap; gap: 8px; }
+            .folder-link-wrap { flex: 1 1 100%; }
+            .input-folder { flex: 1; width: auto; min-width: 0; }
+            .btn-open-link { margin-right: 0; }
+
+            /* 16px : en dessous, iOS zoome tout seul à la mise au point */
+            .form-input, .input-manual, .input-folder, .lg-row input,
+            .pi-row input, .sup-top input, .eff-cell input,
+            .sup-com, .eq-head input { font-size: 16px; }
+
+            /* Écran Options */
+            .opt-add { grid-template-columns: 1fr; gap: 12px; }
+            .btn-add-ligne { width: 100%; padding: 12px; }
+            .opt-cat { padding: 8px 14px; }
+            .opt-row { flex-wrap: wrap; gap: 8px; padding: 10px 14px; }
+            .opt-id { flex: 0 0 auto; }
+            .opt-n { flex: 1 1 auto; min-width: 140px; }
+            .opt-used { order: 2; }
+            .btn-del-ligne { order: 3; margin-left: auto; }
+
+            /* Logistique & Terrain */
+            .subtab { min-width: 0; flex: 1; padding: 11px 6px; font-size: 0.82rem; white-space: normal; line-height: 1.2; }
+            .subpane { padding: 14px; }
+            .lg-grid2 { grid-template-columns: 1fr; }
+            .lg-head { padding: 11px 13px; }
+            .lg-body { padding: 13px; }
+            .lg-row { flex-wrap: wrap; }
+            .lg-name { flex: 1 1 100%; }
+            .lg-part { flex: 1; width: auto; text-align: left; }
+            .pi-lib, .pi-coord { flex: 1 1 100%; }
+            .eff-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .eq-head, .eq-body { padding: 11px 13px; }
+            .eq-head input { flex: 1 1 100%; }
+            .recu-item { flex-wrap: wrap; }
+            .recu-dl { flex: 1 1 100%; }
+
+            /* Pieds de page : deux boutons par ligne.
+               La fiche en compte 5, soit 3 rangées : la marge basse doit
+               les couvrir, sinon le pied fixe masque le bas du contenu. */
+            body { padding-bottom: 176px; }
+            .footer-sticky { padding: 9px; gap: 7px; flex-wrap: wrap; }
+            .btn-action { flex: 1 1 calc(50% - 4px); max-width: none; padding: 12px 5px; font-size: 0.86rem; }
+        }
+
+        /* --- Téléphone en paysage : la hauteur devient la ressource rare.
+           On rend la barre du haut non fixe et on ramène le pied de page
+           sur une seule ligne compacte. --- */
+        @media screen and (orientation: landscape) and (max-height: 520px) {
+            .navbar { position: static; padding: 7px 12px; }
+            .nav-logo { font-size: 0.95rem; }
+            .nav-actions > button { padding: 7px 10px; font-size: 0.82rem; }
+
+            .screen { margin: 10px auto; }
+            .header-bar { padding: 10px 13px; }
+            .subtab { padding: 9px 8px; }
+            .form-grid { padding: 14px; gap: 12px; }
+
+            body { padding-bottom: 64px; }
+            .footer-sticky { padding: 6px 9px; gap: 6px; flex-wrap: nowrap; overflow-x: auto; }
+            .btn-action { flex: 1 1 auto; max-width: none; padding: 9px 8px; font-size: 0.8rem; white-space: nowrap; }
+        }
+
+        /* En paysage la largeur ne manque pas : on remet les grilles sur
+           deux colonnes pour économiser de la hauteur, qui elle est rare. */
+        @media screen and (orientation: landscape) and (max-height: 520px) and (min-width: 560px) {
+            .form-grid, .lg-grid2 { grid-template-columns: 1fr 1fr; }
+            .span-2 { grid-column: span 2; }
+            .eff-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+            .task-name { flex: 2 1 auto; }
+            .task-row { flex-wrap: nowrap; }
+        }
     </style>
 
     <!-- Feuille A3 isolée : cette balise est retirée en mode partage (fin de script) -->
@@ -378,7 +494,7 @@
             </div>
 
             <div class="form-grid">
-                <div class="form-group" style="grid-column: span 2">
+                <div class="form-group span-2">
                     <label class="form-label">Ligne HTB</label>
                     <select id="inp-line" class="form-input" onchange="updateHeader()"></select>
                 </div>
@@ -403,12 +519,12 @@
                     <div id="list-oi" style="margin-top:5px"></div>
                 </div>
 
-                <div class="form-group" style="grid-column: span 2">
+                <div class="form-group span-2">
                     <label class="form-label">Description (Travaux prévus)</label>
                     <textarea id="inp-desc" class="form-input" rows="2"></textarea>
                 </div>
 
-                <div class="form-group" style="grid-column: span 2">
+                <div class="form-group span-2">
                     <label style="cursor:pointer; font-weight:600; color:#d97706">
                         <input type="checkbox" id="inp-depl"> 🚗 Déplacement à prévoir
                     </label>
@@ -814,9 +930,22 @@
                 document.getElementById('display-line-sub').textContent = `Code Liaison: ${l.id}`;
             }
         }
+        // Le pied de page est en position fixe : il faut réserver sa hauteur
+        // sous le contenu, sinon il en masque le bas. Cette hauteur varie
+        // selon l'écran (2 à 5 boutons) et selon la largeur (passage à la
+        // ligne), d'où une mesure plutôt qu'une valeur en dur par palier.
+        function ajusterMargeBasse() {
+            const f = document.querySelector('.screen.active .footer-sticky');
+            const h = f ? f.getBoundingClientRect().height : 0;
+            document.body.style.paddingBottom = (h ? Math.ceil(h) + 18 : 20) + 'px';
+        }
+        window.addEventListener('resize', ajusterMargeBasse);
+        window.addEventListener('orientationchange', () => setTimeout(ajusterMargeBasse, 250));
+
         function switchScreen(id) {
             document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
             document.getElementById(id).classList.add('active');
+            ajusterMargeBasse();
             // Onglet actif dans la barre du haut (aucun sur la fiche chantier)
             const onglet = { 'screen-home':'nav-home', 'screen-archive':'nav-arch', 'screen-options':'nav-opt' }[id];
             ['nav-home','nav-arch','nav-opt'].forEach(n => document.getElementById(n).classList.toggle('active', n === onglet));
@@ -1056,7 +1185,7 @@
                 
                 card.innerHTML = `
                     ${deleteBtn}
-                    <div style="padding-right:70px">
+                    <div class="card-body">
                         <div class="card-title">
                             ${p.lcode} - ${p.lname}
                             ${p.depl ? '<span class="badge-depl">🚗 Déplacement</span>' : ''}
