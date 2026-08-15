@@ -172,6 +172,14 @@
 
         .btn-mini { background: var(--primary); color: white; border: none; border-radius: 6px; padding: 8px 14px; font-weight: bold; cursor: pointer; white-space: nowrap; }
         .btn-mini.ghost { background: #e2e8f0; color: #475569; padding: 5px 11px; font-size: 0.8rem; }
+        .btn-mini:disabled { opacity: 0.35; cursor: not-allowed; }
+
+        /* Reçus PDF */
+        .recu-list { display: flex; flex-direction: column; gap: 8px; }
+        .recu-item { display: flex; align-items: center; gap: 10px; background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; }
+        .recu-dl { flex: 1; text-align: left; background: none; border: none; padding: 0; cursor: pointer; color: #0369a1; font-weight: 700; font-size: 0.95rem; word-break: break-all; }
+        .recu-dl:hover { text-decoration: underline; }
+        .recu-item small { color: #64748b; white-space: nowrap; }
         .btn-x { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; border-radius: 6px; padding: 6px 10px; cursor: pointer; font-weight: bold; white-space: nowrap; }
         .btn-x:hover { background: #ef4444; color: white; }
 
@@ -493,6 +501,13 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
+        // Reçus PDF : Cloud Storage n'est pas activé sur ce projet Firebase.
+        // Les fichiers sont donc stockés en base64 dans un noeud séparé
+        // "recus/<idChantier>/<idRecu>", lu uniquement au téléchargement.
+        // La fiche chantier ne porte que le nom, la taille et la date, pour
+        // que le chargement de l'application reste léger.
+        const RECU_MAX = 3 * 1024 * 1024;   // 3 Mo
+
         // --- 1b. MODE PARTAGE ---
         // index.html?partage=<id> : on n'affiche que l'écran Logistique &
         // Terrain, en lecture seule. Tout le reste de l'application est masqué.
@@ -593,9 +608,10 @@
 
         // Écran Logistique & Terrain (hors calcul d'avancement)
         function logiVide() {
+            // lien et coord ne servent que pour le gîte ; recus : {nom,url,taille,date,chemin}
             return {
-                gite:    { payeur:'', montant:'', pers: [] },   // pers : {nom, nuits}
-                courses: { payeur:'', montant:'', pers: [] }    // pers : {nom}
+                gite:    { payeur:'', montant:'', pers: [], lien:'', coord:'', recus: [] },  // pers : {nom, nuits}
+                courses: { payeur:'', montant:'', pers: [], lien:'', coord:'', recus: [] }   // pers : {nom}
             };
         }
         let logi = logiVide();
@@ -903,6 +919,8 @@
         function deleteProject(id, event) {
             event.stopPropagation();
             if(confirm("⚠️ ATTENTION : Voulez-vous supprimer DÉFINITIVEMENT ce chantier ?")) {
+                // Les reçus vivent dans un noeud séparé : on les emporte aussi
+                db.ref('recus/' + id).remove().catch(() => {});
                 db.ref('chantiers/' + id).remove()
                 .catch(e => alert("Erreur suppression: " + e.message));
             }
@@ -1185,9 +1203,15 @@
                 const s = x[k] || {};
                 v[k].payeur  = s.payeur || '';
                 v[k].montant = (s.montant || s.montant === 0) ? s.montant : '';
+                v[k].lien    = s.lien  || '';
+                v[k].coord   = s.coord || '';
                 v[k].pers    = (s.pers || []).map(p => ({
                     nom:   p.nom || '',
                     nuits: (p.nuits || p.nuits === 0) ? p.nuits : ''
+                }));
+                v[k].recus   = (s.recus || []).map(r => ({
+                    id: r.id || '', nom: r.nom || '',
+                    taille: r.taille || 0, date: r.date || 0
                 }));
             });
             return v;
@@ -1304,6 +1328,132 @@
             </div>`;
         }
 
+        // --- Lien, GPS et reçus ---------------------------------------------
+        function poids(o) {
+            if(!o) return '';
+            return (o < 1024 * 1024) ? Math.round(o / 1024) + ' Ko'
+                                     : (o / 1024 / 1024).toFixed(1).replace('.', ',') + ' Mo';
+        }
+
+        function blocGiteExtra(ro) {
+            const g = logi.gite;
+            const aLien = !!(g.lien || '').trim(), aCoord = !!(g.coord || '').trim();
+            return `<div class="lg-grid2">
+                <div class="form-group"><label class="form-label">Lien du gîte</label>
+                    <div class="input-group-row">
+                        ${ro ? `<span class="ro-val" style="flex:1;overflow:hidden;text-overflow:ellipsis">${esc(g.lien) || '—'}</span>`
+                             : `<input class="form-input" style="flex:1;min-width:0" placeholder="https://…" value="${esc(g.lien)}" onchange="setLogiChamp('gite','lien',this.value)">`}
+                        <button class="btn-mini" onclick="ouvrirLienGite()" ${aLien ? '' : 'disabled'}>Ouvrir</button>
+                    </div>
+                </div>
+                <div class="form-group"><label class="form-label">Coordonnées GPS du gîte</label>
+                    <div class="input-group-row">
+                        ${ro ? `<span class="ro-val" style="flex:1">${esc(g.coord) || '—'}</span>`
+                             : `<input class="form-input" style="flex:1;min-width:0" placeholder="45.8234, 1.2612" value="${esc(g.coord)}" onchange="setLogiChamp('gite','coord',this.value)">`}
+                        <button class="btn-waze" onclick="ouvrirNavGite('waze')" ${aCoord ? '' : 'disabled'}>Waze</button>
+                        <button class="btn-maps" onclick="ouvrirNavGite('maps')" ${aCoord ? '' : 'disabled'}>Maps</button>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function recusHtml(k, ro) {
+            const lst = logi[k].recus || [];
+            let h = `<div class="eq-sect">Reçus (PDF, 3 Mo max)
+                ${ro ? '' : `<label class="btn-mini ghost" style="cursor:pointer">+ Importer un PDF
+                    <input type="file" accept="application/pdf" style="display:none" onchange="uploadRecu('${k}', this)">
+                </label>`}
+                <span id="recu-etat-${k}" style="font-weight:700;color:#0369a1;text-transform:none"></span>
+            </div>`;
+
+            if(!lst.length) return h + '<div class="lg-vide">Aucun reçu importé</div>';
+
+            h += '<div class="recu-list">' + lst.map((r, i) => `<div class="recu-item">
+                    <button class="recu-dl" onclick="telechargerRecu('${k}',${i})">📄 ${esc(r.nom)}</button>
+                    <small>${poids(r.taille)}</small>
+                    ${ro ? '' : `<button class="btn-x" onclick="delRecu('${k}',${i})">🗑</button>`}
+                </div>`).join('') + '</div>';
+            return h;
+        }
+
+        function lireBase64(f) {
+            return new Promise((res, rej) => {
+                const r = new FileReader();
+                r.onload  = () => res(String(r.result).split(',')[1]);   // retire l'entête data:
+                r.onerror = () => rej(new Error("lecture du fichier impossible"));
+                r.readAsDataURL(f);
+            });
+        }
+
+        async function uploadRecu(k, input) {
+            const f = input.files && input.files[0];
+            input.value = '';                     // permet de réimporter le même fichier
+            if(!f) return;
+            if(f.type !== 'application/pdf') { alert("Seuls les fichiers PDF sont acceptés."); return; }
+            if(f.size > RECU_MAX) {
+                alert("Fichier trop volumineux : 3 Mo maximum.\n\nLes reçus sont stockés dans la base temps réel, qui n'est pas prévue pour de gros fichiers.");
+                return;
+            }
+            if(!curId) { alert("Enregistrez d'abord le chantier : le reçu doit être rattaché à son identifiant."); return; }
+
+            const etat = document.getElementById('recu-etat-' + k);
+            if(etat) etat.textContent = ' Import en cours…';
+            try {
+                const data = await lireBase64(f);
+                const id = 'r' + Date.now();
+                await db.ref(`recus/${curId}/${id}`).set({ nom: f.name, taille: f.size, date: Date.now(), data: data });
+                logi[k].recus.push({ id: id, nom: f.name, taille: f.size, date: Date.now() });
+                // Écriture immédiate : sinon un oubli d'enregistrement laisserait
+                // le fichier en base sans rien pour le retrouver.
+                await db.ref(`chantiers/${curId}/logi/${k}/recus`).set(logi[k].recus);
+                renderGite();
+            } catch(e) {
+                if(etat) etat.textContent = '';
+                alert("Échec de l'import du reçu : " + e.message);
+            }
+        }
+
+        // Le contenu du PDF n'est lu qu'ici, à la demande.
+        async function telechargerRecu(k, i) {
+            const meta = logi[k].recus[i];
+            const cid = PARTAGE ? PARTAGE_ID : curId;
+            if(!cid || !meta.id) { alert("Reçu introuvable."); return; }
+
+            const etat = document.getElementById('recu-etat-' + k);
+            if(etat) etat.textContent = ' Téléchargement…';
+            try {
+                const snap = await db.ref(`recus/${cid}/${meta.id}`).once('value');
+                const v = snap.val();
+                if(!v || !v.data) { alert("Ce reçu n'est plus présent en base."); if(etat) etat.textContent = ''; return; }
+
+                const bin = atob(v.data);
+                const buf = new Uint8Array(bin.length);
+                for(let j = 0; j < bin.length; j++) buf[j] = bin.charCodeAt(j);
+                const url = URL.createObjectURL(new Blob([buf], { type: 'application/pdf' }));
+
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = meta.nom || 'recu.pdf';
+                document.body.appendChild(a); a.click(); a.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 30000);
+                if(etat) etat.textContent = '';
+            } catch(e) {
+                if(etat) etat.textContent = '';
+                alert("Téléchargement impossible : " + e.message);
+            }
+        }
+
+        async function delRecu(k, i) {
+            const r = logi[k].recus[i];
+            if(!confirm(`Supprimer définitivement le reçu « ${r.nom} » ?`)) return;
+            if(curId && r.id) await db.ref(`recus/${curId}/${r.id}`).remove().catch(() => {});
+            logi[k].recus.splice(i, 1);
+            if(curId) await db.ref(`chantiers/${curId}/logi/${k}/recus`).set(logi[k].recus);
+            renderGite();
+        }
+
+        function setLogiChamp(k, c, v) { logi[k][c] = v; renderGite(); }
+
         function blocDepense(k, titre, ro) {
             const d = logi[k];
             let actions = '';
@@ -1323,8 +1473,10 @@
                                  : `<input class="form-input" type="number" step="0.01" min="0" placeholder="0,00" value="${esc(d.montant)}" oninput="setMontant('${k}', this.value)">`}
                         </div>
                     </div>
+                    ${k === 'gite' ? blocGiteExtra(ro) : ''}
                     ${persRows(k, ro)}
                     ${totaux(k)}
+                    ${recusHtml(k, ro)}
                 </div>
             </div>`;
         }
@@ -1401,24 +1553,35 @@
             document.getElementById('sub-pi').innerHTML = h;
         }
 
-        function ouvrirNav(i, app) {
-            const v = (piList[i].coord || '').trim();
-            if(!v) return;
-            // lat/lon décimaux, séparateur virgule ou point-virgule
+        // Construit l'URL Waze / Google Maps à partir de coordonnées
+        // décimales (virgule ou point-virgule en séparateur, décimale
+        // française acceptée) ou, à défaut, d'une adresse en toutes lettres.
+        function urlNav(v, app) {
+            v = (v || '').trim();
+            if(!v) return null;
             const m = v.match(/^\s*(-?\d+(?:[.,]\d+)?)\s*[,;]\s*(-?\d+(?:[.,]\d+)?)\s*$/);
-            let url;
             if(m) {
                 const lat = m[1].replace(',', '.'), lon = m[2].replace(',', '.');
-                url = (app === 'waze')
+                return (app === 'waze')
                     ? `https://waze.com/ul?ll=${lat},${lon}&navigate=yes`
                     : `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
-            } else {
-                const q = encodeURIComponent(v);
-                url = (app === 'waze')
-                    ? `https://waze.com/ul?q=${q}&navigate=yes`
-                    : `https://www.google.com/maps/search/?api=1&query=${q}`;
             }
-            window.open(url, '_blank');
+            const q = encodeURIComponent(v);
+            return (app === 'waze')
+                ? `https://waze.com/ul?q=${q}&navigate=yes`
+                : `https://www.google.com/maps/search/?api=1&query=${q}`;
+        }
+
+        function ouvrirNav(i, app)     { const u = urlNav(piList[i].coord, app); if(u) window.open(u, '_blank'); }
+        function ouvrirNavGite(app)    { const u = urlNav(logi.gite.coord, app); if(u) window.open(u, '_blank'); }
+
+        function ouvrirLienGite() {
+            let v = (logi.gite.lien || '').trim();
+            if(!v) return;
+            // On n'ouvre que du http(s) : évite un javascript: collé par erreur
+            if(!/^https?:\/\//i.test(v)) v = 'https://' + v;
+            if(!/^https?:\/\//i.test(v)) return;
+            window.open(v, '_blank', 'noopener');
         }
 
         function addPI()            { piList.push({ lib:'', coord:'' }); renderPI(); }
