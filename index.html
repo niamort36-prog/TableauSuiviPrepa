@@ -233,6 +233,27 @@
         .pylone-svg path, .pylone-svg line { stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
         .pylone-svg circle { fill: currentColor; stroke: none; }
 
+        /* --- Contacts --- */
+        .ct-cat { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
+                  background: #e2e8f0; color: var(--primary); font-weight: 800; font-size: 0.85rem;
+                  text-transform: uppercase; letter-spacing: .04em; padding: 8px 12px; border-radius: 6px; margin: 18px 0 10px; }
+        .ct-cat:first-child { margin-top: 0; }
+        .ct-card { border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 8px; padding: 12px; margin-bottom: 10px; background: #fff; }
+        .ct-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-bottom: 10px; }
+        .ct-grid input, .ct-grid select { padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; width: 100%; }
+        .ct-ident { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+        .ct-nom { font-size: 1.02rem; color: var(--primary); }
+        .ct-fonction { font-size: 0.82rem; color: #64748b; font-weight: 600; }
+        .ct-coord { font-size: 0.88rem; color: #475569; margin: 4px 0 9px; overflow-wrap: anywhere; }
+        .ct-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .ct-bas { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .ct-bas .btn-x { margin-left: auto; }
+        .ct-btn { border: none; border-radius: 6px; padding: 8px 14px; font-weight: 800; cursor: pointer; font-size: 0.86rem; white-space: nowrap; }
+        .ct-tel { background: #10b981; color: #fff; }
+        .ct-sms { background: #0ea5e9; color: #fff; }
+        .ct-mail { background: #6366f1; color: #fff; }
+        .ct-btn:disabled { opacity: .35; cursor: not-allowed; }
+
         /* --- Planning --- */
         .sem-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
         .sem-tab { background: #e2e8f0; border: 1px solid var(--border); color: #475569; border-radius: 8px; padding: 7px 15px; font-weight: 800; cursor: pointer; }
@@ -317,7 +338,8 @@
             /* 16px : en dessous, iOS zoome tout seul à la mise au point */
             .form-input, .input-manual, .input-folder, .lg-row input,
             .pi-row input, .champ-mini input, .param-cell input,
-            .plan-table input, .sup-terre, .sup-com { font-size: 16px; }
+            .plan-table input, .sup-terre, .sup-com,
+            .ct-grid input, .ct-grid select { font-size: 16px; }
 
             /* Écran Options */
             .opt-add { grid-template-columns: 1fr; gap: 12px; }
@@ -340,6 +362,8 @@
             .lg-part { flex: 1; width: auto; text-align: left; }
             .pi-lib, .pi-coord { flex: 1 1 100%; }
             .eff-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .ct-grid { grid-template-columns: 1fr; }
+            .ct-btn { flex: 1 1 auto; }
             /* Le schéma pylône passe en colonne : gauche, centre, droite */
             .sup-schema { grid-template-columns: 1fr; gap: 10px; }
             .centre { width: 100%; }
@@ -628,6 +652,7 @@
             <div class="subtabs">
                 <button class="subtab active" data-t="gite" onclick="showSub('gite')">🏕️ Gîte / Courses</button>
                 <button class="subtab" data-t="pi" onclick="showSub('pi')">📍 PI</button>
+                <button class="subtab" data-t="contacts" onclick="showSub('contacts')">☎️ Contacts</button>
                 <button class="subtab" data-t="tech" onclick="showSub('tech')">🔧 Technique</button>
                 <button class="subtab" data-t="planning" onclick="showSub('planning')">📅 Planning</button>
                 <button class="subtab" data-t="notes" onclick="showSub('notes')">📝 Notes</button>
@@ -635,6 +660,7 @@
 
             <div id="sub-gite" class="subpane"></div>
             <div id="sub-pi" class="subpane" style="display:none"></div>
+            <div id="sub-contacts" class="subpane" style="display:none"></div>
             <div id="sub-tech" class="subpane" style="display:none"></div>
             <div id="sub-planning" class="subpane" style="display:none"></div>
 
@@ -797,6 +823,8 @@
         }
         let logi = logiVide();
         let piList = [];                              // {lib, coord}
+        function contactsVide() { return { cats: [], liste: [] }; }
+        let contacts = contactsVide();                // cats[] + liste[{id,cat,nom,fonction,tel,mail}]
         let tech = { pylones: [], portees: [] };      // voir normSup
         let planning = {};                            // { "2026-S34": { "2026-08-17": "texte" } }
         let notes = [];                               // {id, auteur, texte, fait, date}
@@ -1101,6 +1129,7 @@
                     // Logistique & Terrain (n'entre pas dans le calcul de pct)
                     logi: logi,
                     pi: piList,
+                    contacts: contacts,
                     tech: tech,
                     planning: planning,
                     notes: notes
@@ -1148,6 +1177,7 @@
             ois = p.ois || [];
             logi = normLogi(p.logi);
             piList = p.pi || [];
+            contacts = normContacts(p.contacts);
             tech = normTech(p.tech);
             planning = normPlanning(p.planning);
             notes = normNotes(p.notes);
@@ -1197,7 +1227,7 @@
         // --- 10. NOUVEAU DOSSIER ---
         function newItem() {
             curId = null; states = {}; ots=[]; ois=[];
-            logi = logiVide(); piList = []; tech = { pylones: [], portees: [] };
+            logi = logiVide(); piList = []; contacts = contactsVide(); tech = { pylones: [], portees: [] };
             planning = {}; notes = []; subActif = 'gite'; semActive = null;
             document.querySelectorAll('input,textarea,select').forEach(i=>i.value='');
             const elDepl = document.getElementById('inp-depl');
@@ -1449,6 +1479,21 @@
             });
             return v;
         }
+        function normContacts(x) {
+            const v = contactsVide();
+            if(!x) return v;
+            v.cats = (x.cats || []).filter(Boolean);
+            v.liste = (x.liste || []).map(c => ({
+                id: c.id || ('c' + Math.random().toString(36).slice(2)),
+                cat: c.cat || '', nom: c.nom || '', fonction: c.fonction || '',
+                tel: c.tel || '', mail: c.mail || ''
+            }));
+            // Toute catégorie utilisée doit figurer dans cats : les actions
+            // s'appuient sur l'indice dans ce tableau.
+            v.liste.forEach(c => { if(c.cat && !v.cats.includes(c.cat)) v.cats.push(c.cat); });
+            return v;
+        }
+
         function normNotes(x) {
             return (x || []).map(n => ({
                 id: n.id || ('n' + Math.random().toString(36).slice(2)),
@@ -1468,7 +1513,7 @@
         // --- Navigation ----------------------------------------------------
         function goLogi() { switchScreen('screen-logi'); renderLogi(); }
 
-        const SOUS_ONGLETS = ['gite','pi','tech','planning','notes'];
+        const SOUS_ONGLETS = ['gite','pi','contacts','tech','planning','notes'];
 
         function showSub(t) {
             subActif = t;
@@ -1495,7 +1540,7 @@
             const ia = document.getElementById('note-auteur');
             if(ia && !ia.value) { try { ia.value = localStorage.getItem('suivi-auteur') || ''; } catch(e) {} }
 
-            renderGite(); renderPI(); renderTech(); renderPlanning(); renderNotes();
+            renderGite(); renderPI(); renderContacts(); renderTech(); renderPlanning(); renderNotes();
             showSub(subActif);
         }
 
@@ -1883,6 +1928,134 @@
             }
         }
         function delPI(i) { piList.splice(i, 1); renderPI(); }
+
+        // --- Onglet Contacts ---------------------------------------------------
+        // Contacts rangés par catégorie libre. Appeler et envoyer un SMS
+        // restent possibles depuis le lien de partage : c'est l'intérêt sur
+        // le terrain. Le bouton courriel n'apparaît que si une adresse
+        // valide est renseignée.
+
+        // Le "(0)" de la notation +33 (0)6… ne doit pas être composé
+        function telBrut(t) { return String(t || '').replace(/\(\s*0\s*\)/g, '').replace(/[^\d+]/g, ''); }
+        function mailValide(m) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(m || '').trim()); }
+
+        function contactActions(i, c) {
+            const tel = telBrut(c.tel);
+            return `<div class="ct-actions">
+                <button class="ct-btn ct-tel" onclick="contactAction(${i},'tel')" ${tel ? '' : 'disabled'}>📞 Appeler</button>
+                <button class="ct-btn ct-sms" onclick="contactAction(${i},'sms')" ${tel ? '' : 'disabled'}>💬 SMS</button>
+                ${mailValide(c.mail) ? `<button class="ct-btn ct-mail" onclick="contactAction(${i},'mail')">✉️ Mail</button>` : ''}
+            </div>`;
+        }
+
+        function contactCarte(c, ro) {
+            const i = contacts.liste.indexOf(c);
+            if(ro) {
+                const coord = [c.tel, mailValide(c.mail) ? c.mail : ''].filter(Boolean).join(' · ');
+                return `<div class="ct-card">
+                    <div class="ct-ident">
+                        <b class="ct-nom">${esc(c.nom) || '—'}</b>
+                        ${c.fonction ? `<span class="ct-fonction">${esc(c.fonction)}</span>` : ''}
+                    </div>
+                    <div class="ct-coord">${esc(coord) || 'Aucune coordonnée'}</div>
+                    ${contactActions(i, c)}
+                </div>`;
+            }
+            return `<div class="ct-card">
+                <div class="ct-grid">
+                    <input placeholder="Nom et prénom" value="${esc(c.nom)}" onchange="setContact(${i},'nom',this.value)">
+                    <input placeholder="Fonction" value="${esc(c.fonction)}" onchange="setContact(${i},'fonction',this.value)">
+                    <input type="tel" placeholder="Téléphone" value="${esc(c.tel)}" onchange="setContact(${i},'tel',this.value)">
+                    <input type="email" placeholder="Adresse e-mail (facultatif)" value="${esc(c.mail)}" onchange="setContact(${i},'mail',this.value)">
+                    <select onchange="setContact(${i},'cat',this.value)">
+                        <option value="">Sans catégorie</option>
+                        ${contacts.cats.map(k => `<option value="${esc(k)}" ${k === c.cat ? 'selected' : ''}>${esc(k)}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="ct-bas">
+                    ${contactActions(i, c)}
+                    <button class="btn-x" onclick="delContact(${i})">🗑</button>
+                </div>
+            </div>`;
+        }
+
+        function renderContacts() {
+            const ro = PARTAGE;
+            const groupes = contacts.cats.map((cat, ci) => ({
+                cat: cat, ci: ci, items: contacts.liste.filter(c => c.cat === cat)
+            }));
+            const sans = contacts.liste.filter(c => !c.cat);
+            if(sans.length) groupes.push({ cat: '', ci: -1, items: sans });
+
+            let h = `<div class="lg-block">
+                <div class="lg-head"><span>☎️ Contacts du chantier</span>
+                ${ro ? '' : `<span style="display:flex;gap:8px;flex-wrap:wrap">
+                    <button class="btn-mini ghost" onclick="addContact(-1)">+ Contact</button>
+                    <button class="btn-mini" onclick="addCatContact()">+ Nouvelle catégorie</button>
+                </span>`}</div>
+                <div class="lg-body">`;
+
+            if(!groupes.length) {
+                h += '<div class="lg-vide">Aucun contact. Créez une catégorie (RTE, sous-traitants, secours…) puis ajoutez-y des personnes.</div>';
+            } else {
+                groupes.forEach(g => {
+                    h += `<div class="ct-cat">
+                        <span>${esc(g.cat) || 'Sans catégorie'}</span>
+                        ${(ro || g.ci < 0) ? '' : `<span style="display:flex;gap:8px">
+                            <button class="btn-mini ghost" onclick="addContact(${g.ci})">+ Contact</button>
+                            <button class="btn-x" onclick="delCatContact(${g.ci})">🗑</button>
+                        </span>`}
+                    </div>`;
+                    h += g.items.length ? g.items.map(c => contactCarte(c, ro)).join('')
+                                        : '<div class="lg-vide">Aucun contact dans cette catégorie</div>';
+                });
+            }
+
+            h += '</div></div>';
+            document.getElementById('sub-contacts').innerHTML = h;
+        }
+
+        function contactAction(i, quoi) {
+            const c = contacts.liste[i];
+            if(!c) return;
+            const tel = telBrut(c.tel);
+            let url = null;
+            if(quoi === 'tel'  && tel) url = 'tel:' + tel;
+            if(quoi === 'sms'  && tel) url = 'sms:' + tel;
+            if(quoi === 'mail' && mailValide(c.mail)) url = 'mailto:' + c.mail.trim();
+            if(url) window.location.href = url;
+        }
+
+        function addCatContact() {
+            const n = prompt("Nom de la catégorie (ex : RTE, Sous-traitants, Secours) :");
+            if(!n || !n.trim()) return;
+            const v = n.trim();
+            if(contacts.cats.includes(v)) { alert("Cette catégorie existe déjà."); return; }
+            contacts.cats.push(v);
+            renderContacts();
+        }
+
+        function addContact(ci) {
+            const cat = (ci >= 0 && contacts.cats[ci]) ? contacts.cats[ci] : '';
+            contacts.liste.push({ id: 'c' + Date.now(), cat: cat, nom:'', fonction:'', tel:'', mail:'' });
+            renderContacts();
+        }
+
+        // Re-rendu à chaque champ : c'est ce qui active les boutons d'appel
+        // et fait apparaître celui du courriel dès qu'une adresse est valide.
+        function setContact(i, c, v) { contacts.liste[i][c] = v; renderContacts(); }
+        function delContact(i)       { contacts.liste.splice(i, 1); renderContacts(); }
+
+        function delCatContact(ci) {
+            const cat = contacts.cats[ci];
+            const n = contacts.liste.filter(c => c.cat === cat).length;
+            let msg = `Supprimer la catégorie « ${cat} » ?`;
+            if(n) msg += `\n\nSes ${n} contact(s) ne seront pas supprimés : ils passeront dans « Sans catégorie ».`;
+            if(!confirm(msg)) return;
+            contacts.liste.forEach(c => { if(c.cat === cat) c.cat = ''; });
+            contacts.cats.splice(ci, 1);
+            renderContacts();
+        }
 
         // --- Onglet Technique -------------------------------------------------
         // Une liste plate de pylônes et une de portées (plus de regroupement
@@ -2331,6 +2504,7 @@
                 partageProjet = p;
                 logi     = normLogi(p.logi);
                 piList   = p.pi || [];
+                contacts = normContacts(p.contacts);
                 tech     = normTech(p.tech);
                 planning = normPlanning(p.planning);
                 notes    = normNotes(p.notes);
