@@ -365,7 +365,7 @@
         #print-sheet .pp-page {
             position: absolute; top: 0; left: 210mm;
             width: 210mm; height: 297mm;
-            box-sizing: border-box; padding: 10mm;
+            box-sizing: border-box; padding: 10mm 7mm 8mm 10mm;
             overflow: hidden;
         }
         #print-sheet .pp-scale { transform-origin: top left; display: flow-root; }
@@ -388,6 +388,12 @@
         #print-sheet .task-name { font-size: 10px; }
         #print-sheet .task-deadline { font-size: 9px; padding: 2px; }
 
+        /* Pas d'aplats de couleur sur le papier : le statut reste lisible
+           par les cases cochées et par les dates butoir. */
+        #print-sheet .row-ok,
+        #print-sheet .row-warn,
+        #print-sheet .row-late { background-color: #fff !important; border-left-color: transparent; }
+
         /* OUI/NON remplacés par des cases à cocher */
         #print-sheet .pp-opts { white-space: nowrap; }
         #print-sheet .pp-opt {
@@ -402,7 +408,7 @@
         }
 
         #print-sheet .pp-comments { margin-top: 8px !important; }
-        #print-sheet .pp-comments .pp-multi { min-height: 58px; }
+        #print-sheet .pp-comments .pp-multi { min-height: 135px; }
         #print-sheet .pp-comments .header-bar h3 { font-size: 11px !important; }
         #print-sheet .pp-comments > div:last-child { padding: 8px 12px !important; }
 
@@ -494,7 +500,7 @@
             </div>
 
             <div class="form-grid">
-                <div class="form-group span-2">
+                <div class="form-group span-2" id="grp-ligne">
                     <label class="form-label">Ligne HTB</label>
                     <select id="inp-line" class="form-input" onchange="updateHeader()"></select>
                 </div>
@@ -1859,6 +1865,8 @@
             // b) Éléments inutiles sur papier
             const g = clone.querySelector('#form-gauge-block');
             if(g) g.remove();                                              // jauge de progression
+            const gl = clone.querySelector('#grp-ligne');
+            if(gl) gl.remove();                                            // doublon du titre de l'en-tête
             clone.querySelectorAll('.input-group-row').forEach(e => e.remove()); // champs + bouton "+"
             clone.querySelectorAll('.tag-pill span').forEach(e => e.remove());   // croix de suppression des tags
             clone.querySelectorAll('.form-label').forEach(e => {
@@ -1913,8 +1921,30 @@
             const availW = page.clientWidth  - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
             const availH = page.clientHeight - parseFloat(cs.paddingTop)  - parseFloat(cs.paddingBottom);
             scaler.style.transform = 'none';
-            scaler.style.width = availW + 'px';
-            const k = Math.min(1, availH / scaler.scrollHeight);
+            let W = availW;
+            scaler.style.width = W + 'px';
+
+            // Si la fiche est trop haute, il faut la réduire. Mais une
+            // réduction rétrécit AUSSI la largeur : composée sur availW puis
+            // réduite à k, elle ne couvrirait que availW × k, laissant une
+            // bande blanche à droite. On la compose donc plus large, de sorte
+            // qu'une fois réduite elle occupe exactement la largeur utile.
+            // Autrement dit on cherche W tel que W / hauteur(W) = availW / availH.
+            // hauteur(W) décroît quand W croît, donc W / hauteur(W) est
+            // strictement croissante : une dichotomie converge.
+            if(scaler.scrollHeight > availH) {
+                const cible = availW / availH;
+                let bas = availW, haut = availW * 3;
+                for(let i = 0; i < 14; i++) {
+                    W = (bas + haut) / 2;
+                    scaler.style.width = W + 'px';
+                    if(W / scaler.scrollHeight < cible) bas = W; else haut = W;
+                }
+                W = haut;
+                scaler.style.width = W + 'px';
+            }
+
+            const k = Math.min(1, availH / scaler.scrollHeight, availW / W);
             scaler.style.transform = 'scale(' + k + ')';
             sheet.style.cssText = '';
         }
