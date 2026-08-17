@@ -154,9 +154,17 @@
         .btn-logi { background: #0f766e; color: white; }
 
         .subtabs { display: flex; background: #f1f5f9; border-bottom: 2px solid var(--border); overflow-x: auto; }
-        .subtab { flex: 1; min-width: 150px; background: transparent; border: none; border-bottom: 3px solid transparent; padding: 14px 18px; font-size: 0.95rem; font-weight: 700; color: #64748b; cursor: pointer; white-space: nowrap; }
+        .subtab { position: relative; flex: 1; min-width: 150px; background: transparent; border: none; border-bottom: 3px solid transparent; padding: 14px 18px; font-size: 0.95rem; font-weight: 700; color: #64748b; cursor: pointer; white-space: nowrap; }
         .subtab:hover { background: #e2e8f0; }
         .subtab.active { color: var(--primary); border-bottom-color: var(--accent); background: white; }
+
+        /* Filet de séparation entre onglets, en retrait haut et bas.
+           Il s'efface autour de l'onglet actif, qui se détache ainsi seul. */
+        .subtab + .subtab::before {
+            content: ''; position: absolute; left: 0; top: 24%; bottom: 24%;
+            border-left: 1px solid #cbd5e1;
+        }
+        .subtab.active::before, .subtab.active + .subtab::before { border-left-color: transparent; }
         .subpane { padding: 20px; }
 
         .lg-block { border: 1px solid var(--border); border-radius: 10px; margin-bottom: 20px; overflow: hidden; }
