@@ -200,28 +200,64 @@
         .btn-waze:disabled, .btn-maps:disabled { opacity: 0.35; cursor: not-allowed; }
 
         /* Technique */
-        .eq-card { border: 1px solid #94a3b8; border-radius: 10px; margin-bottom: 18px; overflow: hidden; }
-        .eq-head { background: var(--primary); color: white; padding: 12px 16px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-        .eq-head input { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.35); color: white; padding: 7px 10px; border-radius: 6px; font-weight: 700; }
-        .eq-head input::placeholder { color: rgba(255,255,255,0.6); }
-        .eq-body { padding: 14px 16px; }
         .eq-sect { font-size: 0.78rem; font-weight: 800; text-transform: uppercase; color: #475569; letter-spacing: 0.05em; margin: 16px 0 8px; display: flex; align-items: center; gap: 10px; }
-        .eq-sect:first-child { margin-top: 0; }
-
-        .sup-card { border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 8px; padding: 12px; margin-bottom: 10px; background: #fbfdff; }
-        .sup-top { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
-        .sup-top input { padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; }
-        .sup-num { width: 120px; font-weight: 800; }
-        .sup-terre { flex: 1; min-width: 170px; }
-        .eff-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; }
-        .eff-cell { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-        .eff-lab { font-size: 0.66rem; font-weight: 800; color: #64748b; text-transform: uppercase; }
-        .eff-cell input { padding: 7px; border: 1px solid #cbd5e1; border-radius: 6px; text-align: center; width: 100%; box-sizing: border-box; }
+        .sup-card { border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 8px; padding: 12px; margin-bottom: 12px; background: #fbfdff; }
+        .sup-terre { flex: 1; min-width: 170px; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; }
         .sup-com { width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; }
         .sup-com-ro { background: #f8fafc; border-left: 3px solid #cbd5e1; padding: 8px 10px; border-radius: 4px; font-style: italic; }
 
         .ro-val { display: inline-block; padding: 6px 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; font-weight: 600; color: #0f172a; }
         .ro-eff { font-weight: 800; color: #0f172a; padding: 5px 0; }
+
+        /* Case « a payé » */
+        .lg-paye { display: flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 800; color: #065f46; white-space: nowrap; cursor: pointer; }
+        .lg-paye input { width: 17px; height: 17px; cursor: pointer; }
+        .badge-paye { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 10px; padding: 1px 8px; font-size: 0.72rem; font-weight: 800; white-space: nowrap; }
+        .pi-ok { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 10px; padding: 2px 9px; font-size: 0.75rem; font-weight: 800; white-space: nowrap; }
+
+        /* --- Technique : fiche support avec schéma --- */
+        .sup-param { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; background: #f1f5f9; border-bottom: 1px solid var(--border); padding: 9px 12px; margin: -12px -12px 0; }
+        .param-cell { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 800; color: #475569; }
+        .param-cell input { width: 80px; padding: 6px; border: 1px solid #cbd5e1; border-radius: 6px; text-align: center; font-weight: 700; }
+        .eff-unit { font-size: 0.74rem; font-weight: 800; color: #0369a1; min-width: 20px; }
+
+        .sup-schema { display: grid; grid-template-columns: 1fr auto 1fr; gap: 14px; align-items: start; padding: 14px 0 10px; }
+        .cote { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+        .cote-titre { font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: #64748b; letter-spacing: .05em; text-align: center; }
+        .champ-mini { display: flex; flex-direction: column; gap: 3px; }
+        .champ-mini label { font-size: 0.64rem; font-weight: 800; color: #64748b; text-transform: uppercase; text-align: center; }
+        .champ-mini input { padding: 7px; border: 1px solid #cbd5e1; border-radius: 6px; text-align: center; width: 100%; }
+        .centre { display: flex; flex-direction: column; align-items: center; gap: 7px; width: 132px; }
+        .num-central input { font-weight: 800; font-size: 1.05rem; }
+        .pylone-svg { width: 76px; height: 86px; color: #334155; }
+        .pylone-svg path, .pylone-svg line { stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+        .pylone-svg circle { fill: currentColor; stroke: none; }
+
+        /* --- Planning --- */
+        .sem-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+        .sem-tab { background: #e2e8f0; border: 1px solid var(--border); color: #475569; border-radius: 8px; padding: 7px 15px; font-weight: 800; cursor: pointer; }
+        .sem-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .plan-wrap { overflow-x: auto; }
+        .plan-table { width: 100%; border-collapse: collapse; min-width: 420px; }
+        .plan-table th { background: #f1f5f9; font-size: 0.7rem; text-transform: uppercase; letter-spacing: .05em; color: #475569; padding: 8px 10px; text-align: left; border: 1px solid var(--border); }
+        .plan-table td { border: 1px solid var(--border); padding: 5px 8px; }
+        .plan-jour { width: 165px; font-weight: 700; color: var(--primary); white-space: nowrap; }
+        .plan-we .plan-jour { color: #94a3b8; }
+        .plan-we { background: #f8fafc; }
+        .plan-table input { width: 100%; border: none; padding: 7px 4px; font-size: 0.92rem; background: transparent; }
+        .plan-table input:focus { outline: 2px solid var(--accent); border-radius: 4px; }
+
+        /* --- Notes --- */
+        .note-form { background: #f8fafc; border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 18px; display: flex; flex-direction: column; gap: 11px; }
+        .note-card { border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 8px; padding: 12px; margin-bottom: 10px; background: #fff; }
+        .note-card.faite { border-left-color: #10b981; background: #f0fdf4; }
+        .note-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+        .note-auteur { font-weight: 800; color: var(--primary); }
+        .note-date { font-size: 0.76rem; color: #94a3b8; }
+        .note-texte { white-space: pre-wrap; line-height: 1.45; overflow-wrap: anywhere; }
+        .note-card.faite .note-texte { color: #64748b; text-decoration: line-through; }
+        .note-fait { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 800; color: #065f46; cursor: pointer; margin-left: auto; }
+        .note-fait input { width: 17px; height: 17px; cursor: pointer; }
 
         /* Mode partage : on ne laisse voir que cet écran, sans rien de modifiable */
         body.partage .navbar, body.partage .footer-sticky, body.partage .logi-back { display: none !important; }
@@ -280,8 +316,8 @@
 
             /* 16px : en dessous, iOS zoome tout seul à la mise au point */
             .form-input, .input-manual, .input-folder, .lg-row input,
-            .pi-row input, .sup-top input, .eff-cell input,
-            .sup-com, .eq-head input { font-size: 16px; }
+            .pi-row input, .champ-mini input, .param-cell input,
+            .plan-table input, .sup-terre, .sup-com { font-size: 16px; }
 
             /* Écran Options */
             .opt-add { grid-template-columns: 1fr; gap: 12px; }
@@ -304,8 +340,11 @@
             .lg-part { flex: 1; width: auto; text-align: left; }
             .pi-lib, .pi-coord { flex: 1 1 100%; }
             .eff-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-            .eq-head, .eq-body { padding: 11px 13px; }
-            .eq-head input { flex: 1 1 100%; }
+            /* Le schéma pylône passe en colonne : gauche, centre, droite */
+            .sup-schema { grid-template-columns: 1fr; gap: 10px; }
+            .centre { width: 100%; }
+            .sem-tab { padding: 7px 12px; font-size: 0.85rem; }
+            .plan-jour { width: 118px; font-size: 0.85rem; white-space: normal; }
             .recu-item { flex-wrap: wrap; }
             .recu-dl { flex: 1 1 100%; }
 
@@ -590,11 +629,31 @@
                 <button class="subtab active" data-t="gite" onclick="showSub('gite')">🏕️ Gîte / Courses</button>
                 <button class="subtab" data-t="pi" onclick="showSub('pi')">📍 PI</button>
                 <button class="subtab" data-t="tech" onclick="showSub('tech')">🔧 Technique</button>
+                <button class="subtab" data-t="planning" onclick="showSub('planning')">📅 Planning</button>
+                <button class="subtab" data-t="notes" onclick="showSub('notes')">📝 Notes</button>
             </div>
 
             <div id="sub-gite" class="subpane"></div>
             <div id="sub-pi" class="subpane" style="display:none"></div>
             <div id="sub-tech" class="subpane" style="display:none"></div>
+            <div id="sub-planning" class="subpane" style="display:none"></div>
+
+            <!-- Le formulaire de note est statique : le re-rendre à chaque
+                 publication ferait perdre le focus pendant la frappe. -->
+            <div id="sub-notes" class="subpane" style="display:none">
+                <div class="note-form">
+                    <div class="form-group">
+                        <label class="form-label">Nom et prénom</label>
+                        <input id="note-auteur" class="form-input" placeholder="ex : Jean Dupont">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Votre note</label>
+                        <textarea id="note-texte" class="form-input" rows="3" placeholder="Information, tâche à effectuer, remarque…"></textarea>
+                    </div>
+                    <button class="btn-mini" style="align-self:flex-start" onclick="ajouterNote()">+ Publier la note</button>
+                </div>
+                <div id="notes-list"></div>
+            </div>
         </div>
 
         <div class="footer-sticky">
@@ -737,9 +796,12 @@
             };
         }
         let logi = logiVide();
-        let piList = [];    // {lib, coord}
-        let equipes = [];   // {nom, membres[], pylones[], portees[]}
+        let piList = [];                              // {lib, coord}
+        let tech = { pylones: [], portees: [] };      // voir normSup
+        let planning = {};                            // { "2026-S34": { "2026-08-17": "texte" } }
+        let notes = [];                               // {id, auteur, texte, fait, date}
         let subActif = 'gite';
+        let semActive = null;                         // semaine affichée dans le planning
 
         window.onload = () => {
             if(PARTAGE) return;   // la vue partagée se construit seule (fin de script)
@@ -760,6 +822,17 @@
             if(document.getElementById('screen-home').classList.contains('active')) renderHome();
             if(document.getElementById('screen-archive').classList.contains('active')) renderGrid('grid-archives', true);
             if(document.getElementById('screen-options').classList.contains('active')) renderLignes();
+
+            // Les notes sont collaboratives : on garde la copie en mémoire
+            // alignée sur la base, sinon un enregistrement écraserait celles
+            // publiées entre-temps par quelqu'un d'autre.
+            if(curId) {
+                const p = projects.find(x => x.id == curId);
+                if(p) {
+                    notes = normNotes(p.notes);
+                    if(document.getElementById('screen-logi').classList.contains('active')) renderNotes();
+                }
+            }
         });
 
         // --- 4b. REFERENTIEL DES LIGNES (temps réel) ---
@@ -1028,7 +1101,9 @@
                     // Logistique & Terrain (n'entre pas dans le calcul de pct)
                     logi: logi,
                     pi: piList,
-                    tech: { equipes: equipes }
+                    tech: tech,
+                    planning: planning,
+                    notes: notes
                 };
 
                 // ENVOI VERS FIREBASE
@@ -1073,7 +1148,10 @@
             ois = p.ois || [];
             logi = normLogi(p.logi);
             piList = p.pi || [];
-            equipes = normEquipes(p.tech && p.tech.equipes);
+            tech = normTech(p.tech);
+            planning = normPlanning(p.planning);
+            notes = normNotes(p.notes);
+            semActive = null;
             
             // Remplissage Formulaire
             // Si la ligne a été retirée du référentiel depuis, on la réinjecte
@@ -1119,7 +1197,8 @@
         // --- 10. NOUVEAU DOSSIER ---
         function newItem() {
             curId = null; states = {}; ots=[]; ois=[];
-            logi = logiVide(); piList = []; equipes = []; subActif = 'gite';
+            logi = logiVide(); piList = []; tech = { pylones: [], portees: [] };
+            planning = {}; notes = []; subActif = 'gite'; semActive = null;
             document.querySelectorAll('input,textarea,select').forEach(i=>i.value='');
             const elDepl = document.getElementById('inp-depl');
             if(elDepl) elDepl.checked = false;
@@ -1352,24 +1431,48 @@
             return v;
         }
         function normSup(s) {
-            return { num:s.num||'', terre:s.terre||'', ev:s.ev||'', ehd:s.ehd||'',
-                     ehg:s.ehg||'', eld:s.eld||'', elg:s.elg||'', com:s.com||'' };
+            s = s || {};
+            return { num:s.num||'', numG:s.numG||'', numD:s.numD||'',
+                     param:s.param||'', temp:s.temp||'', vent:s.vent||'',
+                     terre:s.terre||'', ev:s.ev||'', ehd:s.ehd||'', ehg:s.ehg||'',
+                     eld:s.eld||'', elg:s.elg||'', com:s.com||'' };
         }
-        function normEquipes(x) {
-            return (x || []).map(e => ({
-                nom:     e.nom || '',
-                membres: e.membres || [],
-                pylones: (e.pylones || []).map(normSup),
-                portees: (e.portees || []).map(normSup)
+        function normTech(t) {
+            const v = { pylones: [], portees: [] };
+            if(!t) return v;
+            v.pylones = (t.pylones || []).map(normSup);
+            v.portees = (t.portees || []).map(normSup);
+            // Reprise de l'ancien format, qui regroupait par équipe
+            (t.equipes || []).forEach(e => {
+                (e.pylones || []).forEach(s => v.pylones.push(normSup(s)));
+                (e.portees || []).forEach(s => v.portees.push(normSup(s)));
+            });
+            return v;
+        }
+        function normNotes(x) {
+            return (x || []).map(n => ({
+                id: n.id || ('n' + Math.random().toString(36).slice(2)),
+                auteur: n.auteur || '', texte: n.texte || '',
+                fait: !!n.fait, date: n.date || 0
             }));
+        }
+        function normPlanning(x) {
+            const v = {};
+            Object.keys(x || {}).forEach(sem => {
+                v[sem] = {};
+                Object.keys(x[sem] || {}).forEach(j => { v[sem][j] = x[sem][j] || ''; });
+            });
+            return v;
         }
 
         // --- Navigation ----------------------------------------------------
         function goLogi() { switchScreen('screen-logi'); renderLogi(); }
 
+        const SOUS_ONGLETS = ['gite','pi','tech','planning','notes'];
+
         function showSub(t) {
             subActif = t;
-            ['gite','pi','tech'].forEach(x => {
+            SOUS_ONGLETS.forEach(x => {
                 document.getElementById('sub-'+x).style.display = (x === t) ? 'block' : 'none';
             });
             document.querySelectorAll('.subtab').forEach(b => b.classList.toggle('active', b.dataset.t === t));
@@ -1388,7 +1491,11 @@
             document.getElementById('logi-title').textContent = titre.toUpperCase();
             document.getElementById('logi-sub').textContent = sous;
 
-            renderGite(); renderPI(); renderTech();
+            // Pré-remplit le nom de l'auteur des notes s'il est déjà connu
+            const ia = document.getElementById('note-auteur');
+            if(ia && !ia.value) { try { ia.value = localStorage.getItem('suivi-auteur') || ''; } catch(e) {} }
+
+            renderGite(); renderPI(); renderTech(); renderPlanning(); renderNotes();
             showSub(subActif);
         }
 
@@ -1403,22 +1510,17 @@
             return d.pers.length ? m / d.pers.length : 0;
         }
 
-        function selPayeur(k, ro) {
-            const d = logi[k];
-            if(ro) return `<span class="ro-val">${esc(d.payeur) || '—'}</span>`;
-            const noms = d.pers.map(p => p.nom).filter(Boolean);
-            if(!noms.length) return `<div class="lg-warn">Ajoutez d'abord les personnes présentes</div>`;
-            return `<select class="form-input" onchange="setPayeur('${k}', this.value)">
-                <option value="">-- Qui a payé --</option>
-                ${noms.map(n => `<option value="${esc(n)}" ${n === d.payeur ? 'selected' : ''}>${esc(n)}</option>`).join('')}
-            </select>`;
-        }
-
         function persRows(k, ro) {
             const d = logi[k];
             if(!d.pers.length) return '<div class="lg-vide">Aucune personne enregistrée</div>';
             const avecNuits = (k === 'gite');
-            return d.pers.map((p, i) => `<div class="lg-row">
+            return d.pers.map((p, i) => {
+                const paye = !!p.nom && p.nom === d.payeur;
+                return `<div class="lg-row">
+                ${ro ? (paye ? '<span class="badge-paye">✓ a payé</span>' : '')
+                     : `<label class="lg-paye" title="Cocher la personne qui a payé">
+                            <input type="checkbox" ${paye ? 'checked' : ''} onchange="cocherPayeur('${k}',${i})">a payé
+                        </label>`}
                 ${ro ? `<span class="lg-name"><b>${esc(p.nom) || '—'}</b></span>`
                      : `<input class="lg-name" placeholder="Nom" value="${esc(p.nom)}" onchange="setPersNom('${k}',${i},this.value)">`}
                 ${!avecNuits ? '' : (ro
@@ -1426,7 +1528,16 @@
                      : `<input class="lg-nights" type="number" min="0" step="1" placeholder="nuits" value="${esc(p.nuits)}" oninput="setPersNuits('${k}',${i},this.value)">`)}
                 <span class="lg-part" id="part-${k}-${i}">${eur(partDe(k,i))}</span>
                 ${ro ? '' : `<button class="btn-x" onclick="delPers('${k}',${i})">🗑</button>`}
-            </div>`).join('');
+            </div>`;
+            }).join('');
+        }
+
+        // Une seule personne peut être le payeur : cocher l'une décoche l'autre.
+        function cocherPayeur(k, i) {
+            const nom = (logi[k].pers[i].nom || '').trim();
+            if(!nom) { alert("Renseignez d'abord le nom de cette personne."); renderGite(); return; }
+            logi[k].payeur = (logi[k].payeur === nom) ? '' : nom;
+            renderGite();
         }
 
         function totaux(k) {
@@ -1601,12 +1712,10 @@
             return `<div class="lg-block">
                 <div class="lg-head"><span>${titre}</span>${actions}</div>
                 <div class="lg-body">
-                    <div class="lg-grid2">
-                        <div class="form-group"><label class="form-label">Qui a payé</label>${selPayeur(k, ro)}</div>
-                        <div class="form-group"><label class="form-label">Montant total payé (€)</label>
-                            ${ro ? `<span class="ro-val">${eur(d.montant)}</span>`
-                                 : `<input class="form-input" type="number" step="0.01" min="0" placeholder="0,00" value="${esc(d.montant)}" oninput="setMontant('${k}', this.value)">`}
-                        </div>
+                    <div class="form-group" style="max-width:260px;margin-bottom:14px">
+                        <label class="form-label">Montant total payé (€)</label>
+                        ${ro ? `<span class="ro-val">${eur(d.montant)}</span>`
+                             : `<input class="form-input" type="number" step="0.01" min="0" placeholder="0,00" value="${esc(d.montant)}" oninput="setMontant('${k}', this.value)">`}
                     </div>
                     ${k === 'gite' ? blocGiteExtra(ro) : ''}
                     ${persRows(k, ro)}
@@ -1635,7 +1744,6 @@
         }
 
         function setMontant(k, v)      { logi[k].montant = v; majTotaux(k); }
-        function setPayeur(k, v)       { logi[k].payeur  = v; majTotaux(k); }
         function setPersNuits(k, i, v) { logi[k].pers[i].nuits = v; majTotaux(k); }
         function setPersNom(k, i, v) {
             const ancien = logi[k].pers[i].nom;
@@ -1671,11 +1779,17 @@
             } else {
                 h += piList.map((p, i) => {
                     const cible = (p.coord || '').trim();
+                    const gps = extraireCoord(cible);
+                    const lien = !gps && /^https?:\/\//i.test(cible);
+                    let etat = '';
+                    if(gps)       etat = '<span class="pi-ok">✓ GPS</span>';
+                    else if(lien) etat = '<span class="pi-ok" style="background:#e0f2fe;color:#0369a1;border-color:#bae6fd">lien</span>';
                     return `<div class="pi-row">
                         ${ro ? `<span class="pi-lib"><b>${esc(p.lib) || '—'}</b></span>`
                              : `<input class="pi-lib" placeholder="Libellé (ex : Rassemblement)" value="${esc(p.lib)}" onchange="setPI(${i},'lib',this.value)">`}
                         ${ro ? `<span class="pi-coord">${esc(cible) || '—'}</span>`
-                             : `<input class="pi-coord" placeholder="45.8234, 1.2612 ou une adresse" value="${esc(cible)}" onchange="setPI(${i},'coord',this.value)">`}
+                             : `<input class="pi-coord" placeholder="Collez ici un lien Maps, des coordonnées ou une adresse" value="${esc(cible)}" onchange="setPI(${i},'coord',this.value)">`}
+                        ${etat}
                         <button class="btn-waze" onclick="ouvrirNav(${i},'waze')" ${cible ? '' : 'disabled'}>Waze</button>
                         <button class="btn-maps" onclick="ouvrirNav(${i},'maps')" ${cible ? '' : 'disabled'}>Maps</button>
                         ${ro ? '' : `<button class="btn-x" onclick="delPI(${i})">🗑</button>`}
@@ -1684,23 +1798,61 @@
             }
 
             h += `</div></div>`;
-            if(!ro) h += `<div class="lg-warn">Coordonnées décimales séparées par une virgule (45.8234, 1.2612), ou une adresse en toutes lettres. La virgule décimale française est acceptée.</div>`;
+            if(!ro) h += `<div class="lg-warn">Collez directement le lien de partage d'un point Google Maps ou Waze : les coordonnées en sont extraites automatiquement et le champ affiche « ✓ GPS ». Une saisie manuelle (45.8234, 1.2612) ou une adresse en toutes lettres fonctionnent aussi. Un lien court non décodable est conservé tel quel et s'ouvrira directement dans l'application de cartographie.</div>`;
             document.getElementById('sub-pi').innerHTML = h;
         }
 
-        // Construit l'URL Waze / Google Maps à partir de coordonnées
-        // décimales (virgule ou point-virgule en séparateur, décimale
-        // française acceptée) ou, à défaut, d'une adresse en toutes lettres.
+        // Retrouve un couple latitude/longitude dans du texte collé : saisie
+        // directe, ou lien de partage Google Maps / Waze / Apple Plans.
+        // Renvoie "lat, lon" normalisé, ou null si rien d'exploitable.
+        function extraireCoord(t) {
+            t = (t || '').trim();
+            if(!t) return null;
+
+            const ok = (a, b) => {
+                const la = parseFloat(String(a).replace(',', '.'));
+                const lo = parseFloat(String(b).replace(',', '.'));
+                if(isNaN(la) || isNaN(lo) || Math.abs(la) > 90 || Math.abs(lo) > 180) return null;
+                const c = n => String(parseFloat(n.toFixed(6)));
+                return c(la) + ', ' + c(lo);
+            };
+
+            let m;
+            // saisie directe : "45.8234, 1.2612" ou "45,8234; 1,2612"
+            m = t.match(/^\s*(-?\d+(?:[.,]\d+)?)\s*[,;]\s*(-?\d+(?:[.,]\d+)?)\s*$/);
+            if(m) return ok(m[1], m[2]);
+            // .../@45.8234,1.2612,17z
+            m = t.match(/@(-?\d{1,3}\.\d+),\s*(-?\d{1,3}\.\d+)/);
+            if(m) return ok(m[1], m[2]);
+            // ?q= / &query= / &ll= / &sll= / &daddr= / &destination= / &center=
+            m = t.match(/[?&](?:q|query|ll|sll|daddr|destination|center)=(-?\d{1,3}\.\d+)(?:,|%2C)\s*(-?\d{1,3}\.\d+)/i);
+            if(m) return ok(m[1], m[2]);
+            // identifiant de lieu Google : !3d<lat>!4d<lon>
+            m = t.match(/!3d(-?\d{1,3}\.\d+)!4d(-?\d{1,3}\.\d+)/);
+            if(m) return ok(m[1], m[2]);
+            // dernier recours : deux décimaux précis séparés par une virgule
+            m = t.match(/(-?\d{1,3}\.\d{4,})\s*,\s*(-?\d{1,3}\.\d{4,})/);
+            if(m) return ok(m[1], m[2]);
+            return null;
+        }
+
         function urlNav(v, app) {
             v = (v || '').trim();
             if(!v) return null;
-            const m = v.match(/^\s*(-?\d+(?:[.,]\d+)?)\s*[,;]\s*(-?\d+(?:[.,]\d+)?)\s*$/);
-            if(m) {
-                const lat = m[1].replace(',', '.'), lon = m[2].replace(',', '.');
+
+            const c = extraireCoord(v);
+            if(c) {
+                const p = c.split(',');
+                const lat = p[0].trim(), lon = p[1].trim();
                 return (app === 'waze')
                     ? `https://waze.com/ul?ll=${lat},${lon}&navigate=yes`
                     : `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
             }
+            // Lien de partage court (maps.app.goo.gl…) : le navigateur ne peut
+            // pas suivre la redirection depuis cette page. On ouvre le lien
+            // tel quel, l'application de cartographie se débrouille.
+            if(/^https?:\/\//i.test(v)) return v;
+
             const q = encodeURIComponent(v);
             return (app === 'waze')
                 ? `https://waze.com/ul?q=${q}&navigate=yes`
@@ -1719,84 +1871,280 @@
             window.open(v, '_blank', 'noopener');
         }
 
-        function addPI()            { piList.push({ lib:'', coord:'' }); renderPI(); }
-        function setPI(i, c, v)     { piList[i][c] = v; if(c === 'coord') renderPI(); }
-        function delPI(i)           { piList.splice(i, 1); renderPI(); }
+        function addPI() { piList.push({ lib:'', coord:'' }); renderPI(); }
+        function setPI(i, c, v) {
+            if(c === 'coord') {
+                // Un lien collé est immédiatement converti en coordonnées
+                const gps = extraireCoord(v);
+                piList[i].coord = gps || v.trim();
+                renderPI();
+            } else {
+                piList[i][c] = v;
+            }
+        }
+        function delPI(i) { piList.splice(i, 1); renderPI(); }
 
-        // --- Onglet Technique -----------------------------------------------
-        const EFFORTS = [['ev','Vertical'],['ehd','Horiz. droite'],['ehg','Horiz. gauche'],
-                         ['eld','Long. droite'],['elg','Long. gauche']];
+        // --- Onglet Technique -------------------------------------------------
+        // Une liste plate de pylônes et une de portées (plus de regroupement
+        // par équipe). Chaque fiche est un schéma : le support au centre, ses
+        // voisins de gauche et de droite, et les efforts de chaque côté.
 
-        function supportsHtml(ei, type, ro) {
-            const lst = equipes[ei][type] || [];
-            const mot = (type === 'portees') ? 'portée enregistrée' : 'pylône enregistré';
-            if(!lst.length) return `<div class="lg-vide">Aucun${type === 'portees' ? 'e' : ''} ${mot}</div>`;
+        const PYLONE_SVG = `<svg viewBox="0 0 80 92" class="pylone-svg" aria-hidden="true">
+            <path d="M34 10 L40 3 L46 10"/>
+            <line x1="6" y1="32" x2="74" y2="32"/>
+            <line x1="15" y1="54" x2="65" y2="54"/>
+            <path d="M34 10 L34 32 L30 54 L26 90 M46 10 L46 32 L50 54 L54 90"/>
+            <path d="M34 14 L46 23 M46 14 L34 23 M34 23 L46 32 M46 23 L34 32
+                     M33 36 L47 45 M47 36 L33 45 M31 45 L49 54 M49 45 L31 54
+                     M29 58 L51 70 M51 58 L29 70 M27 74 L53 90 M53 74 L27 90"/>
+            <line x1="12" y1="32" x2="12" y2="41"/><circle cx="12" cy="43" r="2.2"/>
+            <line x1="68" y1="32" x2="68" y2="41"/><circle cx="68" cy="43" r="2.2"/>
+            <line x1="19" y1="54" x2="19" y2="62"/><circle cx="19" cy="64" r="2.2"/>
+            <line x1="61" y1="54" x2="61" y2="62"/><circle cx="61" cy="64" r="2.2"/>
+        </svg>`;
+
+        // Vent : exprimé en pascals, "SV" (sans vent) quand la valeur est nulle
+        function uniteVent(v) { return (v === '' || v == null || num(v) === 0) ? 'SV' : 'Pa'; }
+        function majVent(inp) {
+            const s = inp.nextElementSibling;
+            if(s) s.textContent = uniteVent(inp.value);
+        }
+
+        // Un champ du schéma : libellé au-dessus, valeur ou saisie en dessous
+        function champSup(type, si, cle, lab, ro, val, unite, extra) {
+            const v = (val === '' || val == null) ? '' : val;
+            const aff = v === '' ? '—' : esc(v) + (unite ? ' ' + unite : '');
+            return `<div class="champ-mini ${extra || ''}">
+                <label>${lab}</label>
+                ${ro ? `<span class="ro-eff" style="text-align:center">${aff}</span>`
+                     : `<input type="${cle === 'num' || cle === 'numG' || cle === 'numD' ? 'text' : 'number'}"
+                               placeholder="${cle.startsWith('num') ? 'n°' : '0'}" value="${esc(v)}"
+                               onchange="setSup('${type}',${si},'${cle}',this.value)">`}
+            </div>`;
+        }
+
+        function supportsHtml(type, ro) {
+            const lst = tech[type] || [];
+            if(!lst.length) {
+                return `<div class="lg-vide">Aucun${type === 'portees' ? 'e portée enregistrée' : ' pylône enregistré'}</div>`;
+            }
 
             return lst.map((s, si) => `<div class="sup-card">
-                <div class="sup-top">
-                    ${ro ? `<span class="ro-val"><b>${esc(s.num) || '—'}</b></span>`
-                         : `<input class="sup-num" placeholder="${type === 'portees' ? '71 - 72' : 'N° 71'}" value="${esc(s.num)}" onchange="setSup(${ei},'${type}',${si},'num',this.value)">`}
-                    ${ro ? `<span class="ro-val">Terre : ${esc(s.terre) || '—'}</span>`
-                         : `<input class="sup-terre" placeholder="Solution de terre retenue" value="${esc(s.terre)}" onchange="setSup(${ei},'${type}',${si},'terre',this.value)">`}
+                <div class="sup-param">
+                    <span class="param-cell">P :
+                        ${ro ? `<b>${esc(s.param) || '—'}</b>`
+                             : `<input type="text" placeholder="1200" value="${esc(s.param)}" onchange="setSup('${type}',${si},'param',this.value)">`}
+                    </span>
+                    <span class="param-cell">Température :
+                        ${ro ? `<b>${s.temp === '' ? '—' : esc(s.temp) + ' °C'}</b>`
+                             : `<input type="number" step="1" placeholder="15" value="${esc(s.temp)}" onchange="setSup('${type}',${si},'temp',this.value)"><span class="eff-unit">°C</span>`}
+                    </span>
+                    <span class="param-cell">Vent :
+                        ${ro ? `<b>${uniteVent(s.vent) === 'SV' ? 'SV' : esc(s.vent) + ' Pa'}</b>`
+                             : `<input type="number" step="1" placeholder="0" value="${esc(s.vent)}" oninput="majVent(this)" onchange="setSup('${type}',${si},'vent',this.value)"><span class="eff-unit">${uniteVent(s.vent)}</span>`}
+                    </span>
                     <div style="flex:1"></div>
-                    ${ro ? '' : `<button class="btn-x" onclick="delSup(${ei},'${type}',${si})">🗑</button>`}
+                    ${ro ? '' : `<button class="btn-x" onclick="delSup('${type}',${si})">🗑</button>`}
                 </div>
-                <div class="eff-grid">
-                    ${EFFORTS.map(([k, lab]) => `<div class="eff-cell">
-                        <span class="eff-lab">${lab} (daN)</span>
-                        ${ro ? `<span class="ro-eff">${s[k] !== '' && s[k] != null ? esc(s[k]) + ' daN' : '—'}</span>`
-                             : `<input type="number" step="1" placeholder="0" value="${esc(s[k])}" onchange="setSup(${ei},'${type}',${si},'${k}',this.value)">`}
-                    </div>`).join('')}
+
+                <div class="sup-schema">
+                    <div class="cote">
+                        <div class="cote-titre">◀ Côté gauche</div>
+                        ${champSup(type, si, 'numG', 'Support gauche', ro, s.numG)}
+                        ${champSup(type, si, 'ehg', 'Horizontal (daN)', ro, s.ehg, 'daN')}
+                        ${champSup(type, si, 'elg', 'Longitudinal (daN)', ro, s.elg, 'daN')}
+                    </div>
+
+                    <div class="centre">
+                        ${PYLONE_SVG}
+                        ${champSup(type, si, 'num', type === 'portees' ? 'Portée' : 'Pylône', ro, s.num, '', 'num-central')}
+                        ${champSup(type, si, 'ev', 'Vertical (daN)', ro, s.ev, 'daN')}
+                    </div>
+
+                    <div class="cote">
+                        <div class="cote-titre">Côté droit ▶</div>
+                        ${champSup(type, si, 'numD', 'Support droit', ro, s.numD)}
+                        ${champSup(type, si, 'ehd', 'Horizontal (daN)', ro, s.ehd, 'daN')}
+                        ${champSup(type, si, 'eld', 'Longitudinal (daN)', ro, s.eld, 'daN')}
+                    </div>
                 </div>
-                ${ro ? (s.com ? `<div class="sup-com-ro">${esc(s.com)}</div>` : '')
-                     : `<input class="sup-com" placeholder="Tâche à effectuer / remarque" value="${esc(s.com)}" onchange="setSup(${ei},'${type}',${si},'com',this.value)">`}
+
+                <div style="display:flex;gap:10px;flex-wrap:wrap">
+                    ${ro ? `<span class="ro-val">Terre : ${esc(s.terre) || '—'}</span>`
+                         : `<input class="sup-terre" placeholder="Solution de terre retenue" value="${esc(s.terre)}" onchange="setSup('${type}',${si},'terre',this.value)">`}
+                </div>
+                <div style="margin-top:10px">
+                    ${ro ? (s.com ? `<div class="sup-com-ro">${esc(s.com)}</div>` : '')
+                         : `<input class="sup-com" placeholder="Tâche à effectuer / remarque" value="${esc(s.com)}" onchange="setSup('${type}',${si},'com',this.value)">`}
+                </div>
             </div>`).join('');
         }
 
         function renderTech() {
             const ro = PARTAGE;
-            let h = `<div class="lg-block">
-                <div class="lg-head"><span>🔧 Équipes, pylônes et portées</span>
-                ${ro ? '' : '<button class="btn-mini" onclick="addEquipe()">+ Nouvelle équipe</button>'}</div>
-                <div class="lg-body">`;
-
-            if(!equipes.length) {
-                h += '<div class="lg-vide">Aucune équipe créée</div>';
-            } else {
-                h += equipes.map((e, ei) => `<div class="eq-card">
-                    <div class="eq-head">
-                        ${ro ? `<b style="font-size:1.05rem">${esc(e.nom) || 'Équipe sans nom'}</b>`
-                             : `<input placeholder="Nom de l'équipe" value="${esc(e.nom)}" onchange="setEq(${ei},'nom',this.value)">`}
-                        <div style="flex:1"></div>
-                        ${ro ? '' : `<button class="btn-x" onclick="delEquipe(${ei})">🗑 Supprimer l'équipe</button>`}
-                    </div>
-                    <div class="eq-body">
-                        <div class="eq-sect">Membres ${ro ? '' : `<button class="btn-mini ghost" onclick="addMembre(${ei})">+ Ajouter</button>`}</div>
-                        <div>${e.membres.length
-                            ? e.membres.map((m, mi) => `<span class="tag-pill">${esc(m)}${ro ? '' : `<span onclick="delMembre(${ei},${mi})" style="cursor:pointer;margin-left:5px">×</span>`}</span>`).join('')
-                            : '<span class="lg-vide">Aucun membre</span>'}</div>
-
-                        <div class="eq-sect">Pylônes ${ro ? '' : `<button class="btn-mini ghost" onclick="addSup(${ei},'pylones')">+ Ajouter un pylône</button>`}</div>
-                        ${supportsHtml(ei, 'pylones', ro)}
-
-                        <div class="eq-sect">Portées ${ro ? '' : `<button class="btn-mini ghost" onclick="addSup(${ei},'portees')">+ Ajouter une portée</button>`}</div>
-                        ${supportsHtml(ei, 'portees', ro)}
-                    </div>
-                </div>`).join('');
-            }
-
-            h += '</div></div>';
-            document.getElementById('sub-tech').innerHTML = h;
+            document.getElementById('sub-tech').innerHTML = `
+                <div class="lg-block">
+                    <div class="lg-head"><span>🔧 Pylônes</span>
+                    ${ro ? '' : `<button class="btn-mini" onclick="addSup('pylones')">+ Ajouter un pylône</button>`}</div>
+                    <div class="lg-body">${supportsHtml('pylones', ro)}</div>
+                </div>
+                <div class="lg-block">
+                    <div class="lg-head"><span>🔗 Portées</span>
+                    ${ro ? '' : `<button class="btn-mini" onclick="addSup('portees')">+ Ajouter une portée</button>`}</div>
+                    <div class="lg-body">${supportsHtml('portees', ro)}</div>
+                </div>`;
         }
 
-        function addEquipe()    { equipes.push({ nom:'', membres:[], pylones:[], portees:[] }); renderTech(); }
-        function setEq(ei,c,v)  { equipes[ei][c] = v; }
-        function delEquipe(ei)  { if(confirm("Supprimer cette équipe et tout son contenu ?")) { equipes.splice(ei,1); renderTech(); } }
-        function addMembre(ei)  { const n = prompt("Nom du membre :"); if(n && n.trim()) { equipes[ei].membres.push(n.trim()); renderTech(); } }
-        function delMembre(ei,mi) { equipes[ei].membres.splice(mi,1); renderTech(); }
-        function addSup(ei,type)  { equipes[ei][type].push(normSup({})); renderTech(); }
-        function setSup(ei,type,si,c,v) { equipes[ei][type][si][c] = v; }
-        function delSup(ei,type,si)     { equipes[ei][type].splice(si,1); renderTech(); }
+        function addSup(type)          { tech[type].push(normSup({})); renderTech(); }
+        function setSup(type, si, c, v) { tech[type][si][c] = v; }
+        function delSup(type, si)      { tech[type].splice(si, 1); renderTech(); }
+
+        // --- Onglet Planning ---------------------------------------------------
+        // Un sous-onglet par semaine ISO couverte par le chantier.
+
+        function numSemaine(d) {
+            const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+            const jour = t.getUTCDay() || 7;            // lundi = 1 … dimanche = 7
+            t.setUTCDate(t.getUTCDate() + 4 - jour);    // jeudi de la semaine
+            const an = t.getUTCFullYear();
+            const jan1 = new Date(Date.UTC(an, 0, 1));
+            return { an: an, num: Math.ceil((((t - jan1) / 86400000) + 1) / 7) };
+        }
+
+        function datesChantier() {
+            if(PARTAGE && partageProjet) return { d: partageProjet.start, f: partageProjet.end };
+            return { d: document.getElementById('inp-start').value,
+                     f: document.getElementById('inp-end').value };
+        }
+
+        function listeSemaines() {
+            const { d, f } = datesChantier();
+            if(!d) return [];
+            const debut = new Date(d + 'T00:00:00');
+            const fin   = new Date((f || d) + 'T00:00:00');
+            if(isNaN(debut) || isNaN(fin) || fin < debut) return [];
+
+            const cur = new Date(debut);
+            cur.setDate(cur.getDate() - ((cur.getDay() + 6) % 7));   // reculer au lundi
+            const out = [];
+            let garde = 0;
+            while(cur <= fin && garde++ < 120) {
+                const w = numSemaine(cur);
+                out.push({ cle: w.an + '-S' + String(w.num).padStart(2, '0'),
+                           lib: 'S' + w.num, lundi: new Date(cur) });
+                cur.setDate(cur.getDate() + 7);
+            }
+            return out;
+        }
+
+        const JOURS = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'];
+
+        function renderPlanning() {
+            const ro = PARTAGE;
+            const sems = listeSemaines();
+            const c = document.getElementById('sub-planning');
+
+            if(!sems.length) {
+                c.innerHTML = '<div class="lg-warn">Renseignez la date de début et la date de fin du chantier pour générer le planning.</div>';
+                return;
+            }
+            if(!semActive || !sems.some(s => s.cle === semActive)) semActive = sems[0].cle;
+            const sem = sems.find(s => s.cle === semActive);
+
+            const { d, f } = datesChantier();
+            const debut = new Date(d + 'T00:00:00'), fin = new Date((f || d) + 'T00:00:00');
+
+            let lignes = '';
+            for(let i = 0; i < 7; i++) {
+                const j = new Date(sem.lundi);
+                j.setDate(j.getDate() + i);
+                const iso = j.getFullYear() + '-' + String(j.getMonth()+1).padStart(2,'0') + '-' + String(j.getDate()).padStart(2,'0');
+                const horsChantier = (j < debut || j > fin);
+                const we = (i >= 5);
+                const val = (planning[sem.cle] && planning[sem.cle][iso]) || '';
+                lignes += `<tr class="${we ? 'plan-we' : ''}" ${horsChantier ? 'style="opacity:.5"' : ''}>
+                    <td class="plan-jour">${JOURS[i]} ${j.toLocaleDateString('fr-FR')}</td>
+                    <td>${ro ? esc(val) || '<span style="color:#cbd5e1">—</span>'
+                             : `<input value="${esc(val)}" placeholder="${horsChantier ? 'hors période de chantier' : 'Tâches, équipes, moyens…'}" onchange="setPlan('${sem.cle}','${iso}',this.value)">`}</td>
+                </tr>`;
+            }
+
+            c.innerHTML = `
+                <div class="sem-tabs">
+                    ${sems.map(s => `<button class="sem-tab ${s.cle === semActive ? 'active' : ''}" onclick="showSem('${s.cle}')">${s.lib}</button>`).join('')}
+                </div>
+                <div class="lg-block">
+                    <div class="lg-head"><span>📅 Semaine ${sem.lib} — du ${sem.lundi.toLocaleDateString('fr-FR')}</span></div>
+                    <div class="lg-body plan-wrap">
+                        <table class="plan-table">
+                            <thead><tr><th>Jour</th><th>Informations</th></tr></thead>
+                            <tbody>${lignes}</tbody>
+                        </table>
+                    </div>
+                </div>`;
+        }
+
+        function showSem(cle) { semActive = cle; renderPlanning(); }
+        function setPlan(sem, iso, v) {
+            if(!planning[sem]) planning[sem] = {};
+            planning[sem][iso] = v;
+        }
+
+        // --- Onglet Notes ------------------------------------------------------
+        // Contrairement aux autres onglets, celui-ci reste ouvert en écriture
+        // depuis le lien de partage : chacun signe sa note de son nom.
+
+        function renderNotes() {
+            const c = document.getElementById('notes-list');
+            if(!c) return;
+            if(!notes.length) { c.innerHTML = '<div class="lg-vide">Aucune note pour le moment</div>'; return; }
+
+            const lst = notes.slice().sort((a, b) => (b.date || 0) - (a.date || 0));
+            c.innerHTML = lst.map(n => {
+                const i = notes.indexOf(n);
+                const q = n.date ? new Date(n.date).toLocaleString('fr-FR', {dateStyle:'short', timeStyle:'short'}) : '';
+                return `<div class="note-card ${n.fait ? 'faite' : ''}">
+                    <div class="note-head">
+                        <span class="note-auteur">${esc(n.auteur) || 'Anonyme'}</span>
+                        <span class="note-date">${q}</span>
+                        <label class="note-fait">
+                            <input type="checkbox" ${n.fait ? 'checked' : ''} onchange="basculerNote(${i})">Effectué
+                        </label>
+                        ${PARTAGE ? '' : `<button class="btn-x" onclick="supprimerNote(${i})">🗑</button>`}
+                    </div>
+                    <div class="note-texte">${esc(n.texte)}</div>
+                </div>`;
+            }).join('');
+        }
+
+        function idChantierCourant() { return PARTAGE ? PARTAGE_ID : curId; }
+
+        async function persisterNotes() {
+            const cid = idChantierCourant();
+            if(!cid) return;
+            try { await db.ref('chantiers/' + cid + '/notes').set(notes); }
+            catch(e) { alert("Enregistrement de la note impossible : " + e.message); }
+        }
+
+        async function ajouterNote() {
+            const a = document.getElementById('note-auteur').value.trim();
+            const t = document.getElementById('note-texte').value.trim();
+            if(!a) { alert("Indiquez votre nom et votre prénom."); return; }
+            if(!t) { alert("La note est vide."); return; }
+            if(!idChantierCourant()) { alert("Enregistrez d'abord le chantier avant de publier des notes."); return; }
+
+            try { localStorage.setItem('suivi-auteur', a); } catch(e) {}
+            notes.push({ id: 'n' + Date.now(), auteur: a, texte: t, fait: false, date: Date.now() });
+            document.getElementById('note-texte').value = '';
+            renderNotes();
+            await persisterNotes();
+        }
+
+        async function basculerNote(i) { notes[i].fait = !notes[i].fait; renderNotes(); await persisterNotes(); }
+        async function supprimerNote(i) {
+            if(!confirm(`Supprimer la note de ${notes[i].auteur || 'cet auteur'} ?`)) return;
+            notes.splice(i, 1); renderNotes(); await persisterNotes();
+        }
 
         // --- Lien de partage --------------------------------------------------
         function copierLienPartage() {
@@ -1981,9 +2329,11 @@
                     return;
                 }
                 partageProjet = p;
-                logi    = normLogi(p.logi);
-                piList  = p.pi || [];
-                equipes = normEquipes(p.tech && p.tech.equipes);
+                logi     = normLogi(p.logi);
+                piList   = p.pi || [];
+                tech     = normTech(p.tech);
+                planning = normPlanning(p.planning);
+                notes    = normNotes(p.notes);
                 renderLogi();
             });
         }
