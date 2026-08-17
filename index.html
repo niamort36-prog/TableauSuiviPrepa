@@ -270,6 +270,27 @@
         .ct-mail { background: #6366f1; color: #fff; }
         .ct-btn:disabled { opacity: .35; cursor: not-allowed; }
 
+        /* --- Mode opératoire --- */
+        .mo-card { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 10px; background: #fff; overflow: hidden; }
+        .mo-card.ouvert { border-color: #94a3b8; }
+        .mo-head { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; padding: 11px 13px; cursor: pointer; background: #f8fafc; }
+        .mo-head:hover { background: #f1f5f9; }
+        .mo-chevron { color: #64748b; font-size: 0.75rem; width: 11px; flex: 0 0 11px; }
+        .mo-titre { font-weight: 800; color: var(--primary); }
+        .mo-titre.vide { color: #94a3b8; font-weight: 600; font-style: italic; }
+        .mo-when { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; border-radius: 10px; padding: 2px 9px; font-size: 0.73rem; font-weight: 800; white-space: nowrap; }
+        .mo-count { margin-left: auto; font-size: 0.75rem; color: #64748b; font-weight: 700; white-space: nowrap; }
+        .mo-body { padding: 13px; border-top: 1px solid var(--border); }
+        .mo-quand { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; margin-bottom: 12px; }
+        .mo-st { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+        .mo-st-num { flex: 0 0 22px; text-align: right; color: #64748b; font-weight: 800; font-size: 0.8rem; }
+        .mo-st input { flex: 1; min-width: 0; border: 1px solid #cbd5e1; border-radius: 5px; padding: 7px 9px; }
+        .mo-st select { border: 1px solid #cbd5e1; border-radius: 5px; padding: 7px 6px; font-size: 0.8rem; background: #f8fafc; min-width: 0; }
+        .st-jour { flex: 0 1 132px; }
+        .st-demi { flex: 0 1 104px; }
+        .mo-st-lu .mo-when { margin-left: 8px; }
+        .mo-st-lu { flex: 1; background: #f8fafc; border-left: 3px solid var(--accent); border-radius: 4px; padding: 6px 9px; overflow-wrap: anywhere; }
+
         /* --- Planning --- */
         .sem-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
         .sem-tab { background: #e2e8f0; border: 1px solid var(--border); color: #475569; border-radius: 8px; padding: 7px 15px; font-weight: 800; cursor: pointer; }
@@ -400,6 +421,12 @@
             /* Le schéma pylône passe en colonne : gauche, centre, droite */
             .sup-schema { grid-template-columns: 1fr; gap: 10px; }
             .centre { width: 100%; }
+            .mo-quand { grid-template-columns: 1fr !important; }
+            .mo-st { flex-wrap: wrap; }
+            .mo-st input { flex: 1 1 calc(100% - 60px); }
+            /* 40% laisse la place a la croix sur la meme ligne que les menus */
+            .st-jour, .st-demi { flex: 1 1 40%; }
+            .mo-st input, .mo-st select, .mo-quand select { font-size: 16px; }
             .sem-tab { padding: 7px 12px; font-size: 0.85rem; }
             /* Trois colonnes ne tiennent pas : chaque jour devient une carte
                empilant matin et après-midi, chacun avec son intitulé. */
@@ -712,6 +739,7 @@
                 <button class="subtab" data-t="pi" onclick="showSub('pi')">📍 PI</button>
                 <button class="subtab" data-t="contacts" onclick="showSub('contacts')">☎️ Contacts</button>
                 <button class="subtab" data-t="tech" onclick="showSub('tech')">🔧 Technique</button>
+                <button class="subtab" data-t="modeop" onclick="showSub('modeop')">📋 Mode opératoire</button>
                 <button class="subtab" data-t="planning" onclick="showSub('planning')">📅 Planning</button>
                 <button class="subtab" data-t="notes" onclick="showSub('notes')">📝 Notes</button>
             </div>
@@ -720,6 +748,7 @@
             <div id="sub-pi" class="subpane" style="display:none"></div>
             <div id="sub-contacts" class="subpane" style="display:none"></div>
             <div id="sub-tech" class="subpane" style="display:none"></div>
+            <div id="sub-modeop" class="subpane" style="display:none"></div>
             <div id="sub-planning" class="subpane" style="display:none"></div>
 
             <!-- Le formulaire de note est statique : le re-rendre à chaque
@@ -894,7 +923,9 @@
         function contactsVide() { return { cats: [], liste: [] }; }
         let contacts = contactsVide();                // cats[] + liste[{id,cat,nom,fonction,tel,mail}]
         let tech = { pylones: [], portees: [] };      // voir normSup
-        let planning = {};                            // { "2026-S34": { "2026-08-17": "texte" } }
+        let planning = {};                            // { "2026-S34": { "2026-08-17": {matin:[],apm:[]} } }
+        let modeOp = [];                              // {id,titre,personnes[],sem,jour,demi,sousTaches[]}
+        let moOuverts = {};                           // repli/depli des fiches, non enregistre
         let notes = [];                               // {id, auteur, texte, fait, date}
         let subActif = 'gite';
         let semActive = null;                         // semaine affichée dans le planning
@@ -1267,6 +1298,7 @@
                     pi: piList,
                     contacts: contacts,
                     tech: tech,
+                    modeOp: modeOpPropre(),
                     planning: planningPropre(),
                     notes: notes
                 };
@@ -1315,6 +1347,8 @@
             piList = p.pi || [];
             contacts = normContacts(p.contacts);
             tech = normTech(p.tech);
+            modeOp = normModeOp(p.modeOp);
+            moOuverts = {};
             planning = normPlanning(p.planning);
             notes = normNotes(p.notes);
             semActive = null;
@@ -1375,6 +1409,7 @@
         function newItem() {
             curId = null; states = {}; ots=[]; ois=[];
             logi = logiVide(); piList = []; contacts = contactsVide(); tech = { pylones: [], portees: [] };
+            modeOp = []; moOuverts = {};
             planning = {}; notes = []; subActif = 'gite'; semActive = null;
             document.querySelectorAll('input,textarea,select').forEach(i=>i.value='');
             const elDepl = document.getElementById('inp-depl');
@@ -1692,6 +1727,39 @@
                 fait: !!n.fait, date: n.date || 0
             }));
         }
+        // Une tâche mère couvre une PÉRIODE (jourDebut → jourFin) : elle peut
+        // durer une journée comme plusieurs semaines. Ses sous-tâches, elles,
+        // se rattachent au plus fin : une journée, voire une demi-journée.
+        function normSousTache(s) {
+            if(typeof s === 'string') s = { texte: s };
+            return { id: (s && s.id) || ('st' + Math.random().toString(36).slice(2)),
+                     texte: (s && s.texte) || '', jour: (s && s.jour) || '', demi: (s && s.demi) || '' };
+        }
+        function normModeOp(x) {
+            return (x || []).map(t => ({
+                id: t.id || ('mo' + Math.random().toString(36).slice(2)),
+                titre: t.titre || '',
+                personnes: t.personnes || [],
+                jourDebut: t.jourDebut || '',
+                jourFin: t.jourFin || '',
+                sousTaches: (t.sousTaches || []).map(normSousTache)
+            }));
+        }
+
+        // Retire les sous-tâches vides, puis les fiches restées entièrement vides
+        function modeOpPropre() {
+            return modeOp.map(t => ({
+                id: t.id,
+                titre: (t.titre || '').trim(),
+                personnes: t.personnes || [],
+                jourDebut: t.jourDebut || '',
+                jourFin: t.jourFin || '',
+                sousTaches: (t.sousTaches || [])
+                    .map(s => ({ id: s.id, texte: String(s.texte || '').trim(), jour: s.jour || '', demi: s.demi || '' }))
+                    .filter(s => s.texte)
+            })).filter(t => t.titre || t.personnes.length || t.sousTaches.length);
+        }
+
         // planning[semaine][jourISO] = { matin: [tâches], apm: [tâches] }
         function normPlanning(x) {
             const v = {};
@@ -1729,7 +1797,7 @@
         // --- Navigation ----------------------------------------------------
         function goLogi() { switchScreen('screen-logi'); renderLogi(); }
 
-        const SOUS_ONGLETS = ['gite','pi','contacts','tech','planning','notes'];
+        const SOUS_ONGLETS = ['gite','pi','contacts','tech','modeop','planning','notes'];
 
         function showSub(t) {
             subActif = t;
@@ -1756,7 +1824,8 @@
             const ia = document.getElementById('note-auteur');
             if(ia && !ia.value) { try { ia.value = localStorage.getItem('suivi-auteur') || ''; } catch(e) {} }
 
-            renderGite(); renderPI(); renderContacts(); renderTech(); renderPlanning(); renderNotes();
+            renderGite(); renderPI(); renderContacts(); renderTech();
+            renderModeOp(); renderPlanning(); renderNotes();
             showSub(subActif);
         }
 
@@ -2505,6 +2574,195 @@
         function setTache(sem, iso, demi, i, v) { jourPlan(sem, iso)[demi][i] = v; }
         function delTache(sem, iso, demi, i)    { jourPlan(sem, iso)[demi].splice(i, 1); renderPlanning(); }
 
+        // --- Onglet Mode opératoire ---------------------------------------------
+        // Fiches repliables : titre + intervenants en tête, sous-tâches au
+        // dépli. Chaque fiche peut se rattacher à une semaine, à une journée
+        // ou à une demi-journée, en réutilisant le découpage du Planning.
+
+        function isoDe(d) {
+            return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+        }
+
+        // Tous les jours du chantier, groupés par semaine (pour les <optgroup>)
+        function joursChantier() {
+            return listeSemaines().map(s => {
+                const jours = [];
+                for(let i = 0; i < 7; i++) {
+                    const j = new Date(s.lundi); j.setDate(j.getDate() + i);
+                    jours.push({ iso: isoDe(j),
+                                 lib: JOURS[i] + ' ' + j.toLocaleDateString('fr-FR'),
+                                 court: JOURS[i].slice(0,3).toLowerCase() + ' ' + String(j.getDate()).padStart(2,'0') + '/' + String(j.getMonth()+1).padStart(2,'0') });
+                }
+                return { sem: s.lib, jours: jours };
+            });
+        }
+        function jourInfo(iso, groupes) {
+            let r = null;
+            (groupes || joursChantier()).forEach(g => g.jours.forEach(j => { if(j.iso === iso) r = j; }));
+            return r;
+        }
+        function optionsJours(groupes, choisi) {
+            return groupes.map(g => `<optgroup label="Semaine ${esc(g.sem)}">${
+                g.jours.map(j => `<option value="${esc(j.iso)}" ${j.iso === choisi ? 'selected' : ''}>${esc(j.lib)}</option>`).join('')
+            }</optgroup>`).join('');
+        }
+
+        function libellePeriode(t, groupes) {
+            if(!t.jourDebut) return '';
+            const d = jourInfo(t.jourDebut, groupes);
+            if(!t.jourFin || t.jourFin === t.jourDebut) return d ? d.lib : t.jourDebut;
+            const f = jourInfo(t.jourFin, groupes);
+            const nb = Math.round((new Date(t.jourFin) - new Date(t.jourDebut)) / 86400000) + 1;
+            return 'Du ' + (d ? d.court : t.jourDebut) + ' au ' + (f ? f.court : t.jourFin) + ' · ' + nb + ' j';
+        }
+
+        function libelleSousTache(s, groupes) {
+            if(!s.jour) return '';
+            const j = jourInfo(s.jour, groupes);
+            const base = j ? j.court : s.jour;
+            if(!s.demi) return base;
+            return base + ' ' + (s.demi === 'matin' ? 'matin' : 'après-midi');
+        }
+
+        function renderModeOp() {
+            const ro = PARTAGE;
+            const gj = joursChantier();
+            const sansJours = !gj.length;
+
+            let h = `<div class="lg-block">
+                <div class="lg-head"><span>📋 Mode opératoire</span>
+                ${ro ? '' : `<button class="btn-mini" onclick="addMO()">+ Nouvelle tâche</button>`}</div>
+                <div class="lg-body">`;
+
+            if(sansJours && !ro) {
+                h += '<div class="lg-warn" style="margin-bottom:12px">Renseignez les dates du chantier pour pouvoir rattacher les tâches à un jour ou à une période.</div>';
+            }
+
+            if(!modeOp.length) {
+                h += '<div class="lg-vide">Aucune tâche. Créez-en une, donnez-lui un titre, associez des personnes puis détaillez les sous-tâches.</div>';
+            } else {
+                h += modeOp.map((t, i) => {
+                    const ouvert = !!moOuverts[t.id];
+                    const quand = libellePeriode(t, gj);
+                    const nb = (t.sousTaches || []).filter(s => String(s.texte || '').trim()).length;
+
+                    let corps = '';
+                    if(ouvert) {
+                        corps = `<div class="mo-body">
+                            ${ro ? '' : `<div class="form-group" style="margin-bottom:12px">
+                                <label class="form-label">Titre de la tâche</label>
+                                <input class="form-input" value="${esc(t.titre)}" placeholder="ex : Dépose du support 71" onchange="setMO(${i},'titre',this.value)">
+                            </div>`}
+
+                            <div class="eq-sect" style="margin-top:0">Période ${ro ? '' : '<span style="font-weight:600;text-transform:none;color:#94a3b8">— même jour de part et d’autre pour une tâche sur une seule journée</span>'}</div>
+                            ${ro ? `<div class="ro-val">${esc(quand) || 'Non rattachée'}</div>` : `
+                            <div class="mo-quand" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+                                <select class="form-input" onchange="setMO(${i},'jourDebut',this.value)">
+                                    <option value="">— Début : non rattachée —</option>
+                                    ${optionsJours(gj, t.jourDebut)}
+                                </select>
+                                <select class="form-input" ${t.jourDebut ? '' : 'disabled'} onchange="setMO(${i},'jourFin',this.value)">
+                                    <option value="">Fin : même jour</option>
+                                    ${optionsJours(gj, t.jourFin)}
+                                </select>
+                            </div>`}
+
+                            <div class="eq-sect">Intervenants ${ro ? '' : `<button class="btn-mini ghost" onclick="addPersonneMO(${i})">+ Personne</button>`}</div>
+                            <div>${(t.personnes || []).length
+                                ? t.personnes.map((p, k) => `<span class="tag-pill">${esc(p)}${ro ? '' : `<span onclick="delPersonneMO(${i},${k})" style="cursor:pointer;margin-left:5px">×</span>`}</span>`).join('')
+                                : '<span class="lg-vide">Personne associée</span>'}</div>
+
+                            <div class="eq-sect">Sous-tâches ${ro ? '' : `<button class="btn-mini ghost" onclick="addSousTache(${i})">+ Sous-tâche</button>`}</div>
+                            ${(t.sousTaches || []).length ? t.sousTaches.map((s, k) => {
+                                const q = libelleSousTache(s, gj);
+                                return `<div class="mo-st">
+                                    <span class="mo-st-num">${k + 1}.</span>
+                                    ${ro ? `<span class="mo-st-lu">${esc(s.texte)}${q ? ` <span class="mo-when">${esc(q)}</span>` : ''}</span>`
+                                         : `<input value="${esc(s.texte)}" placeholder="Action à réaliser…" onchange="setSousTache(${i},${k},'texte',this.value)">
+                                            <select class="st-jour" onchange="setSousTache(${i},${k},'jour',this.value)">
+                                                <option value="">— jour —</option>
+                                                ${optionsJours(gj, s.jour)}
+                                            </select>
+                                            <select class="st-demi" ${s.jour ? '' : 'disabled'} onchange="setSousTache(${i},${k},'demi',this.value)">
+                                                <option value="">journée</option>
+                                                <option value="matin" ${s.demi === 'matin' ? 'selected' : ''}>matin</option>
+                                                <option value="apm" ${s.demi === 'apm' ? 'selected' : ''}>après-midi</option>
+                                            </select>
+                                            <button class="pl-x" title="Retirer" onclick="delSousTache(${i},${k})">×</button>`}
+                                </div>`;
+                            }).join('') : '<div class="lg-vide">Aucune sous-tâche</div>'}
+
+                            ${ro ? '' : `<div style="margin-top:14px"><button class="btn-x" onclick="delMO(${i})">🗑 Supprimer cette tâche</button></div>`}
+                        </div>`;
+                    }
+
+                    return `<div class="mo-card ${ouvert ? 'ouvert' : ''}">
+                        <div class="mo-head" onclick="toggleMO(${i})">
+                            <span class="mo-chevron">${ouvert ? '▾' : '▸'}</span>
+                            <span class="mo-titre ${t.titre ? '' : 'vide'}">${esc(t.titre) || 'Sans titre'}</span>
+                            ${quand ? `<span class="mo-when">${esc(quand)}</span>` : ''}
+                            ${(t.personnes || []).map(p => `<span class="tag-pill">${esc(p)}</span>`).join('')}
+                            <span class="mo-count">${nb} sous-tâche${nb > 1 ? 's' : ''}</span>
+                        </div>
+                        ${corps}
+                    </div>`;
+                }).join('');
+            }
+
+            document.getElementById('sub-modeop').innerHTML = h + '</div></div>';
+        }
+
+        function toggleMO(i) { const id = modeOp[i].id; moOuverts[id] = !moOuverts[id]; renderModeOp(); }
+
+        function addMO() {
+            const t = { id: 'mo' + Date.now(), titre: '', personnes: [], jourDebut: '', jourFin: '', sousTaches: [] };
+            modeOp.push(t);
+            moOuverts[t.id] = true;               // on ouvre celle qu'on vient de créer
+            renderModeOp();
+            const champ = document.querySelector('.mo-card.ouvert .mo-body input');
+            if(champ) champ.focus();
+        }
+
+        function setMO(i, champ, v) {
+            const t = modeOp[i];
+            t[champ] = v;
+            // Les dates ISO se comparent directement : on garde fin >= début
+            if(champ === 'jourDebut') {
+                if(!v) t.jourFin = '';
+                else if(t.jourFin && t.jourFin < v) t.jourFin = v;
+            }
+            if(champ === 'jourFin' && v && t.jourDebut && v < t.jourDebut) t.jourDebut = v;
+            renderModeOp();
+        }
+
+        function delMO(i) {
+            const t = modeOp[i];
+            if(!confirm(`Supprimer la tâche « ${t.titre || 'Sans titre'} » et ses sous-tâches ?`)) return;
+            delete moOuverts[t.id];
+            modeOp.splice(i, 1);
+            renderModeOp();
+        }
+
+        function addPersonneMO(i) {
+            const n = prompt("Nom de la personne :");
+            if(n && n.trim()) { modeOp[i].personnes.push(n.trim()); renderModeOp(); }
+        }
+        function delPersonneMO(i, k) { modeOp[i].personnes.splice(k, 1); renderModeOp(); }
+
+        function addSousTache(i) {
+            modeOp[i].sousTaches.push(normSousTache({}));
+            renderModeOp();
+            const champs = document.querySelectorAll('.mo-card.ouvert .mo-st input');
+            if(champs.length) champs[champs.length - 1].focus();
+        }
+        function setSousTache(i, k, champ, v) {
+            const s = modeOp[i].sousTaches[k];
+            s[champ] = v;
+            if(champ === 'jour' && !v) s.demi = '';
+            if(champ !== 'texte') renderModeOp();   // le texte n'a pas besoin de re-rendu
+        }
+        function delSousTache(i, k) { modeOp[i].sousTaches.splice(k, 1); renderModeOp(); }
+
         // --- Onglet Notes ------------------------------------------------------
         // Contrairement aux autres onglets, celui-ci reste ouvert en écriture
         // depuis le lien de partage : chacun signe sa note de son nom.
@@ -2750,6 +3008,7 @@
                 piList   = p.pi || [];
                 contacts = normContacts(p.contacts);
                 tech     = normTech(p.tech);
+                modeOp   = normModeOp(p.modeOp);
                 planning = normPlanning(p.planning);
                 notes    = normNotes(p.notes);
                 renderLogi();
