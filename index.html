@@ -31,7 +31,14 @@
         .btn-nav { background: transparent; border: 1px solid var(--border); padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 500; }
         .btn-nav.active { background: var(--primary); color: white; border-color: var(--primary); }
         .btn-new { background: var(--accent); color: white; border: none; padding: 8px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        .sel-equipe { border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-weight: 700; color: var(--primary); background: #f8fafc; cursor: pointer; max-width: 210px; }
+        /* Rappel permanent de l'équipe affichée (le choix se fait dans Options) */
+        .nav-equipe { display: inline-block; background: #0f766e; color: #fff; font-size: 0.72rem; font-weight: 800; padding: 3px 11px; border-radius: 12px; margin-left: 8px; vertical-align: middle; letter-spacing: .03em; }
+
+        /* Bascule d'équipe, écran Options */
+        .eq-row.eq-active { background: #ecfdf5; border-left: 4px solid #10b981; }
+        .btn-basculer { background: var(--accent); color: white; border: none; border-radius: 6px; padding: 7px 16px; font-weight: 800; cursor: pointer; white-space: nowrap; }
+        .btn-basculer:hover { background: #0284c7; }
+        .badge-actif { background: #10b981; color: white; border-radius: 12px; padding: 4px 12px; font-size: 0.78rem; font-weight: 800; white-space: nowrap; }
 
         /* --- LAYOUT --- */
         .screen { max-width: 1200px; margin: 20px auto; padding: 0 20px; display: none; }
@@ -323,7 +330,7 @@
             .nav-logo { font-size: 1rem; flex: 1 1 100%; }
             .nav-actions { width: 100%; gap: 6px; }
             .nav-actions > button { flex: 1; padding: 9px 4px; font-size: 0.8rem; }
-            .sel-equipe { flex: 1 1 100%; max-width: none; }
+            .eq-row .btn-basculer, .eq-row .badge-actif { order: 4; }
 
             .project-card { padding: 15px; }
             .card-body { padding-right: 54px; }
@@ -500,9 +507,8 @@
 <body>
 
     <nav class="navbar">
-        <div class="nav-logo" onclick="goHome()">⚡ SUIVI CHANTIER (Live)</div>
+        <div class="nav-logo" onclick="goHome()">⚡ SUIVI CHANTIER (Live) <span id="nav-equipe" class="nav-equipe"></span></div>
         <div class="nav-actions">
-            <select id="sel-equipe" class="sel-equipe" title="Équipe affichée" onchange="changerEquipe(this.value)"></select>
             <button class="btn-nav active" id="nav-home" onclick="goHome()">En cours</button>
             <button class="btn-nav" id="nav-arch" onclick="goArchive()">Archives</button>
             <button class="btn-nav" id="nav-opt" onclick="goOptions()">⚙️ Options</button>
@@ -960,11 +966,11 @@
         function equipeDe(p) { return p.equipe || EQUIPE_DEFAUT; }
 
         function fillEquipeSelects() {
-            const nav = document.getElementById('sel-equipe');
-            if(nav) {
-                nav.innerHTML = equipesDispo.map(e =>
-                    `<option value="${esc(e)}" ${e === equipeActive ? 'selected' : ''}>${esc(e)}</option>`).join('');
-            }
+            // La barre du haut ne fait que rappeler l'équipe affichée :
+            // la bascule se fait par bouton dans l'écran Options.
+            const nav = document.getElementById('nav-equipe');
+            if(nav) nav.textContent = equipeActive;
+
             const f = document.getElementById('inp-equipe');
             if(f) {
                 const cur = f.value;
@@ -975,12 +981,17 @@
             if(lbl) lbl.textContent = equipeActive;
         }
 
+        function changerEquipeIdx(i) { changerEquipe(equipesDispo[i]); }
+
         function changerEquipe(v) {
+            if(!v || v === equipeActive) return;
             equipeActive = v;
             try { localStorage.setItem('suivi-equipe', v); } catch(e) {}
             fillEquipeSelects();
             ecouterLignes();                      // recharge le référentiel de la nouvelle équipe
-            if(document.getElementById('screen-archive').classList.contains('active')) goArchive();
+            // Depuis Options on y reste, pour voir le basculement s'appliquer
+            if(document.getElementById('screen-options').classList.contains('active')) { renderEquipes(); renderLignes(); }
+            else if(document.getElementById('screen-archive').classList.contains('active')) goArchive();
             else goHome();
         }
 
@@ -1479,9 +1490,12 @@
             if(!c) return;
             c.innerHTML = equipesDispo.map((e, i) => {
                 const nb = projects.filter(p => equipeDe(p) === e).length;
-                return `<div class="opt-row">
-                    <span class="opt-n"><b>${esc(e)}</b>${e === equipeActive ? ' <span class="opt-used">affichée</span>' : ''}</span>
-                    ${nb ? `<span class="opt-used">${nb} chantier${nb > 1 ? 's' : ''}</span>` : '<span class="opt-used">aucun chantier</span>'}
+                const actif = (e === equipeActive);
+                return `<div class="opt-row eq-row ${actif ? 'eq-active' : ''}">
+                    <span class="opt-n"><b>${esc(e)}</b></span>
+                    <span class="opt-used">${nb ? nb + ' chantier' + (nb > 1 ? 's' : '') : 'aucun chantier'}</span>
+                    ${actif ? '<span class="badge-actif">✓ Équipe affichée</span>'
+                            : `<button class="btn-basculer" onclick="changerEquipeIdx(${i})">Basculer sur cette équipe</button>`}
                     <button class="btn-del-ligne" onclick="deleteEquipe(${i})">🗑 Supprimer</button>
                 </div>`;
             }).join('');
