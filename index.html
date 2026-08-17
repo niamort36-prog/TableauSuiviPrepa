@@ -161,7 +161,7 @@
         .btn-logi { background: #0f766e; color: white; }
 
         .subtabs { display: flex; background: #f1f5f9; border-bottom: 2px solid var(--border); overflow-x: auto; }
-        .subtab { position: relative; flex: 1; min-width: 150px; background: transparent; border: none; border-bottom: 3px solid transparent; padding: 14px 18px; font-size: 0.95rem; font-weight: 700; color: #64748b; cursor: pointer; white-space: nowrap; }
+        .subtab { position: relative; flex: 1; min-width: 118px; background: transparent; border: none; border-bottom: 3px solid transparent; padding: 14px 14px; font-size: 0.95rem; font-weight: 700; color: #64748b; cursor: pointer; white-space: normal; line-height: 1.25; }
         .subtab:hover { background: #e2e8f0; }
         .subtab.active { color: var(--primary); border-bottom-color: var(--accent); background: white; }
 
@@ -369,7 +369,12 @@
             .btn-del-ligne { order: 3; margin-left: auto; }
 
             /* Logistique & Terrain */
-            .subtab { min-width: 0; flex: 1; padding: 11px 6px; font-size: 0.82rem; white-space: normal; line-height: 1.2; }
+            /* Six onglets sur 375px donneraient 62px chacun : "Technique",
+               mot insécable, deborderait de son bouton. On passe donc sur
+               deux rangees de trois. */
+            .subtabs { flex-wrap: wrap; overflow-x: visible; }
+            .subtab { min-width: 0; flex: 1 1 30%; padding: 10px 5px; font-size: 0.8rem; white-space: normal; line-height: 1.25; }
+            .subtab:nth-child(3n+1)::before { border-left-color: transparent; }   /* debut de rangee */
             .subpane { padding: 14px; }
             .lg-grid2 { grid-template-columns: 1fr; }
             .lg-head { padding: 11px 13px; }
