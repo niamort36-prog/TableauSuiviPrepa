@@ -277,12 +277,23 @@
         .plan-wrap { overflow-x: auto; }
         .plan-table { width: 100%; border-collapse: collapse; min-width: 420px; }
         .plan-table th { background: #f1f5f9; font-size: 0.7rem; text-transform: uppercase; letter-spacing: .05em; color: #475569; padding: 8px 10px; text-align: left; border: 1px solid var(--border); }
-        .plan-table td { border: 1px solid var(--border); padding: 5px 8px; }
-        .plan-jour { width: 165px; font-weight: 700; color: var(--primary); white-space: nowrap; }
+        .plan-table td { border: 1px solid var(--border); padding: 6px; vertical-align: top; }
+        .plan-jour { width: 158px; font-weight: 700; color: var(--primary); white-space: nowrap; vertical-align: middle; }
         .plan-we .plan-jour { color: #94a3b8; }
         .plan-we { background: #f8fafc; }
-        .plan-table input { width: 100%; border: none; padding: 7px 4px; font-size: 0.92rem; background: transparent; }
-        .plan-table input:focus { outline: 2px solid var(--accent); border-radius: 4px; }
+        .plan-cell { width: 40%; }
+
+        /* Tâches d'une demi-journée */
+        .pl-taches { display: flex; flex-direction: column; gap: 5px; }
+        .pl-tache { display: flex; align-items: center; gap: 5px; }
+        .pl-tache input { flex: 1; min-width: 0; border: 1px solid #cbd5e1; border-radius: 5px; padding: 6px 8px; font-size: 0.88rem; background: #fff; }
+        .pl-tache input:focus { outline: 2px solid var(--accent); }
+        .pl-lu { flex: 1; background: #eff6ff; border-left: 3px solid var(--accent); border-radius: 4px; padding: 5px 8px; font-size: 0.88rem; overflow-wrap: anywhere; }
+        .pl-x { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; border-radius: 5px; padding: 4px 9px; cursor: pointer; font-weight: 800; line-height: 1; }
+        .pl-x:hover { background: #ef4444; color: #fff; }
+        .pl-add { background: transparent; border: 1px dashed #94a3b8; color: #64748b; border-radius: 5px; padding: 5px; cursor: pointer; font-size: 0.76rem; font-weight: 700; }
+        .pl-add:hover { background: #f1f5f9; color: var(--primary); }
+        .pl-vide { color: #cbd5e1; }
 
         /* --- Notes --- */
         .note-form { background: #f8fafc; border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 18px; display: flex; flex-direction: column; gap: 11px; }
@@ -390,7 +401,16 @@
             .sup-schema { grid-template-columns: 1fr; gap: 10px; }
             .centre { width: 100%; }
             .sem-tab { padding: 7px 12px; font-size: 0.85rem; }
-            .plan-jour { width: 118px; font-size: 0.85rem; white-space: normal; }
+            /* Trois colonnes ne tiennent pas : chaque jour devient une carte
+               empilant matin et après-midi, chacun avec son intitulé. */
+            .plan-table { min-width: 0; }
+            .plan-table thead { display: none; }
+            .plan-table, .plan-table tbody, .plan-table tr, .plan-table td { display: block; width: 100%; }
+            .plan-table tr { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 10px; overflow: hidden; }
+            .plan-table td { border: none; border-top: 1px solid #e2e8f0; }
+            .plan-jour { width: auto; background: #f1f5f9; border-top: none; font-size: 0.9rem; padding: 8px 10px; white-space: normal; }
+            .plan-cell::before { content: attr(data-demi); display: block; font-size: 0.66rem; font-weight: 800;
+                                 text-transform: uppercase; letter-spacing: .05em; color: #64748b; margin-bottom: 5px; }
             .recu-item { flex-wrap: wrap; }
             .recu-dl { flex: 1 1 100%; }
 
@@ -1247,7 +1267,7 @@
                     pi: piList,
                     contacts: contacts,
                     tech: tech,
-                    planning: planning,
+                    planning: planningPropre(),
                     notes: notes
                 };
 
@@ -1672,11 +1692,36 @@
                 fait: !!n.fait, date: n.date || 0
             }));
         }
+        // planning[semaine][jourISO] = { matin: [tâches], apm: [tâches] }
         function normPlanning(x) {
             const v = {};
             Object.keys(x || {}).forEach(sem => {
                 v[sem] = {};
-                Object.keys(x[sem] || {}).forEach(j => { v[sem][j] = x[sem][j] || ''; });
+                Object.keys(x[sem] || {}).forEach(j => {
+                    const c = x[sem][j];
+                    if(typeof c === 'string') {
+                        // Ancien format : une seule zone de texte par journée
+                        v[sem][j] = { matin: c.trim() ? [c] : [], apm: [] };
+                    } else {
+                        v[sem][j] = { matin: (c && c.matin) || [], apm: (c && c.apm) || [] };
+                    }
+                });
+            });
+            return v;
+        }
+
+        // Retire les tâches vides et les journées devenues vides
+        function planningPropre() {
+            const v = {};
+            Object.keys(planning).forEach(sem => {
+                const jours = {};
+                Object.keys(planning[sem] || {}).forEach(iso => {
+                    const d = planning[sem][iso] || {};
+                    const m = (d.matin || []).map(s => String(s).trim()).filter(Boolean);
+                    const a = (d.apm   || []).map(s => String(s).trim()).filter(Boolean);
+                    if(m.length || a.length) jours[iso] = { matin: m, apm: a };
+                });
+                if(Object.keys(jours).length) v[sem] = jours;
             });
             return v;
         }
@@ -2404,12 +2449,10 @@
                 j.setDate(j.getDate() + i);
                 const iso = j.getFullYear() + '-' + String(j.getMonth()+1).padStart(2,'0') + '-' + String(j.getDate()).padStart(2,'0');
                 const horsChantier = (j < debut || j > fin);
-                const we = (i >= 5);
-                const val = (planning[sem.cle] && planning[sem.cle][iso]) || '';
-                lignes += `<tr class="${we ? 'plan-we' : ''}" ${horsChantier ? 'style="opacity:.5"' : ''}>
+                lignes += `<tr class="${i >= 5 ? 'plan-we' : ''}" ${horsChantier ? 'style="opacity:.55"' : ''}>
                     <td class="plan-jour">${JOURS[i]} ${j.toLocaleDateString('fr-FR')}</td>
-                    <td>${ro ? esc(val) || '<span style="color:#cbd5e1">—</span>'
-                             : `<input value="${esc(val)}" placeholder="${horsChantier ? 'hors période de chantier' : 'Tâches, équipes, moyens…'}" onchange="setPlan('${sem.cle}','${iso}',this.value)">`}</td>
+                    <td class="plan-cell" data-demi="Matin">${demiJournee(sem.cle, iso, 'matin', ro)}</td>
+                    <td class="plan-cell" data-demi="Après-midi">${demiJournee(sem.cle, iso, 'apm', ro)}</td>
                 </tr>`;
             }
 
@@ -2421,18 +2464,46 @@
                     <div class="lg-head"><span>📅 Semaine ${sem.lib} — du ${sem.lundi.toLocaleDateString('fr-FR')}</span></div>
                     <div class="lg-body plan-wrap">
                         <table class="plan-table">
-                            <thead><tr><th>Jour</th><th>Informations</th></tr></thead>
+                            <thead><tr><th>Jour</th><th>Matin</th><th>Après-midi</th></tr></thead>
                             <tbody>${lignes}</tbody>
                         </table>
                     </div>
                 </div>`;
         }
 
-        function showSem(cle) { semActive = cle; renderPlanning(); }
-        function setPlan(sem, iso, v) {
-            if(!planning[sem]) planning[sem] = {};
-            planning[sem][iso] = v;
+        function demiJournee(sem, iso, demi, ro) {
+            const lst = (planning[sem] && planning[sem][iso] && planning[sem][iso][demi]) || [];
+            let h = `<div class="pl-taches" data-cell="${sem}|${iso}|${demi}">`;
+            if(!lst.length && ro) h += '<span class="pl-vide">—</span>';
+            h += lst.map((t, i) => `<div class="pl-tache">
+                ${ro ? `<span class="pl-lu">${esc(t)}</span>`
+                     : `<input value="${esc(t)}" placeholder="Tâche…" onchange="setTache('${sem}','${iso}','${demi}',${i},this.value)">
+                        <button class="pl-x" title="Retirer" onclick="delTache('${sem}','${iso}','${demi}',${i})">×</button>`}
+            </div>`).join('');
+            if(!ro) h += `<button class="pl-add" onclick="addTache('${sem}','${iso}','${demi}')">+ Tâche</button>`;
+            return h + '</div>';
         }
+
+        function showSem(cle) { semActive = cle; renderPlanning(); }
+
+        function jourPlan(sem, iso) {
+            if(!planning[sem]) planning[sem] = {};
+            const d = planning[sem][iso] || (planning[sem][iso] = {});
+            if(!d.matin) d.matin = [];
+            if(!d.apm)   d.apm   = [];
+            return d;
+        }
+
+        function addTache(sem, iso, demi) {
+            jourPlan(sem, iso)[demi].push('');
+            renderPlanning();
+            // Placer le curseur dans la tâche qu'on vient de créer
+            const cell = document.querySelector(`[data-cell="${sem}|${iso}|${demi}"]`);
+            const champs = cell ? cell.querySelectorAll('input') : [];
+            if(champs.length) champs[champs.length - 1].focus();
+        }
+        function setTache(sem, iso, demi, i, v) { jourPlan(sem, iso)[demi][i] = v; }
+        function delTache(sem, iso, demi, i)    { jourPlan(sem, iso)[demi].splice(i, 1); renderPlanning(); }
 
         // --- Onglet Notes ------------------------------------------------------
         // Contrairement aux autres onglets, celui-ci reste ouvert en écriture
