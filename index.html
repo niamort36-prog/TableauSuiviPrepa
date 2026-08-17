@@ -214,6 +214,8 @@
         .btn-waze { background: #33ccff; color: #062b36; border: none; border-radius: 6px; padding: 8px 14px; font-weight: 800; cursor: pointer; }
         .btn-maps { background: #34a853; color: white; border: none; border-radius: 6px; padding: 8px 14px; font-weight: 800; cursor: pointer; }
         .btn-waze:disabled, .btn-maps:disabled { opacity: 0.35; cursor: not-allowed; }
+        .btn-inv { background: #6366f1; color: #fff; border: none; border-radius: 6px; padding: 8px 14px; font-weight: 800; cursor: pointer; white-space: nowrap; }
+        .btn-inv:disabled { opacity: 0.35; cursor: not-allowed; }
 
         /* Technique */
         .eq-sect { font-size: 0.78rem; font-weight: 800; text-transform: uppercase; color: #475569; letter-spacing: 0.05em; margin: 16px 0 8px; display: flex; align-items: center; gap: 10px; }
@@ -738,6 +740,7 @@
                 <button class="subtab active" data-t="gite" onclick="showSub('gite')">🏕️ Gîte / Courses</button>
                 <button class="subtab" data-t="pi" onclick="showSub('pi')">📍 PI</button>
                 <button class="subtab" data-t="contacts" onclick="showSub('contacts')">☎️ Contacts</button>
+                <button class="subtab" data-t="chargement" onclick="showSub('chargement')">📦 Chargement</button>
                 <button class="subtab" data-t="tech" onclick="showSub('tech')">🔧 Technique</button>
                 <button class="subtab" data-t="modeop" onclick="showSub('modeop')">📋 Mode opératoire</button>
                 <button class="subtab" data-t="planning" onclick="showSub('planning')">📅 Planning</button>
@@ -747,6 +750,7 @@
             <div id="sub-gite" class="subpane"></div>
             <div id="sub-pi" class="subpane" style="display:none"></div>
             <div id="sub-contacts" class="subpane" style="display:none"></div>
+            <div id="sub-chargement" class="subpane" style="display:none"></div>
             <div id="sub-tech" class="subpane" style="display:none"></div>
             <div id="sub-modeop" class="subpane" style="display:none"></div>
             <div id="sub-planning" class="subpane" style="display:none"></div>
@@ -922,6 +926,7 @@
         let piList = [];                              // {lib, coord}
         function contactsVide() { return { cats: [], liste: [] }; }
         let contacts = contactsVide();                // cats[] + liste[{id,cat,nom,fonction,tel,mail}]
+        let chargement = [];                          // {id, nom, lien} vers Invent'RTE
         let tech = { pylones: [], portees: [] };      // voir normSup
         let planning = {};                            // { "2026-S34": { "2026-08-17": {matin:[],apm:[]} } }
         let modeOp = [];                              // {id,titre,personnes[],sem,jour,demi,sousTaches[]}
@@ -1297,6 +1302,7 @@
                     logi: logi,
                     pi: piList,
                     contacts: contacts,
+                    chargement: chargement,
                     tech: tech,
                     modeOp: modeOpPropre(),
                     planning: planningPropre(),
@@ -1346,6 +1352,7 @@
             logi = normLogi(p.logi);
             piList = p.pi || [];
             contacts = normContacts(p.contacts);
+            chargement = normChargement(p.chargement);
             tech = normTech(p.tech);
             modeOp = normModeOp(p.modeOp);
             moOuverts = {};
@@ -1408,7 +1415,8 @@
         // --- 10. NOUVEAU DOSSIER ---
         function newItem() {
             curId = null; states = {}; ots=[]; ois=[];
-            logi = logiVide(); piList = []; contacts = contactsVide(); tech = { pylones: [], portees: [] };
+            logi = logiVide(); piList = []; contacts = contactsVide(); chargement = [];
+            tech = { pylones: [], portees: [] };
             modeOp = []; moOuverts = {};
             planning = {}; notes = []; subActif = 'gite'; semActive = null;
             document.querySelectorAll('input,textarea,select').forEach(i=>i.value='');
@@ -1720,6 +1728,13 @@
             return v;
         }
 
+        function normChargement(x) {
+            return (x || []).map(c => ({
+                id: c.id || ('p' + Math.random().toString(36).slice(2)),
+                nom: c.nom || '', lien: c.lien || ''
+            })).filter(c => c.nom || c.lien);
+        }
+
         function normNotes(x) {
             return (x || []).map(n => ({
                 id: n.id || ('n' + Math.random().toString(36).slice(2)),
@@ -1797,7 +1812,7 @@
         // --- Navigation ----------------------------------------------------
         function goLogi() { switchScreen('screen-logi'); renderLogi(); }
 
-        const SOUS_ONGLETS = ['gite','pi','contacts','tech','modeop','planning','notes'];
+        const SOUS_ONGLETS = ['gite','pi','contacts','chargement','tech','modeop','planning','notes'];
 
         function showSub(t) {
             subActif = t;
@@ -1824,7 +1839,7 @@
             const ia = document.getElementById('note-auteur');
             if(ia && !ia.value) { try { ia.value = localStorage.getItem('suivi-auteur') || ''; } catch(e) {} }
 
-            renderGite(); renderPI(); renderContacts(); renderTech();
+            renderGite(); renderPI(); renderContacts(); renderChargement(); renderTech();
             renderModeOp(); renderPlanning(); renderNotes();
             showSub(subActif);
         }
@@ -2341,6 +2356,78 @@
             contacts.cats.splice(ci, 1);
             renderContacts();
         }
+
+        // --- Onglet Chargement ---------------------------------------------------
+        // Renvoie vers les chantiers de l'application Invent'RTE. Sa base est
+        // fermee en lecture (authentification requise) : impossible d'aller y
+        // chercher la liste des paniers. On stocke donc le lien que l'autre
+        // application sait produire, et dont on relit l'equipe et l'identifiant.
+        const INVENTAIRE_URL = 'https://niamort36-prog.github.io/Inventaire-RTE/';
+
+        function infoPanier(lien) {
+            const v = String(lien || '').trim();
+            if(!/^https?:\/\//i.test(v)) return null;
+            try {
+                const u = new URL(v);
+                const panier = u.searchParams.get('panier');
+                if(!panier) return null;
+                return { panier: panier, equipe: u.searchParams.get('equipe') || '' };
+            } catch(e) { return null; }
+        }
+
+        function renderChargement() {
+            const ro = PARTAGE;
+            let h = `<div class="lg-block">
+                <div class="lg-head"><span>📦 Paniers de chargement</span>
+                <span style="display:flex;gap:8px;flex-wrap:wrap">
+                    <button class="btn-mini ghost" onclick="ouvrirInventaire()">Ouvrir Invent'RTE</button>
+                    ${ro ? '' : `<button class="btn-mini" onclick="addPanier()">+ Ajouter un panier</button>`}
+                </span></div>
+                <div class="lg-body">`;
+
+            if(!chargement.length) {
+                h += '<div class="lg-vide">Aucun panier rattaché à ce chantier</div>';
+            } else {
+                h += chargement.map((c, i) => {
+                    const info = infoPanier(c.lien);
+                    let etat = '';
+                    if(info) {
+                        etat = `<span class="pi-ok">✓ ${esc(info.equipe) || 'panier'}</span>`;
+                    } else if((c.lien || '').trim()) {
+                        etat = `<span class="pi-ok" style="background:#fef3c7;color:#92400e;border-color:#fcd34d">lien non reconnu</span>`;
+                    }
+                    return `<div class="pi-row">
+                        ${ro ? `<span class="pi-lib"><b>${esc(c.nom) || '—'}</b></span>`
+                             : `<input class="pi-lib" placeholder="Nom du panier" value="${esc(c.nom)}" onchange="setPanier(${i},'nom',this.value)">`}
+                        ${ro ? '' : `<input class="pi-coord" placeholder="Collez ici le lien du chantier Invent'RTE" value="${esc(c.lien)}" onchange="setPanier(${i},'lien',this.value)">`}
+                        ${etat}
+                        <button class="btn-inv" onclick="ouvrirPanier(${i})" ${info ? '' : 'disabled'}>Ouvrir le panier</button>
+                        ${ro ? '' : `<button class="btn-x" onclick="delPanier(${i})">🗑</button>`}
+                    </div>`;
+                }).join('');
+            }
+
+            h += '</div></div>';
+            if(!ro) {
+                h += `<div class="lg-warn">Dans Invent'RTE, ouvrez le chantier puis cliquez sur l'icône 🔗 en haut de sa fiche : le lien est copié. Collez-le ici. L'équipe est reprise du lien, le panier s'ouvrira donc directement, même si votre application est réglée sur une autre équipe.</div>`;
+            }
+            document.getElementById('sub-chargement').innerHTML = h;
+        }
+
+        function ouvrirInventaire() { window.open(INVENTAIRE_URL, '_blank', 'noopener'); }
+
+        function ouvrirPanier(i) {
+            const info = infoPanier(chargement[i].lien);
+            if(!info) return;
+            window.open(chargement[i].lien.trim(), '_blank', 'noopener');
+        }
+
+        function addPanier() { chargement.push({ id: 'p' + Date.now(), nom: '', lien: '' }); renderChargement(); }
+        function setPanier(i, champ, v) {
+            chargement[i][champ] = v;
+            if(champ === 'lien') renderChargement();   // met a jour le badge et le bouton
+        }
+        function delPanier(i) { chargement.splice(i, 1); renderChargement(); }
 
         // --- Onglet Technique -------------------------------------------------
         // Une liste plate de pylônes et une de portées (plus de regroupement
@@ -3007,6 +3094,7 @@
                 logi     = normLogi(p.logi);
                 piList   = p.pi || [];
                 contacts = normContacts(p.contacts);
+                chargement = normChargement(p.chargement);
                 tech     = normTech(p.tech);
                 modeOp   = normModeOp(p.modeOp);
                 planning = normPlanning(p.planning);
