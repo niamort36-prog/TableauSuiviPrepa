@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Suivi des préparations de travail — Guide</title>
+<style>
+    :root {
+        --primary: #0f172a;
+        --accent:  #0ea5e9;
+        --vert:    #0f766e;
+        --gris:    #64748b;
+        --bord:    #cbd5e1;
+        --fond:    #f8fafc;
+    }
+    * { box-sizing: border-box; }
+    body {
+        font-family: 'Segoe UI', system-ui, sans-serif;
+        color: #1e293b; margin: 0; font-size: 10.5pt; line-height: 1.55;
+    }
+
+    /* ---------------------------------------------------------- Couverture */
+    .couverture {
+        height: 247mm; display: flex; flex-direction: column;
+        justify-content: center; text-align: center; page-break-after: always;
+    }
+    .couverture .eclair { font-size: 46pt; }
+    .couverture h1 { font-size: 30pt; margin: 6mm 0 2mm; color: var(--primary); letter-spacing: -0.5px; }
+    .couverture .sous { font-size: 14pt; color: var(--gris); font-weight: 500; }
+    .couverture .barre { width: 40mm; height: 3px; background: var(--accent); margin: 8mm auto; border-radius: 2px; }
+    .couverture .meta { font-size: 10pt; color: var(--gris); margin-top: 4mm; }
+    .couverture .lien {
+        margin-top: 12mm; font-size: 11pt; font-weight: 700; color: var(--vert);
+        background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px;
+        padding: 5mm 8mm; display: inline-block;
+    }
+
+    /* ------------------------------------------------------------ Sommaire */
+    .sommaire { page-break-after: always; }
+    .sommaire ol { font-size: 11pt; line-height: 2; padding-left: 6mm; }
+    .sommaire ol ol { font-size: 10pt; line-height: 1.7; color: var(--gris); }
+
+    /* -------------------------------------------------------------- Titres */
+    h2 {
+        font-size: 16pt; color: var(--primary); margin: 0 0 4mm;
+        padding-bottom: 2mm; border-bottom: 2px solid var(--accent);
+        page-break-after: avoid;
+    }
+    h3 {
+        font-size: 12pt; color: var(--vert); margin: 7mm 0 2mm;
+        page-break-after: avoid;
+    }
+    section { page-break-before: always; }
+    section.suite { page-break-before: auto; }
+    p { margin: 0 0 3mm; }
+
+    /* -------------------------------------------------------------- Images */
+    figure { margin: 4mm 0 6mm; page-break-inside: avoid; }
+    figure img {
+        width: 100%; border: 1px solid var(--bord); border-radius: 6px;
+        display: block;
+    }
+    figure img.etroit { width: 62%; margin: 0 auto; }
+    figure img.tel { width: 38%; margin: 0 auto; }
+    figcaption {
+        font-size: 8.5pt; color: var(--gris); text-align: center;
+        margin-top: 1.5mm; font-style: italic;
+    }
+
+    /* --------------------------------------------------------------- Blocs */
+    .note, .attention {
+        border-radius: 6px; padding: 3mm 4mm; margin: 4mm 0;
+        font-size: 9.5pt; page-break-inside: avoid;
+    }
+    .note { background: #eff6ff; border-left: 3px solid var(--accent); }
+    .attention { background: #fffbeb; border-left: 3px solid #f59e0b; }
+    .note b, .attention b { color: var(--primary); }
+
+    table { width: 100%; border-collapse: collapse; margin: 3mm 0 5mm; font-size: 9.5pt; page-break-inside: avoid; }
+    th { background: var(--fond); text-align: left; padding: 2mm 3mm; border: 1px solid var(--bord);
+         font-size: 8.5pt; text-transform: uppercase; letter-spacing: .04em; color: var(--gris); }
+    td { padding: 2mm 3mm; border: 1px solid var(--bord); vertical-align: top; }
+
+    ul, ol { margin: 0 0 3mm; padding-left: 6mm; }
+    li { margin-bottom: 1.5mm; }
+
+    code {
+        background: var(--fond); border: 1px solid var(--bord); border-radius: 4px;
+        padding: 0.4mm 1.5mm; font-family: Consolas, monospace; font-size: 9pt;
+    }
+    .pastille {
+        display: inline-block; background: var(--vert); color: #fff; border-radius: 10px;
+        padding: 0.3mm 2.5mm; font-size: 8.5pt; font-weight: 700;
+    }
+</style>
+</head>
+<body>
+
+<!-- ====================================================== COUVERTURE ==== -->
+<div class="couverture">
+    <div class="eclair">⚡</div>
+    <h1>Suivi des préparations de travail</h1>
+    <div class="sous">Guide d'installation et d'utilisation</div>
+    <div class="barre"></div>
+    <div class="meta">Lignes HTB — EEL Limoges &amp; EEL Aurillac</div>
+    <div class="meta">Version du 18 août 2026</div>
+    <div class="lien">niamort36-prog.github.io/TableauSuiviPrepa</div>
+</div>
+
+<!-- ======================================================== SOMMAIRE ==== -->
+<div class="sommaire">
+    <h2>Sommaire</h2>
+    <ol>
+        <li>Installer l'application</li>
+        <li>L'écran d'accueil</li>
+        <li>Créer et remplir un chantier</li>
+        <li>Les tâches et leurs dates butoir</li>
+        <li>Les détails techniques</li>
+        <li>Logistique &amp; Terrain
+            <ol>
+                <li>Gîte et courses</li>
+                <li>Points d'intérêt</li>
+                <li>Contacts</li>
+                <li>Chargement</li>
+                <li>Technique</li>
+                <li>Mode opératoire</li>
+                <li>Planning</li>
+                <li>Notes</li>
+            </ol>
+        </li>
+        <li>Partager un chantier en lecture seule</li>
+        <li>Imprimer le porte-document A3</li>
+        <li>Les options : équipes et lignes</li>
+        <li>Les archives</li>
+        <li>Sur téléphone</li>
+        <li>Questions fréquentes</li>
+    </ol>
+</div>
+
+<!-- ==================================================== 1. INSTALLER ==== -->
+<section>
+    <h2>1. Installer l'application</h2>
+
+    <p>Il n'y a rien à installer au sens habituel : l'application vit sur une page web.
+    Elle s'ouvre dans n'importe quel navigateur récent, sur ordinateur comme sur téléphone,
+    à cette adresse :</p>
+
+    <p style="text-align:center;font-size:12pt;font-weight:700;color:var(--vert);margin:5mm 0">
+        https://niamort36-prog.github.io/TableauSuiviPrepa/
+    </p>
+
+    <p>Aucun compte, aucun mot de passe. Les données sont partagées en temps réel entre tous
+    ceux qui ouvrent l'adresse : ce qu'une personne enregistre apparaît chez les autres.</p>
+
+    <h3>La garder sous la main</h3>
+
+    <p>Plutôt que de retaper l'adresse, ajoutez un raccourci :</p>
+
+    <table>
+        <tr>
+            <th style="width:34%">Appareil</th>
+            <th>Comment faire</th>
+        </tr>
+        <tr>
+            <td><b>Ordinateur</b><br>Chrome ou Edge</td>
+            <td>Menu <code>⋮</code> en haut à droite, puis <i>Enregistrer et partager</i> →
+                <i>Créer un raccourci</i>. Cochez <i>Ouvrir dans une fenêtre</i> pour que
+                l'application s'ouvre sans barre d'adresse.</td>
+        </tr>
+        <tr>
+            <td><b>Android</b><br>Chrome</td>
+            <td>Menu <code>⋮</code>, puis <i>Ajouter à l'écran d'accueil</i>.</td>
+        </tr>
+        <tr>
+            <td><b>iPhone / iPad</b><br>Safari</td>
+            <td>Bouton <i>Partager</i> (le carré avec une flèche), puis
+                <i>Sur l'écran d'accueil</i>.</td>
+        </tr>
+    </table>
+
+    <div class="attention">
+        <b>Après une mise à jour de l'application</b>, le navigateur peut continuer à afficher
+        l'ancienne version pendant une dizaine de minutes. Forcez le rechargement avec
+        <code>Ctrl + F5</code> sur ordinateur. Si cela ne suffit pas, ajoutez
+        <code>?v=2</code> à la fin de l'adresse : le navigateur la considère comme nouvelle
+        et ne peut plus servir sa copie en cache.
+    </div>
+
+    <div class="note">
+        <b>Hors réseau</b>, l'application ne se charge pas et les modifications ne partent pas.
+        Sur les chantiers mal couverts, préparez ce qui doit l'être avant de partir, ou
+        utilisez le lien de partage sur un téléphone déjà connecté.
+    </div>
+</section>
+
+<!-- ====================================================== 2. ACCUEIL ==== -->
+<section>
+    <h2>2. L'écran d'accueil</h2>
+
+    <p>L'accueil liste les chantiers <b>en cours</b> de l'équipe affichée, du plus proche au
+    plus lointain. Chaque carte se lit d'un coup d'œil.</p>
+
+    <figure>
+        <img src="captures/01-accueil.png" alt="Écran d'accueil">
+        <figcaption>L'accueil, avec la pastille d'équipe en haut à gauche</figcaption>
+    </figure>
+
+    <table>
+        <tr><th style="width:30%">Élément</th><th>Ce qu'il indique</th></tr>
+        <tr><td><b>Bordure verte</b></td><td>Aucune date butoir dépassée ni proche.</td></tr>
+        <tr><td><b>Bordure jaune</b></td><td>Une échéance approche.</td></tr>
+        <tr><td><b>Bordure rouge</b></td><td>Au moins une date butoir est dépassée.</td></tr>
+        <tr><td><b>Jauge</b></td><td>Part des tâches renseignées, sur les 25 tâches du suivi.</td></tr>
+        <tr><td><b>Liste d'alertes</b></td><td>Les tâches en retard (⚠️) ou proches de l'échéance (🕒).</td></tr>
+        <tr><td><span class="pastille">🚗 Déplacement</span></td><td>Le chantier nécessite un déplacement.</td></tr>
+    </table>
+
+    <p>Un clic sur une carte ouvre le chantier. Le bouton <b>+ NOUVEAU</b> en crée un dans
+    l'équipe affichée.</p>
+</section>
+
+<!-- ======================================================= 3. FICHE ==== -->
+<section>
+    <h2>3. Créer et remplir un chantier</h2>
+
+    <p>La fiche rassemble l'identité du chantier : la ligne concernée, les personnes, les dates,
+    les numéros d'ordre et la description des travaux.</p>
+
+    <figure>
+        <img src="captures/02-fiche-chantier.png" alt="Fiche chantier">
+        <figcaption>Le haut de la fiche : équipe, ligne, intervenants et dates</figcaption>
+    </figure>
+
+    <h3>Les champs</h3>
+    <ul>
+        <li><b>Équipe</b> — détermine dans quelle liste le chantier apparaît. C'est aussi ici
+            qu'on déplace un chantier d'une équipe à l'autre.</li>
+        <li><b>Ligne HTB</b> — choisie dans le référentiel de l'équipe. Le titre de la fiche
+            reprend automatiquement la tension et le nom de la ligne.</li>
+        <li><b>Début et fin de chantier</b> — la date de début sert de référence à tout le
+            calcul des échéances, et détermine les semaines du planning. C'est le champ le
+            plus important de la fiche.</li>
+        <li><b>N° OT et N° OI</b> — tapez le numéro puis <i>Entrée</i>, il s'ajoute en pastille.
+            La croix le retire.</li>
+        <li><b>Commentaires internes</b> — en bas de la fiche, pour les remarques d'équipe.</li>
+    </ul>
+
+    <div class="note">
+        <b>Rien n'est enregistré tant que vous n'avez pas cliqué sur ENREGISTRER.</b>
+        Le bouton vert est toujours visible en bas de l'écran.
+    </div>
+</section>
+
+<!-- ======================================================= 4. TACHES ==== -->
+<section>
+    <h2>4. Les tâches et leurs dates butoir</h2>
+
+    <p>Sous la fiche, les 17 tâches du suivi sont réparties en cinq familles. Chacune a un
+    délai propre, compté <b>en arrière depuis la date de début du chantier</b>. Une tâche à
+    90 jours doit donc être faite trois mois avant le démarrage.</p>
+
+    <figure>
+        <img src="captures/03-taches-butoirs.png" alt="Tableau des tâches">
+        <figcaption>Chaque ligne affiche sa date butoir tant qu'elle n'est pas traitée</figcaption>
+    </figure>
+
+    <table>
+        <tr><th style="width:22%">Couleur</th><th>Signification</th></tr>
+        <tr><td><b>Vert</b></td><td>Traitée : vous avez répondu OUI ou NON.</td></tr>
+        <tr><td><b>Jaune</b></td><td>L'échéance approche — un mois avant pour les tâches à
+            30 jours ou plus, cinq jours avant pour les autres.</td></tr>
+        <tr><td><b>Rouge</b></td><td>La date butoir est passée et la tâche n'est pas traitée.</td></tr>
+        <tr><td><b>Blanc</b></td><td>Pas encore d'échéance, ou tâche sans délai.</td></tr>
+    </table>
+
+    <div class="note">
+        <b>NON compte autant que OUI.</b> La jauge mesure ce qui a été <i>traité</i>, pas ce qui
+        a été fait. Répondre NON à une tâche sans objet la sort des alertes : c'est voulu, une
+        question tranchée n'est plus un risque.
+    </div>
+
+    <p>Les deux lignes <i>Durée du chantier</i> et <i>Nombre d'agents</i> attendent une saisie
+    libre, pas une réponse OUI/NON. Elles comptent dans la jauge dès qu'elles sont remplies.</p>
+</section>
+
+<!-- ======================================================== 5. PREPA ==== -->
+<section>
+    <h2>5. Les détails techniques</h2>
+
+    <p>Le bouton <b>📄 Prépa</b> ouvre la liste des documents à produire : NIP, constat
+    d'adéquation, mode opératoire, calculs, PPE, MALT/CC, listes de matériel et d'outillage.</p>
+
+    <figure>
+        <img src="captures/04-prepa-documents.png" alt="Écran Prépa">
+        <figcaption>Les documents techniques, avec un lien de dossier pour trois d'entre eux</figcaption>
+    </figure>
+
+    <p>Trois documents acceptent un <b>lien de dossier</b> : mode opératoire, calculs et PPE.
+    Collez-y un chemin réseau ou une adresse, le bouton 📂 l'ouvre.</p>
+
+    <div class="attention">
+        Un chemin local du type <code>K:\Dossiers\...</code> ne peut pas être ouvert depuis une
+        page web : les navigateurs l'interdisent pour des raisons de sécurité. Le champ reste
+        utile pour <i>noter</i> l'emplacement, mais il faudra le copier à la main dans
+        l'explorateur.
+    </div>
+</section>
+
+<!-- ==================================================== 6. LOGISTIQUE ==== -->
+<section>
+    <h2>6. Logistique &amp; Terrain</h2>
+
+    <p>Le bouton <b>🏕️ Logistique</b> ouvre un espace à huit onglets qui rassemble tout ce
+    qui entoure le chantier. <b>Aucune de ces informations n'entre dans le calcul
+    d'avancement</b> : la jauge ne bouge pas quand vous les remplissez.</p>
+
+    <p>C'est aussi cet espace, et lui seul, que voient les personnes à qui vous transmettez
+    le lien de partage.</p>
+
+    <h3>6.1 Gîte et courses</h3>
+
+    <p>Qui dort où, combien de nuits, qui a payé — et la répartition calculée toute seule.</p>
+
+    <figure>
+        <img src="captures/05-logi-gite.png" alt="Onglet Gîte">
+        <figcaption>Le gîte se répartit au prorata des nuits, les courses à parts égales</figcaption>
+    </figure>
+
+    <ul>
+        <li>Ajoutez les personnes présentes, avec leur nombre de nuits pour le gîte.</li>
+        <li>Cochez <b>a payé</b> sur la ligne de celle qui a réglé. Une seule à la fois.</li>
+        <li>Saisissez le montant total : le coût par nuitée et la part de chacun s'affichent,
+            puis le <b>règlement</b> — qui doit combien à qui, le payeur exclu.</li>
+        <li>Le gîte accepte en plus un <b>lien</b> et des <b>coordonnées GPS</b>, avec ouverture
+            directe dans Waze ou Maps.</li>
+        <li>Les <b>reçus PDF</b> s'importent sur les deux blocs et se téléchargent ensuite,
+            y compris depuis le lien de partage. Trois mégaoctets maximum par fichier.</li>
+    </ul>
+
+    <div class="note">
+        Le bouton <b>Reprendre les personnes du gîte</b> recopie la liste dans les courses,
+        pour éviter une double saisie.
+    </div>
+</section>
+
+<section class="suite">
+    <h3>6.2 Points d'intérêt</h3>
+
+    <p>Les lieux utiles : rassemblement, accès, base travaux. Chaque point s'ouvre d'un clic
+    dans Waze ou dans Google Maps.</p>
+
+    <figure>
+        <img src="captures/06-logi-pi.png" alt="Onglet PI">
+        <figcaption>Un badge « ✓ GPS » confirme que les coordonnées ont été reconnues</figcaption>
+    </figure>
+
+    <p>Le plus simple est de <b>coller un lien de partage</b> depuis Google Maps ou Waze :
+    les coordonnées en sont extraites automatiquement. Une saisie manuelle
+    (<code>45.8234, 1.2612</code>) fonctionne aussi, virgule décimale française comprise, tout
+    comme une adresse en toutes lettres.</p>
+
+    <div class="note">
+        Un lien raccourci <code>maps.app.goo.gl</code> ne peut pas être décodé par la page.
+        Il est alors conservé tel quel et s'ouvrira directement dans l'application de
+        cartographie : le résultat est le même pour vous.
+    </div>
+
+    <h3>6.3 Contacts</h3>
+
+    <p>Les numéros utiles, rangés dans les catégories que vous créez : RTE, sous-traitants,
+    secours, ce que vous voulez.</p>
+
+    <figure>
+        <img src="captures/07-logi-contacts.png" alt="Onglet Contacts">
+        <figcaption>Appeler, envoyer un SMS ou un courriel depuis la fiche</figcaption>
+    </figure>
+
+    <p>Le bouton <b>Mail</b> n'apparaît que si une adresse valide est renseignée. Sans numéro,
+    <b>Appeler</b> et <b>SMS</b> restent visibles mais inactifs. Supprimer une catégorie ne
+    supprime pas ses contacts : ils passent dans <i>Sans catégorie</i>.</p>
+</section>
+
+<section class="suite">
+    <h3>6.4 Chargement</h3>
+
+    <p>Cet onglet fait le lien avec <b>Invent'RTE</b>, l'application d'inventaire, et donne
+    accès aux paniers de chargement du chantier.</p>
+
+    <figure>
+        <img src="captures/08-logi-chargement.png" alt="Onglet Chargement">
+        <figcaption>Un clic ouvre le panier directement dans Invent'RTE</figcaption>
+    </figure>
+
+    <p>Pour rattacher un panier :</p>
+    <ol>
+        <li>Dans <b>Invent'RTE</b>, ouvrez le chantier voulu.</li>
+        <li>Cliquez sur l'icône <b>🔗</b> en haut de sa fiche : le lien est copié.</li>
+        <li>Revenez ici, ajoutez une ligne, nommez le panier et collez le lien.</li>
+    </ol>
+
+    <p>Le lien porte l'équipe : si votre Invent'RTE est réglé sur une autre équipe que celle
+    du panier, il bascule tout seul. Un badge confirme l'équipe reconnue, ou signale un lien
+    inexploitable.</p>
+
+    <h3>6.5 Technique</h3>
+
+    <p>Les efforts et les solutions de terre, pylône par pylône et portée par portée.</p>
+
+    <figure>
+        <img src="captures/09-logi-technique.png" alt="Onglet Technique">
+        <figcaption>Le support au centre, ses voisins et les efforts de chaque côté</figcaption>
+    </figure>
+
+    <p>Chaque fiche se lit comme un schéma : le support concerné au centre avec son effort
+    vertical, ses voisins de gauche et de droite avec leurs efforts horizontaux et
+    longitudinaux. Au-dessus, le bandeau de paramètres : <b>P</b>, la température en degrés,
+    et le vent en pascals — qui affiche <b>SV</b> dès que la valeur est nulle.</p>
+</section>
+
+<section class="suite">
+    <h3>6.6 Mode opératoire</h3>
+
+    <p>Le déroulé des opérations, en tâches et sous-tâches. Chaque fiche se replie sur son
+    titre, sa période et ses intervenants.</p>
+
+    <figure>
+        <img src="captures/10-logi-mode-operatoire.png" alt="Onglet Mode opératoire">
+        <figcaption>Une tâche dépliée, avec sa période et ses sous-tâches datées</figcaption>
+    </figure>
+
+    <p>Une <b>tâche</b> couvre une période : du jour X au jour Y. Elle peut donc durer une
+    journée comme plusieurs semaines. Choisir le même jour de part et d'autre donne une tâche
+    d'une seule journée.</p>
+
+    <p>Ses <b>sous-tâches</b> se rattachent au plus fin : une journée, voire une demi-journée.
+    C'est là que se joue le détail du déroulé.</p>
+
+    <h3>6.7 Planning</h3>
+
+    <p>Une vue par semaine, découpée en matin et après-midi, comme un agenda.</p>
+
+    <figure>
+        <img src="captures/11-logi-planning.png" alt="Onglet Planning">
+        <figcaption>Les semaines du chantier en onglets, les journées en deux demi-journées</figcaption>
+    </figure>
+
+    <p>Les onglets de semaine — S37, S38, S39… — sont calculés à partir des dates du chantier.
+    Si aucune semaine n'apparaît, c'est que les dates de début et de fin ne sont pas
+    renseignées sur la fiche.</p>
+
+    <p>Chaque demi-journée accepte autant de tâches que nécessaire. Les week-ends sont grisés,
+    les jours hors période atténués.</p>
+</section>
+
+<section class="suite">
+    <h3>6.8 Notes</h3>
+
+    <p>Un fil de notes partagé, où chacun signe de son nom.</p>
+
+    <figure>
+        <img src="captures/12-logi-notes.png" alt="Onglet Notes">
+        <figcaption>Chaque note porte son auteur, sa date et une case « Effectué »</figcaption>
+    </figure>
+
+    <div class="attention">
+        <b>Les notes sont le seul onglet modifiable depuis le lien de partage.</b>
+        C'est voulu : c'est ce qui permet à quelqu'un sur le terrain de signaler une
+        difficulté sans avoir accès au reste. Tous les autres onglets y sont en lecture seule.
+    </div>
+
+    <p>Votre nom est mémorisé sur l'appareil : vous ne le saisissez qu'une fois. La case
+    <b>Effectué</b> barre la note sans la supprimer.</p>
+</section>
+
+<!-- ====================================================== 7. PARTAGE ==== -->
+<section>
+    <h2>7. Partager un chantier en lecture seule</h2>
+
+    <p>Depuis l'espace Logistique, le bouton <b>🔗 Lien de partage</b> copie une adresse à
+    transmettre. Celui qui l'ouvre ne voit <b>que</b> cet espace : ni la liste des chantiers,
+    ni la fiche, ni les options.</p>
+
+    <figure>
+        <img src="captures/16-vue-partagee.png" alt="Vue partagée">
+        <figcaption>La vue partagée : un bandeau signale la lecture seule</figcaption>
+    </figure>
+
+    <table>
+        <tr><th style="width:38%">Depuis le lien de partage</th><th>Possible ?</th></tr>
+        <tr><td>Consulter les huit onglets</td><td>Oui</td></tr>
+        <tr><td>Ouvrir Waze, Maps, un panier</td><td>Oui</td></tr>
+        <tr><td>Appeler, envoyer un SMS ou un courriel</td><td>Oui</td></tr>
+        <tr><td>Télécharger les reçus</td><td>Oui</td></tr>
+        <tr><td>Publier une note</td><td>Oui</td></tr>
+        <tr><td>Modifier quoi que ce soit d'autre</td><td>Non</td></tr>
+    </table>
+
+    <div class="note">
+        <b>Le lien affiche ce qui est en base, pas ce qui est à l'écran.</b>
+        Enregistrez avant de le transmettre.
+    </div>
+
+    <div class="attention">
+        <b>Ce lien n'est protégé par aucun mot de passe.</b> Quiconque le reçoit peut le
+        transmettre. La lecture seule évite les modifications accidentelles, elle ne protège
+        pas d'une diffusion non souhaitée : réfléchissez avant d'y mettre des informations
+        sensibles.
+    </div>
+</section>
+
+<!-- ==================================================== 8. IMPRESSION ==== -->
+<section>
+    <h2>8. Imprimer le porte-document A3</h2>
+
+    <p>Le bouton <b>🖨️ Imprimer A3</b> produit une feuille A3 en paysage dont seule la moitié
+    droite est occupée. Pliée en son centre, elle devient un porte-document avec la fiche
+    chantier en couverture.</p>
+
+    <figure>
+        <img src="captures/15-impression-a3.png" alt="Feuille A3">
+        <figcaption>Le trait de pli au centre, la fiche sur la moitié droite</figcaption>
+    </figure>
+
+    <p>La fiche imprimée est allégée par rapport à l'écran : la jauge, le champ Équipe et le
+    rappel de la ligne disparaissent — l'en-tête les donne déjà. Les aplats de couleur sont
+    retirés, le statut restant lisible par les cases cochées. Les dates butoir sont affichées
+    pour <b>toutes</b> les tâches, y compris celles déjà traitées, ce qui donne le calendrier
+    complet du chantier. Le bloc de commentaires est agrandi pour écrire à la main.</p>
+
+    <div class="attention">
+        Dans la fenêtre d'impression, vérifiez que le format est bien sur <b>A3</b> et les
+        marges sur <b>Aucune</b>. Selon le pilote d'imprimante, il faut parfois le forcer.
+    </div>
+
+    <p>La mise en page s'adapte toute seule au contenu : plus la fiche est remplie, plus elle
+    est réduite, mais elle occupe toujours exactement la hauteur et la largeur utiles.</p>
+</section>
+
+<!-- ======================================================= 9. OPTIONS ==== -->
+<section>
+    <h2>9. Les options : équipes et lignes</h2>
+
+    <figure>
+        <img src="captures/13-options.png" alt="Écran Options">
+        <figcaption>Les équipes en haut, le référentiel de lignes en dessous</figcaption>
+    </figure>
+
+    <h3>Changer d'équipe</h3>
+
+    <p>Chaque équipe a <b>sa liste de chantiers et son propre référentiel de lignes</b>.
+    Le bouton <b>Basculer sur cette équipe</b> change l'affichage ; l'équipe active porte un
+    bandeau vert, et une pastille la rappelle en permanence dans la barre du haut. Le choix
+    est mémorisé sur l'appareil.</p>
+
+    <div class="note">
+        Les référentiels sont séparés parce qu'un même code peut désigner deux lignes
+        différentes : le <b>4015</b> est <i>Boriette&nbsp;–&nbsp;Montignac</i> à Limoges et
+        <i>Boriette&nbsp;–&nbsp;Marcillac</i> à Aurillac. Un référentiel commun en aurait
+        écrasé une.
+    </div>
+
+    <p>Une équipe ne peut pas être supprimée tant que des chantiers y sont rattachés : ils
+    disparaîtraient de toutes les listes. Réaffectez-les d'abord depuis leur fiche.</p>
+
+    <h3>Gérer les lignes</h3>
+
+    <p>La liste affiche les lignes de l'équipe affichée, groupées par niveau de tension, avec
+    un filtre par code ou par nom. Pour ajouter une ligne : domaine de tension, code, nom.
+    Les doublons de code sont refusés.</p>
+
+    <p>Supprimer une ligne utilisée par des chantiers est possible — un avertissement indique
+    combien — et ces chantiers restent lisibles : la ligne y est signalée
+    <i>(ligne supprimée)</i>.</p>
+</section>
+
+<!-- ====================================================== 10. ARCHIVES ==== -->
+<section>
+    <h2>10. Les archives</h2>
+
+    <p>Le bouton <b>🗃️ Archiver</b>, sur la fiche, sort le chantier de la liste des travaux
+    en cours sans rien perdre. On le retrouve dans l'onglet <b>Archives</b>.</p>
+
+    <figure>
+        <img src="captures/14-archives.png" alt="Écran Archives">
+        <figcaption>Les chantiers archivés de l'équipe affichée</figcaption>
+    </figure>
+
+    <p>La suppression définitive n'est possible que depuis les archives, par la croix rouge en
+    haut de la carte. Elle emporte aussi les reçus du chantier.</p>
+
+    <div class="attention">
+        <b>Une suppression est irréversible.</b> Il n'y a pas de corbeille. Dans le doute,
+        archivez plutôt que de supprimer : un chantier archivé ne gêne personne.
+    </div>
+</section>
+
+<!-- ===================================================== 11. TELEPHONE ==== -->
+<section>
+    <h2>11. Sur téléphone</h2>
+
+    <p>Toutes les mises en page s'adaptent à l'écran, en portrait comme en paysage.</p>
+
+    <figure>
+        <img src="captures/17-mobile.png" alt="Affichage téléphone" class="tel">
+        <figcaption>La vue partagée sur téléphone, en portrait</figcaption>
+    </figure>
+
+    <ul>
+        <li>Le formulaire passe sur une colonne, les lignes de tâches s'empilent.</li>
+        <li>Les huit onglets se répartissent sur trois rangées, sans rien tronquer.</li>
+        <li>Le planning abandonne le tableau : chaque journée devient une carte empilant
+            matin et après-midi.</li>
+        <li>En paysage, la barre du haut se libère pour récupérer de la hauteur, et les
+            grilles repassent sur deux colonnes.</li>
+    </ul>
+
+    <div class="note">
+        C'est sur le terrain que le <b>lien de partage</b> prend tout son sens : les
+        coordonnées s'ouvrent dans Waze d'un doigt, les contacts s'appellent d'un doigt, et
+        personne ne risque de modifier la préparation par mégarde.
+    </div>
+</section>
+
+<!-- =========================================================== 12. FAQ ==== -->
+<section>
+    <h2>12. Questions fréquentes</h2>
+
+    <h3>Je ne vois pas mes chantiers</h3>
+    <p>Vérifiez la pastille d'équipe en haut à gauche. Chaque équipe a sa propre liste ; vous
+    regardez peut-être celle de l'autre. Le changement se fait dans <b>Options</b>.</p>
+
+    <h3>Je ne vois pas les dernières nouveautés</h3>
+    <p>Votre navigateur affiche une copie en cache. <code>Ctrl + F5</code> sur ordinateur, ou
+    ajoutez <code>?v=2</code> à la fin de l'adresse.</p>
+
+    <h3>Le planning est vide</h3>
+    <p>Les semaines se déduisent des dates de début et de fin du chantier. Renseignez-les sur
+    la fiche.</p>
+
+    <h3>La jauge ne bouge pas quand je remplis la logistique</h3>
+    <p>C'est normal. La jauge ne mesure que les 25 tâches du suivi de préparation. Tout ce qui
+    se trouve dans <b>Logistique &amp; Terrain</b> en est volontairement exclu.</p>
+
+    <h3>Je n'arrive pas à ajouter un reçu</h3>
+    <p>Le chantier doit être enregistré au préalable — le reçu s'y rattache par son
+    identifiant. Vérifiez aussi qu'il s'agit bien d'un PDF de moins de trois mégaoctets.</p>
+
+    <h3>Deux personnes peuvent-elles travailler en même temps ?</h3>
+    <p>Oui pour les <b>notes</b> et les <b>reçus</b>, écrits en base immédiatement. Pour le
+    reste, le dernier qui enregistre écrase le travail de l'autre : mettez-vous d'accord avant
+    de remplir la même fiche à deux.</p>
+
+    <h3>Où sont stockées les données ?</h3>
+    <p>Dans une base Firebase hébergée en Europe. Elles ne sont pas chiffrées et l'accès n'est
+    pas protégé par mot de passe : n'y mettez rien qui ne puisse être lu par quelqu'un
+    d'extérieur.</p>
+</section>
+
+</body>
+</html>
