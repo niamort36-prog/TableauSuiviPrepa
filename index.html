@@ -517,6 +517,14 @@
         #print-sheet .pp-val.pp-multi { white-space: pre-wrap; min-height: 32px; }
         #print-sheet .tag-pill { font-size: 9.5px; padding: 1px 7px; }
 
+        /* Numeros d'ordre : remontes en tete et grossis, ce sont les
+           references qu'on cherche en premier sur le papier. */
+        #print-sheet .pp-ordre .form-label { font-size: 9px; color: #0f172a; }
+        #print-sheet .pp-ordre .tag-pill {
+            font-size: 14px; font-weight: 800; padding: 3px 13px; margin: 2px 3px 0 0;
+            background: #e0f2fe; border-color: #7dd3fc; color: #0c4a6e; letter-spacing: 0.02em;
+        }
+
         #print-sheet .category-header { padding: 4px 12px; font-size: 10px; }
         #print-sheet .task-row { padding: 4px 12px; gap: 8px; }
         #print-sheet .task-name { font-size: 10px; }
@@ -664,12 +672,12 @@
                 <div class="form-group"><label class="form-label">Début Consignation</label><input type="date" id="inp-cons-start" class="form-input"></div>
                 <div class="form-group"><label class="form-label">Fin Consignation</label><input type="date" id="inp-cons-end" class="form-input"></div>
 
-                <div class="form-group">
+                <div class="form-group" id="grp-ot">
                     <label class="form-label">N° OT (Entrée pour ajouter)</label>
                     <div class="input-group-row"><input id="inp-ot-add" class="form-input" style="flex:1" onkeypress="if(event.key==='Enter') addTag('ot')"><button class="btn-add-tag" onclick="addTag('ot')">+</button></div>
                     <div id="list-ot" style="margin-top:5px"></div>
                 </div>
-                <div class="form-group">
+                <div class="form-group" id="grp-oi">
                     <label class="form-label">N° OI (Entrée pour ajouter)</label>
                     <div class="input-group-row"><input id="inp-oi-add" class="form-input" style="flex:1" onkeypress="if(event.key==='Enter') addTag('oi')"><button class="btn-add-tag" onclick="addTag('oi')">+</button></div>
                     <div id="list-oi" style="margin-top:5px"></div>
@@ -2977,6 +2985,18 @@
             if(gl) gl.remove();                                            // doublon du titre de l'en-tête
             const ge = clone.querySelector('#grp-equipe');
             if(ge) ge.remove();                                            // sans objet sur le papier
+
+            // Les numeros d'ordre passent en tete de fiche et sont grossis :
+            // ce sont eux qu'on cherche en premier sur le papier.
+            const grille = clone.querySelector('.form-grid');
+            const gOT = clone.querySelector('#grp-ot');
+            const gOI = clone.querySelector('#grp-oi');
+            if(grille && gOT && gOI) {
+                gOT.classList.add('pp-ordre');
+                gOI.classList.add('pp-ordre');
+                grille.insertBefore(gOI, grille.firstElementChild);
+                grille.insertBefore(gOT, gOI);
+            }
             clone.querySelectorAll('.input-group-row').forEach(e => e.remove()); // champs + bouton "+"
             clone.querySelectorAll('.tag-pill span').forEach(e => e.remove());   // croix de suppression des tags
             clone.querySelectorAll('.form-label').forEach(e => {
