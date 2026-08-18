@@ -64,9 +64,7 @@ const ID_DEMO = await page.evaluate(async (D) => {
     Object.keys(D.MANUELS).forEach(k => { const e = document.getElementById('val-' + k); if (e) e.value = D.MANUELS[k]; });
     refreshUI();
 
-    logi = logiVide();
-    Object.assign(logi.gite, D.GITE, { recus: [] });
-    Object.assign(logi.courses, D.COURSES, { recus: [] });
+    logi = normLogi({ gites: [D.GITE], depenses: [D.COURSES] });
     piList = D.PI.map(x => ({ ...x }));
     contacts = normContacts(D.CONTACTS);
     chargement = D.CHARGEMENT.map((c, i) => ({ id: 'p' + i, nom: c.nom, lien: c.lien }));

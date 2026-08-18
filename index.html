@@ -257,6 +257,22 @@
         .cable-svg path, .cable-svg line { stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
         .pylone-svg circle, .cable-svg circle { fill: currentColor; stroke: none; }
 
+        /* Sections Gîtes et Dépenses communes */
+        .dep-section { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 4px 0 12px; }
+        .dep-titre { font-size: 1.05rem; font-weight: 800; color: var(--primary); }
+        .dep-nom { flex: 1; min-width: 140px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 7px 10px; font-weight: 800; color: var(--primary); background: #fff; }
+
+        /* --- Dossiers d'archives --- */
+        .archives-liste { display: block; }
+        .dossier { border: 1px solid var(--border); border-radius: 10px; margin-bottom: 12px; background: #fff; overflow: hidden; }
+        .dossier-tete { display: flex; align-items: center; gap: 10px; padding: 12px 16px; cursor: pointer; background: #f8fafc; }
+        .dossier-tete:hover { background: #f1f5f9; }
+        .dossier.ouvert .dossier-tete { border-bottom: 1px solid var(--border); }
+        .dossier-chevron { color: #64748b; font-size: 0.8rem; flex: 0 0 12px; }
+        .dossier-nom { font-weight: 800; color: var(--primary); font-size: 1.05rem; }
+        .dossier-nb { margin-left: auto; font-size: 0.8rem; color: #64748b; font-weight: 700; white-space: nowrap; }
+        .dossier-corps { padding: 14px; }
+
         /* --- Contacts --- */
         .ct-cat { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
                   background: #e2e8f0; color: var(--primary); font-weight: 800; font-size: 0.85rem;
@@ -752,7 +768,7 @@
             </div>
 
             <div class="subtabs">
-                <button class="subtab active" data-t="gite" onclick="showSub('gite')">🏕️ Gîte / Courses</button>
+                <button class="subtab active" data-t="gite" onclick="showSub('gite')">🏕️ Gîtes / Dépenses</button>
                 <button class="subtab" data-t="pi" onclick="showSub('pi')">📍 PI</button>
                 <button class="subtab" data-t="contacts" onclick="showSub('contacts')">☎️ Contacts</button>
                 <button class="subtab" data-t="chargement" onclick="showSub('chargement')">📦 Chargement</button>
@@ -930,12 +946,14 @@
         let ots = []; let ois = [];
 
         // Écran Logistique & Terrain (hors calcul d'avancement)
-        function logiVide() {
-            // lien et coord ne servent que pour le gîte ; recus : {nom,url,taille,date,chemin}
-            return {
-                gite:    { payeur:'', montant:'', pers: [], lien:'', coord:'', recus: [] },  // pers : {nom, nuits}
-                courses: { payeur:'', montant:'', pers: [], lien:'', coord:'', recus: [] }   // pers : {nom}
-            };
+        // Un chantier peut compter plusieurs gites et plusieurs depenses
+        // communes. Chaque entree porte son nom, son payeur, son montant, ses
+        // participants et ses recus. Un gite ajoute un lien et des coordonnees.
+        function logiVide() { return { gites: [], depenses: [] }; }
+
+        function entreeVide(kind) {
+            return { id: (kind === 'gites' ? 'g' : 'd') + Date.now() + Math.floor(Math.random()*1000),
+                     nom: '', payeur: '', montant: '', lien: '', coord: '', pers: [], recus: [] };
         }
         let logi = logiVide();
         let piList = [];                              // {lib, coord}
@@ -947,6 +965,7 @@
         let modeOp = [];                              // {id,titre,personnes[],sem,jour,demi,sousTaches[]}
         let moOuverts = {};                           // repli/depli des fiches, non enregistre
         let notes = [];                               // {id, auteur, texte, fait, date}
+        let dossiersArchives = {};                    // repli/depli des dossiers d'archives
         let subActif = 'gite';
         let semActive = null;                         // semaine affichée dans le planning
 
@@ -1314,7 +1333,7 @@
                     depl: isDepl,
                     folderLinks: fLinks, // Ajout des liens à l'objet
                     // Logistique & Terrain (n'entre pas dans le calcul de pct)
-                    logi: logi,
+                    logi: normLogi(logi),   // forme stable : relire donne exactement ceci
                     pi: piList,
                     contacts: contacts,
                     chargement: chargement,
@@ -1445,67 +1464,43 @@
 
         // --- 11. AFFICHAGE DES GRILLES (TRI PAR DATE) ---
         function renderHome() { renderGrid('grid-projects', false); }
-        function renderGrid(domId, isArch) {
-            const d = document.getElementById(domId); d.innerHTML = '';
-            
-            // Chaque équipe ne voit que ses chantiers, puis tri par date
-            const lst = projects
-                .filter(p => equipeDe(p) === equipeActive)
-                .filter(p => !!p.archived === isArch)
-                .sort((a, b) => {
-                    if (!a.start) return 1;
-                    if (!b.start) return -1;
-                    return new Date(a.start) - new Date(b.start);
-                });
-            
-            if(!lst.length) { 
-                d.innerHTML = `<div style="text-align:center;color:#999;grid-column:1/-1;padding:20px;">Aucun dossier pour ${esc(equipeActive)}</div>`;
-                return; 
-            }
-
+        // Fabrique la carte d'un chantier. Partagee par l'accueil et les
+        // archives : seul le bouton de suppression les distingue.
+        function carteChantier(p, isArch) {
             const today = new Date(); today.setHours(0,0,0,0);
+            let alertsHtml = '';
+            let globalStatus = 'green';
 
-            lst.forEach(p => {
-                let alertsHtml = '';
-                const allT = [...confLog.flatMap(x=>x.t), ...confPrep.flatMap(x=>x.t)];
-                let globalStatus = 'green';
-                
-                if(p.start) {
-                    allT.forEach(t => {
-                        if(t.type === 'input') return;
-                        if(p.states && p.states[t.id]) return;
-                        if(!t.d) return;
+            if(p.start) {
+                [...confLog.flatMap(x=>x.t), ...confPrep.flatMap(x=>x.t)].forEach(t => {
+                    if(t.type === 'input') return;
+                    if(p.states && p.states[t.id]) return;
+                    if(!t.d) return;
 
-                        const due = new Date(p.start); due.setDate(due.getDate() - t.d);
-                        if(today > due) {
-                            globalStatus = 'red';
-                            alertsHtml += `<div class="alert-item alert-red">⚠️ ${t.l}</div>`;
-                        } else {
-                            let warn = new Date(due);
-                            if(t.d >= 30) warn.setMonth(warn.getMonth()-1); else warn.setDate(warn.getDate()-5);
-                            if(today >= warn) {
-                                if(globalStatus !== 'red') globalStatus = 'yellow';
-                                alertsHtml += `<div class="alert-item alert-orange">🕒 ${t.l}</div>`;
-                            }
+                    const due = new Date(p.start); due.setDate(due.getDate() - t.d);
+                    if(today > due) {
+                        globalStatus = 'red';
+                        alertsHtml += `<div class="alert-item alert-red">⚠️ ${t.l}</div>`;
+                    } else {
+                        let warn = new Date(due);
+                        if(t.d >= 30) warn.setMonth(warn.getMonth()-1); else warn.setDate(warn.getDate()-5);
+                        if(today >= warn) {
+                            if(globalStatus !== 'red') globalStatus = 'yellow';
+                            alertsHtml += `<div class="alert-item alert-orange">🕒 ${t.l}</div>`;
                         }
-                    });
-                }
-                if(alertsHtml) alertsHtml = `<div class="card-alerts">${alertsHtml}</div>`;
+                    }
+                });
+            }
+            if(alertsHtml) alertsHtml = `<div class="card-alerts">${alertsHtml}</div>`;
 
-                const borderClass = globalStatus==='red'?'card-red':(globalStatus==='yellow'?'card-yellow':'card-green');
-                const gaugeColor = p.pct===100 ? '#10b981' : (globalStatus==='red' ? '#ef4444' : '#0055a4');
+            const borderClass = globalStatus==='red'?'card-red':(globalStatus==='yellow'?'card-yellow':'card-green');
+            const gaugeColor = p.pct===100 ? '#10b981' : (globalStatus==='red' ? '#ef4444' : '#0055a4');
+            const deleteBtn = isArch ? `<div class="btn-delete" onclick="deleteProject('${p.id}', event)">×</div>` : '';
 
-                // BOUTON SUPPRESSION (Uniquement si Archive)
-                let deleteBtn = '';
-                if(isArch) {
-                    deleteBtn = `<div class="btn-delete" onclick="deleteProject('${p.id}', event)">×</div>`;
-                }
-
-                const card = document.createElement('div');
-                card.className = `project-card ${borderClass}`;
-                card.onclick = function() { load(p.id); };
-                
-                card.innerHTML = `
+            const card = document.createElement('div');
+            card.className = `project-card ${borderClass}`;
+            card.onclick = function() { load(p.id); };
+            card.innerHTML = `
                     ${deleteBtn}
                     <div class="card-body">
                         <div class="card-title">
@@ -1514,7 +1509,7 @@
                         </div>
                         <div class="card-dates">📅 Du ${p.start?new Date(p.start).toLocaleDateString():'?'} au ${p.end?new Date(p.end).toLocaleDateString():'?'}</div>
                         <div class="card-dates">👤 ${p.cdt||'-'}</div>
-                        
+
                         <div class="card-desc">📝 ${p.desc || 'Aucune description'}</div>
 
                         ${alertsHtml}
@@ -1525,10 +1520,98 @@
                             <path class="circle" stroke-dasharray="${p.pct}, 100" stroke="${gaugeColor}" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
                         </svg>
                         <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:0.8rem; font-weight:bold">${p.pct}%</div>
-                    </div>
-                `;
-                d.appendChild(card);
+                    </div>`;
+            return card;
+        }
+
+        function renderGrid(domId, isArch) {
+            const d = document.getElementById(domId); d.innerHTML = '';
+
+            // Chaque equipe ne voit que ses chantiers, puis tri par date
+            const lst = projects
+                .filter(p => equipeDe(p) === equipeActive)
+                .filter(p => !!p.archived === isArch)
+                .sort((a, b) => {
+                    if (!a.start) return 1;
+                    if (!b.start) return -1;
+                    return new Date(a.start) - new Date(b.start);
+                });
+
+            if(!lst.length) {
+                d.className = 'projects-grid';
+                d.innerHTML = `<div style="text-align:center;color:#999;grid-column:1/-1;padding:20px;">Aucun dossier pour ${esc(equipeActive)}</div>`;
+                return;
+            }
+
+            if(isArch) { renderDossiers(d, lst); return; }
+
+            d.className = 'projects-grid';
+            lst.forEach(p => d.appendChild(carteChantier(p, false)));
+        }
+
+        // Les archives s'accumulent : on les range par mois de debut de
+        // chantier, dans des dossiers replies. Seul le plus recent s'ouvre
+        // d'office, pour que la page reste courte.
+        const MOIS = ['Janvier','Février','Mars','Avril','Mai','Juin',
+                      'Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+        function periodeChantier(p) {
+            if(!p.start) return { cle: '0000-00', lib: 'Sans date' };
+            const dt = new Date(p.start);
+            if(isNaN(dt.getTime())) return { cle: '0000-00', lib: 'Sans date' };
+            return {
+                cle: dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0'),
+                lib: MOIS[dt.getMonth()] + ' ' + dt.getFullYear()
+            };
+        }
+
+        function renderDossiers(conteneur, lst) {
+            conteneur.className = 'archives-liste';
+
+            const groupes = {};
+            const libelles = {};
+            lst.forEach(p => {
+                const g = periodeChantier(p);
+                libelles[g.cle] = g.lib;
+                (groupes[g.cle] = groupes[g.cle] || []).push(p);
             });
+
+            // Mois les plus recents d'abord ; "Sans date" (cle 0000-00) finit dernier
+            const cles = Object.keys(groupes).sort((a, b) => b.localeCompare(a));
+
+            // Premier affichage : on ouvre le dossier le plus recent
+            if(!Object.keys(dossiersArchives).length && cles.length) dossiersArchives[cles[0]] = true;
+
+            conteneur.innerHTML = '';
+            cles.forEach(cle => {
+                const items = groupes[cle].slice().reverse();   // plus recents en tete
+                const ouvert = !!dossiersArchives[cle];
+
+                const dossier = document.createElement('div');
+                dossier.className = 'dossier' + (ouvert ? ' ouvert' : '');
+                dossier.innerHTML = `
+                    <div class="dossier-tete" onclick="basculerDossier('${esc(cle)}')">
+                        <span class="dossier-chevron">${ouvert ? '▾' : '▸'}</span>
+                        <span class="dossier-nom">${ouvert ? '📂' : '📁'} ${esc(libelles[cle])}</span>
+                        <span class="dossier-nb">${items.length} chantier${items.length > 1 ? 's' : ''}</span>
+                    </div>`;
+
+                if(ouvert) {
+                    const corps = document.createElement('div');
+                    corps.className = 'dossier-corps';
+                    const grille = document.createElement('div');
+                    grille.className = 'projects-grid';
+                    items.forEach(p => grille.appendChild(carteChantier(p, true)));
+                    corps.appendChild(grille);
+                    dossier.appendChild(corps);
+                }
+                conteneur.appendChild(dossier);
+            });
+        }
+
+        function basculerDossier(cle) {
+            dossiersArchives[cle] = !dossiersArchives[cle];
+            renderGrid('grid-archives', true);
         }
         
         function doArchive() { if(confirm("Archiver ce chantier ?")) save(true); }
@@ -1689,24 +1772,42 @@
         // --- Normalisation des données relues depuis Firebase -------------
         // Firebase ne stocke ni les chaînes vides ni les tableaux vides :
         // on remet systématiquement une structure complète.
+        function normEntree(e, kind, rang) {
+            e = e || {};
+            return {
+                id: e.id || ((kind === 'gites' ? 'g' : 'd') + rang + Math.random().toString(36).slice(2, 7)),
+                nom: e.nom || '',
+                payeur: e.payeur || '',
+                montant: (e.montant || e.montant === 0) ? e.montant : '',
+                lien: e.lien || '',
+                coord: e.coord || '',
+                pers: (e.pers || []).map(x => ({
+                    nom: x.nom || '',
+                    nuits: (x.nuits || x.nuits === 0) ? x.nuits : ''
+                })),
+                recus: (e.recus || []).map(r => ({
+                    id: r.id || '', nom: r.nom || '',
+                    taille: r.taille || 0, date: r.date || 0
+                }))
+            };
+        }
+
         function normLogi(x) {
             const v = logiVide();
             if(!x) return v;
-            ['gite','courses'].forEach(k => {
-                const s = x[k] || {};
-                v[k].payeur  = s.payeur || '';
-                v[k].montant = (s.montant || s.montant === 0) ? s.montant : '';
-                v[k].lien    = s.lien  || '';
-                v[k].coord   = s.coord || '';
-                v[k].pers    = (s.pers || []).map(p => ({
-                    nom:   p.nom || '',
-                    nuits: (p.nuits || p.nuits === 0) ? p.nuits : ''
-                }));
-                v[k].recus   = (s.recus || []).map(r => ({
-                    id: r.id || '', nom: r.nom || '',
-                    taille: r.taille || 0, date: r.date || 0
-                }));
-            });
+
+            // Format actuel : deux listes
+            if(x.gites || x.depenses) {
+                v.gites    = (x.gites    || []).map((e, i) => normEntree(e, 'gites', i));
+                v.depenses = (x.depenses || []).map((e, i) => normEntree(e, 'depenses', i));
+                return v;
+            }
+
+            // Ancien format : un seul gite et une seule ligne de courses.
+            // On les reprend, en n'en gardant que ce qui etait renseigne.
+            const garni = e => e && (e.payeur || e.montant || (e.pers || []).length || (e.recus || []).length || e.lien || e.coord);
+            if(garni(x.gite))    v.gites.push(Object.assign(normEntree(x.gite, 'gites', 0),      { nom: 'Gîte' }));
+            if(garni(x.courses)) v.depenses.push(Object.assign(normEntree(x.courses, 'depenses', 0), { nom: 'Courses' }));
             return v;
         }
         function normSup(s) {
@@ -1866,77 +1967,85 @@
             showSub(subActif);
         }
 
-        // --- Onglet Gîte / Courses -----------------------------------------
-        // Gîte : répartition au prorata des nuits. Courses : parts égales.
-        function partDe(k, i) {
-            const d = logi[k], m = num(d.montant);
-            if(k === 'gite') {
-                const totN = d.pers.reduce((s,p) => s + num(p.nuits), 0);
-                return totN ? m * num(d.pers[i].nuits) / totN : 0;
+        // --- Onglet Gîtes / Dépenses communes --------------------------------
+        // Deux listes : les gîtes (répartis au prorata des nuits) et les
+        // dépenses communes (à parts égales). Autant d'entrées que voulu.
+
+        function entree(kind, i) { return (logi[kind] || [])[i]; }
+
+        function partDe(kind, i, j) {
+            const e = entree(kind, i);
+            if(!e) return 0;
+            const m = num(e.montant);
+            if(kind === 'gites') {
+                const totN = e.pers.reduce((s, p) => s + num(p.nuits), 0);
+                return totN ? m * num(e.pers[j].nuits) / totN : 0;
             }
-            return d.pers.length ? m / d.pers.length : 0;
+            return e.pers.length ? m / e.pers.length : 0;
         }
 
-        function persRows(k, ro) {
-            const d = logi[k];
-            if(!d.pers.length) return '<div class="lg-vide">Aucune personne enregistrée</div>';
-            const avecNuits = (k === 'gite');
-            return d.pers.map((p, i) => {
-                const paye = !!p.nom && p.nom === d.payeur;
+        function persRows(kind, i, ro) {
+            const e = entree(kind, i);
+            if(!e.pers.length) return '<div class="lg-vide">Aucune personne enregistrée</div>';
+            const avecNuits = (kind === 'gites');
+            return e.pers.map((p, j) => {
+                const paye = !!p.nom && p.nom === e.payeur;
                 return `<div class="lg-row">
-                ${ro ? (paye ? '<span class="badge-paye">✓ a payé</span>' : '')
+                ${ro ? (paye ? '<span class="badge-paye">\u2713 a payé</span>' : '')
                      : `<label class="lg-paye" title="Cocher la personne qui a payé">
-                            <input type="checkbox" ${paye ? 'checked' : ''} onchange="cocherPayeur('${k}',${i})">a payé
+                            <input type="checkbox" ${paye ? 'checked' : ''} onchange="cocherPayeur('${kind}',${i},${j})">a payé
                         </label>`}
-                ${ro ? `<span class="lg-name"><b>${esc(p.nom) || '—'}</b></span>`
-                     : `<input class="lg-name" placeholder="Nom" value="${esc(p.nom)}" onchange="setPersNom('${k}',${i},this.value)">`}
+                ${ro ? `<span class="lg-name"><b>${esc(p.nom) || '\u2014'}</b></span>`
+                     : `<input class="lg-name" placeholder="Nom" value="${esc(p.nom)}" onchange="setPersNom('${kind}',${i},${j},this.value)">`}
                 ${!avecNuits ? '' : (ro
                      ? `<span class="lg-nights">${num(p.nuits)} nuit${num(p.nuits) > 1 ? 's' : ''}</span>`
-                     : `<input class="lg-nights" type="number" min="0" step="1" placeholder="nuits" value="${esc(p.nuits)}" oninput="setPersNuits('${k}',${i},this.value)">`)}
-                <span class="lg-part" id="part-${k}-${i}">${eur(partDe(k,i))}</span>
-                ${ro ? '' : `<button class="btn-x" onclick="delPers('${k}',${i})">🗑</button>`}
+                     : `<input class="lg-nights" type="number" min="0" step="1" placeholder="nuits" value="${esc(p.nuits)}" oninput="setPersNuits('${kind}',${i},${j},this.value)">`)}
+                <span class="lg-part" id="part-${kind}-${i}-${j}">${eur(partDe(kind, i, j))}</span>
+                ${ro ? '' : `<button class="btn-x" onclick="delPers('${kind}',${i},${j})">🗑</button>`}
             </div>`;
             }).join('');
         }
 
         // Une seule personne peut être le payeur : cocher l'une décoche l'autre.
-        function cocherPayeur(k, i) {
-            const nom = (logi[k].pers[i].nom || '').trim();
+        function cocherPayeur(kind, i, j) {
+            const e = entree(kind, i);
+            const nom = (e.pers[j].nom || '').trim();
             if(!nom) { alert("Renseignez d'abord le nom de cette personne."); renderGite(); return; }
-            logi[k].payeur = (logi[k].payeur === nom) ? '' : nom;
+            e.payeur = (e.payeur === nom) ? '' : nom;
             renderGite();
         }
 
-        function totaux(k) {
-            const d = logi[k], m = num(d.montant);
+        function totaux(kind, i) {
+            const e = entree(kind, i);
+            const m = num(e.montant);
             const infos = [];
-            if(k === 'gite') {
-                const totN = d.pers.reduce((s,p) => s + num(p.nuits), 0);
-                infos.push(['Nuitées totales', totN || '—']);
-                infos.push(['Coût par nuitée', totN ? eur(m / totN) : '—']);
+            if(kind === 'gites') {
+                const totN = e.pers.reduce((s, p) => s + num(p.nuits), 0);
+                infos.push(['Nuitées totales', totN || '\u2014']);
+                infos.push(['Coût par nuitée', totN ? eur(m / totN) : '\u2014']);
             } else {
-                infos.push(['Personnes', d.pers.length || '—']);
-                infos.push(['Part par personne', d.pers.length ? eur(m / d.pers.length) : '—']);
+                infos.push(['Personnes', e.pers.length || '\u2014']);
+                infos.push(['Part par personne', e.pers.length ? eur(m / e.pers.length) : '\u2014']);
             }
 
             let regl = '';
-            if(m > 0 && !d.payeur) {
+            if(m > 0 && !e.payeur) {
                 regl = `<div style="margin-top:10px"><div class="lg-warn">Indiquez qui a payé pour calculer le règlement.</div></div>`;
-            } else if(m > 0 && d.payeur) {
-                const dus = d.pers
-                    .map((p, i) => ({ nom: p.nom, part: partDe(k, i) }))
-                    .filter(x => x.nom && x.nom !== d.payeur && x.part > 0.004);
+            } else if(m > 0 && e.payeur) {
+                const dus = e.pers
+                    .map((p, j) => ({ nom: p.nom, part: partDe(kind, i, j) }))
+                    .filter(x => x.nom && x.nom !== e.payeur && x.part > 0.004);
                 if(dus.length) {
                     regl = `<div style="margin-top:10px;padding-top:10px;border-top:1px solid #a7f3d0">
                         <div style="font-weight:800;color:#065f46;margin-bottom:5px">Règlement</div>
-                        ${dus.map(x => `<div class="lg-total-line"><span>${esc(x.nom)} doit à ${esc(d.payeur)}</span><b>${eur(x.part)}</b></div>`).join('')}
+                        ${dus.map(x => `<div class="lg-total-line"><span>${esc(x.nom)} doit à ${esc(e.payeur)}</span><b>${eur(x.part)}</b></div>`).join('')}
                     </div>`;
                 }
             }
 
-            return `<div class="lg-total" id="tot-${k}">
+            return `<div class="lg-total" id="tot-${kind}-${i}">
                 <div class="lg-total-line"><span>Montant total payé</span><b>${eur(m)}</b></div>
-                ${infos.map(([a,b]) => `<div class="lg-total-line"><span>${a}</span><b>${b}</b></div>`).join('')}
+                ${infos.map(([a, b]) => `<div class="lg-total-line"><span>${a}</span><b>${b}</b></div>`).join('')}
                 ${regl}
             </div>`;
         }
@@ -1948,43 +2057,43 @@
                                      : (o / 1024 / 1024).toFixed(1).replace('.', ',') + ' Mo';
         }
 
-        function blocGiteExtra(ro) {
-            const g = logi.gite;
-            const aLien = !!(g.lien || '').trim(), aCoord = !!(g.coord || '').trim();
+        function blocGiteExtra(i, ro) {
+            const e = entree('gites', i);
+            const aLien = !!(e.lien || '').trim(), aCoord = !!(e.coord || '').trim();
             return `<div class="lg-grid2">
                 <div class="form-group"><label class="form-label">Lien du gîte</label>
                     <div class="input-group-row">
-                        ${ro ? `<span class="ro-val" style="flex:1;overflow:hidden;text-overflow:ellipsis">${esc(g.lien) || '—'}</span>`
-                             : `<input class="form-input" style="flex:1;min-width:0" placeholder="https://…" value="${esc(g.lien)}" onchange="setLogiChamp('gite','lien',this.value)">`}
-                        <button class="btn-mini" onclick="ouvrirLienGite()" ${aLien ? '' : 'disabled'}>Ouvrir</button>
+                        ${ro ? `<span class="ro-val" style="flex:1;overflow:hidden;text-overflow:ellipsis">${esc(e.lien) || '\u2014'}</span>`
+                             : `<input class="form-input" style="flex:1;min-width:0" placeholder="https://\u2026" value="${esc(e.lien)}" onchange="setEntree('gites',${i},'lien',this.value)">`}
+                        <button class="btn-mini" onclick="ouvrirLienGite(${i})" ${aLien ? '' : 'disabled'}>Ouvrir</button>
                     </div>
                 </div>
                 <div class="form-group"><label class="form-label">Coordonnées GPS du gîte</label>
                     <div class="input-group-row">
-                        ${ro ? `<span class="ro-val" style="flex:1">${esc(g.coord) || '—'}</span>`
-                             : `<input class="form-input" style="flex:1;min-width:0" placeholder="45.8234, 1.2612" value="${esc(g.coord)}" onchange="setLogiChamp('gite','coord',this.value)">`}
-                        <button class="btn-waze" onclick="ouvrirNavGite('waze')" ${aCoord ? '' : 'disabled'}>Waze</button>
-                        <button class="btn-maps" onclick="ouvrirNavGite('maps')" ${aCoord ? '' : 'disabled'}>Maps</button>
+                        ${ro ? `<span class="ro-val" style="flex:1">${esc(e.coord) || '\u2014'}</span>`
+                             : `<input class="form-input" style="flex:1;min-width:0" placeholder="45.8234, 1.2612" value="${esc(e.coord)}" onchange="setEntree('gites',${i},'coord',this.value)">`}
+                        <button class="btn-waze" onclick="ouvrirNavGite(${i},'waze')" ${aCoord ? '' : 'disabled'}>Waze</button>
+                        <button class="btn-maps" onclick="ouvrirNavGite(${i},'maps')" ${aCoord ? '' : 'disabled'}>Maps</button>
                     </div>
                 </div>
             </div>`;
         }
 
-        function recusHtml(k, ro) {
-            const lst = logi[k].recus || [];
+        function recusHtml(kind, i, ro) {
+            const lst = entree(kind, i).recus || [];
             let h = `<div class="eq-sect">Reçus (PDF, 3 Mo max)
                 ${ro ? '' : `<label class="btn-mini ghost" style="cursor:pointer">+ Importer un PDF
-                    <input type="file" accept="application/pdf" style="display:none" onchange="uploadRecu('${k}', this)">
+                    <input type="file" accept="application/pdf" style="display:none" onchange="uploadRecu('${kind}',${i}, this)">
                 </label>`}
-                <span id="recu-etat-${k}" style="font-weight:700;color:#0369a1;text-transform:none"></span>
+                <span id="recu-etat-${kind}-${i}" style="font-weight:700;color:#0369a1;text-transform:none"></span>
             </div>`;
 
             if(!lst.length) return h + '<div class="lg-vide">Aucun reçu importé</div>';
 
-            h += '<div class="recu-list">' + lst.map((r, i) => `<div class="recu-item">
-                    <button class="recu-dl" onclick="telechargerRecu('${k}',${i})">📄 ${esc(r.nom)}</button>
+            h += '<div class="recu-list">' + lst.map((r, j) => `<div class="recu-item">
+                    <button class="recu-dl" onclick="telechargerRecu('${kind}',${i},${j})">📄 ${esc(r.nom)}</button>
                     <small>${poids(r.taille)}</small>
-                    ${ro ? '' : `<button class="btn-x" onclick="delRecu('${k}',${i})">🗑</button>`}
+                    ${ro ? '' : `<button class="btn-x" onclick="delRecu('${kind}',${i},${j})">🗑</button>`}
                 </div>`).join('') + '</div>';
             return h;
         }
@@ -1998,7 +2107,14 @@
             });
         }
 
-        async function uploadRecu(k, input) {
+        // Ecrit toute la liste : un chemin base sur l'indice se decalerait
+        // des qu'une entree est supprimee.
+        async function persisterLogi(kind) {
+            if(!curId) return;
+            await db.ref('chantiers/' + curId + '/logi/' + kind).set(logi[kind]);
+        }
+
+        async function uploadRecu(kind, i, input) {
             const f = input.files && input.files[0];
             input.value = '';                     // permet de réimporter le même fichier
             if(!f) return;
@@ -2009,16 +2125,14 @@
             }
             if(!curId) { alert("Enregistrez d'abord le chantier : le reçu doit être rattaché à son identifiant."); return; }
 
-            const etat = document.getElementById('recu-etat-' + k);
-            if(etat) etat.textContent = ' Import en cours…';
+            const etat = document.getElementById('recu-etat-' + kind + '-' + i);
+            if(etat) etat.textContent = ' Import en cours\u2026';
             try {
                 const data = await lireBase64(f);
                 const id = 'r' + Date.now();
                 await db.ref(`recus/${curId}/${id}`).set({ nom: f.name, taille: f.size, date: Date.now(), data: data });
-                logi[k].recus.push({ id: id, nom: f.name, taille: f.size, date: Date.now() });
-                // Écriture immédiate : sinon un oubli d'enregistrement laisserait
-                // le fichier en base sans rien pour le retrouver.
-                await db.ref(`chantiers/${curId}/logi/${k}/recus`).set(logi[k].recus);
+                entree(kind, i).recus.push({ id: id, nom: f.name, taille: f.size, date: Date.now() });
+                await persisterLogi(kind);
                 renderGite();
             } catch(e) {
                 if(etat) etat.textContent = '';
@@ -2027,13 +2141,13 @@
         }
 
         // Le contenu du PDF n'est lu qu'ici, à la demande.
-        async function telechargerRecu(k, i) {
-            const meta = logi[k].recus[i];
+        async function telechargerRecu(kind, i, j) {
+            const meta = entree(kind, i).recus[j];
             const cid = PARTAGE ? PARTAGE_ID : curId;
             if(!cid || !meta.id) { alert("Reçu introuvable."); return; }
 
-            const etat = document.getElementById('recu-etat-' + k);
-            if(etat) etat.textContent = ' Téléchargement…';
+            const etat = document.getElementById('recu-etat-' + kind + '-' + i);
+            if(etat) etat.textContent = ' Téléchargement\u2026';
             try {
                 const snap = await db.ref(`recus/${cid}/${meta.id}`).once('value');
                 const v = snap.val();
@@ -2041,7 +2155,7 @@
 
                 const bin = atob(v.data);
                 const buf = new Uint8Array(bin.length);
-                for(let j = 0; j < bin.length; j++) buf[j] = bin.charCodeAt(j);
+                for(let z = 0; z < bin.length; z++) buf[z] = bin.charCodeAt(z);
                 const url = URL.createObjectURL(new Blob([buf], { type: 'application/pdf' }));
 
                 const a = document.createElement('a');
@@ -2056,80 +2170,116 @@
             }
         }
 
-        async function delRecu(k, i) {
-            const r = logi[k].recus[i];
-            if(!confirm(`Supprimer définitivement le reçu « ${r.nom} » ?`)) return;
+        async function delRecu(kind, i, j) {
+            const r = entree(kind, i).recus[j];
+            if(!confirm(`Supprimer définitivement le reçu \u00ab ${r.nom} \u00bb ?`)) return;
             if(curId && r.id) await db.ref(`recus/${curId}/${r.id}`).remove().catch(() => {});
-            logi[k].recus.splice(i, 1);
-            if(curId) await db.ref(`chantiers/${curId}/logi/${k}/recus`).set(logi[k].recus);
+            entree(kind, i).recus.splice(j, 1);
+            await persisterLogi(kind);
             renderGite();
         }
 
-        function setLogiChamp(k, c, v) { logi[k][c] = v; renderGite(); }
-
-        function blocDepense(k, titre, ro) {
-            const d = logi[k];
-            let actions = '';
-            if(!ro) {
-                actions = `<span style="display:flex;gap:8px;flex-wrap:wrap">
-                    ${k === 'courses' ? `<button class="btn-mini ghost" onclick="copierPersGite()">Reprendre les personnes du gîte</button>` : ''}
-                    <button class="btn-mini" onclick="addPers('${k}')">+ Ajouter une personne</button>
-                </span>`;
-            }
+        // --- Rendu ------------------------------------------------------------
+        function blocEntree(kind, i, ro) {
+            const e = entree(kind, i);
+            const parDefaut = (kind === 'gites') ? 'Gîte sans nom' : 'Dépense sans intitulé';
             return `<div class="lg-block">
-                <div class="lg-head"><span>${titre}</span>${actions}</div>
+                <div class="lg-head">
+                    ${ro ? `<span>${esc(e.nom) || parDefaut}</span>`
+                         : `<input class="dep-nom" placeholder="${kind === 'gites' ? 'Nom du gîte' : 'Intitulé de la dépense'}" value="${esc(e.nom)}" onchange="setEntree('${kind}',${i},'nom',this.value)">`}
+                    <span style="display:flex;gap:8px;flex-wrap:wrap">
+                        ${(!ro && kind === 'depenses') ? `<button class="btn-mini ghost" onclick="reprendrePersonnes(${i})">Reprendre les personnes des gîtes</button>` : ''}
+                        ${ro ? '' : `<button class="btn-mini" onclick="addPers('${kind}',${i})">+ Personne</button>`}
+                        ${ro ? '' : `<button class="btn-x" onclick="delEntree('${kind}',${i})">🗑</button>`}
+                    </span>
+                </div>
                 <div class="lg-body">
                     <div class="form-group" style="max-width:260px;margin-bottom:14px">
                         <label class="form-label">Montant total payé (€)</label>
-                        ${ro ? `<span class="ro-val">${eur(d.montant)}</span>`
-                             : `<input class="form-input" type="number" step="0.01" min="0" placeholder="0,00" value="${esc(d.montant)}" oninput="setMontant('${k}', this.value)">`}
+                        ${ro ? `<span class="ro-val">${eur(e.montant)}</span>`
+                             : `<input class="form-input" type="number" step="0.01" min="0" placeholder="0,00" value="${esc(e.montant)}" oninput="setMontant('${kind}',${i}, this.value)">`}
                     </div>
-                    ${k === 'gite' ? blocGiteExtra(ro) : ''}
-                    ${persRows(k, ro)}
-                    ${totaux(k)}
-                    ${recusHtml(k, ro)}
+                    ${kind === 'gites' ? blocGiteExtra(i, ro) : ''}
+                    ${persRows(kind, i, ro)}
+                    ${totaux(kind, i)}
+                    ${recusHtml(kind, i, ro)}
                 </div>
             </div>`;
+        }
+
+        function sectionDepenses(kind, titre, libAjout, vide, ro) {
+            const lst = logi[kind] || [];
+            let h = `<div class="dep-section">
+                <span class="dep-titre">${titre}</span>
+                ${ro ? '' : `<button class="btn-mini" onclick="addEntree('${kind}')">${libAjout}</button>`}
+            </div>`;
+            h += lst.length ? lst.map((e, i) => blocEntree(kind, i, ro)).join('')
+                            : `<div class="lg-vide" style="margin-bottom:18px">${vide}</div>`;
+            return h;
         }
 
         function renderGite() {
             const ro = PARTAGE;
             document.getElementById('sub-gite').innerHTML =
-                  blocDepense('gite',    '🏕️ Gîte — hébergement (au prorata des nuits)', ro)
-                + blocDepense('courses', '🛒 Courses — ravitaillement (à parts égales)',  ro);
+                  sectionDepenses('gites', '🏕️ Gîtes \u2014 hébergement', '+ Ajouter un gîte',
+                                  'Aucun gîte enregistré', ro)
+                + sectionDepenses('depenses', '🛒 Dépenses communes', '+ Ajouter une dépense',
+                                  'Aucune dépense enregistrée', ro);
         }
 
         // Recalcule les montants sans reconstruire le panneau : évite de
         // perdre le focus pendant la frappe.
-        function majTotaux(k) {
-            logi[k].pers.forEach((p, i) => {
-                const el = document.getElementById(`part-${k}-${i}`);
-                if(el) el.textContent = eur(partDe(k, i));
+        function majTotaux(kind, i) {
+            entree(kind, i).pers.forEach((p, j) => {
+                const el = document.getElementById(`part-${kind}-${i}-${j}`);
+                if(el) el.textContent = eur(partDe(kind, i, j));
             });
-            const t = document.getElementById('tot-' + k);
-            if(t) t.outerHTML = totaux(k);
+            const t = document.getElementById(`tot-${kind}-${i}`);
+            if(t) t.outerHTML = totaux(kind, i);
         }
 
-        function setMontant(k, v)      { logi[k].montant = v; majTotaux(k); }
-        function setPersNuits(k, i, v) { logi[k].pers[i].nuits = v; majTotaux(k); }
-        function setPersNom(k, i, v) {
-            const ancien = logi[k].pers[i].nom;
-            logi[k].pers[i].nom = v;
-            if(logi[k].payeur === ancien) logi[k].payeur = v;   // suivre le renommage
+        function setMontant(kind, i, v)        { entree(kind, i).montant = v; majTotaux(kind, i); }
+        function setPersNuits(kind, i, j, v)   { entree(kind, i).pers[j].nuits = v; majTotaux(kind, i); }
+        function setEntree(kind, i, champ, v)  { entree(kind, i)[champ] = v; renderGite(); }
+
+        function setPersNom(kind, i, j, v) {
+            const e = entree(kind, i);
+            const ancien = e.pers[j].nom;
+            e.pers[j].nom = v;
+            // Suivre le renommage du payeur. Le test sur un ancien nom vide
+            // est indispensable : sans lui, la premiere personne saisie
+            // devenait payeur d'office, payeur et ancien valant tous deux ''.
+            if(ancien && e.payeur === ancien) e.payeur = v;
             renderGite();
         }
-        function addPers(k) {
-            logi[k].pers.push(k === 'gite' ? { nom:'', nuits:'' } : { nom:'' });
+        function addPers(kind, i) {
+            entree(kind, i).pers.push({ nom:'', nuits:'' });
             renderGite();
         }
-        function delPers(k, i) {
-            if(logi[k].payeur === logi[k].pers[i].nom) logi[k].payeur = '';
-            logi[k].pers.splice(i, 1);
+        function delPers(kind, i, j) {
+            const e = entree(kind, i);
+            if(e.payeur === e.pers[j].nom) e.payeur = '';
+            e.pers.splice(j, 1);
             renderGite();
         }
-        function copierPersGite() {
-            logi.courses.pers = logi.gite.pers.map(p => ({ nom: p.nom }));
-            if(!logi.courses.payeur) logi.courses.payeur = logi.gite.payeur;
+
+        function addEntree(kind) { logi[kind].push(entreeVide(kind)); renderGite(); }
+        function delEntree(kind, i) {
+            const e = entree(kind, i);
+            const quoi = (kind === 'gites' ? 'le gîte' : 'la dépense');
+            if(!confirm(`Supprimer ${quoi} \u00ab ${e.nom || 'sans nom'} \u00bb, ses participants et ses reçus ?`)) return;
+            logi[kind].splice(i, 1);
+            renderGite();
+        }
+
+        // Reprend, sans doublon, les personnes presentes dans les gites
+        function reprendrePersonnes(i) {
+            const noms = [];
+            (logi.gites || []).forEach(g => g.pers.forEach(p => {
+                if(p.nom && !noms.includes(p.nom)) noms.push(p.nom);
+            }));
+            if(!noms.length) { alert("Aucune personne n'est encore enregistrée dans les gîtes."); return; }
+            entree('depenses', i).pers = noms.map(n => ({ nom: n, nuits: '' }));
             renderGite();
         }
 
@@ -2226,11 +2376,11 @@
                 : `https://www.google.com/maps/search/?api=1&query=${q}`;
         }
 
-        function ouvrirNav(i, app)     { const u = urlNav(piList[i].coord, app); if(u) window.open(u, '_blank'); }
-        function ouvrirNavGite(app)    { const u = urlNav(logi.gite.coord, app); if(u) window.open(u, '_blank'); }
+        function ouvrirNav(i, app)      { const u = urlNav(piList[i].coord, app); if(u) window.open(u, '_blank'); }
+        function ouvrirNavGite(i, app)  { const u = urlNav(entree('gites', i).coord, app); if(u) window.open(u, '_blank'); }
 
-        function ouvrirLienGite() {
-            let v = (logi.gite.lien || '').trim();
+        function ouvrirLienGite(i) {
+            let v = (entree('gites', i).lien || '').trim();
             if(!v) return;
             // On n'ouvre que du http(s) : évite un javascript: collé par erreur
             if(!/^https?:\/\//i.test(v)) v = 'https://' + v;

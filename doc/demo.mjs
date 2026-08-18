@@ -33,6 +33,7 @@ export const ETATS = {
 export const MANUELS = { r_dur: '3 semaines', r_agt: '5' };
 
 export const GITE = {
+    nom: 'Gîte des Monts',
     payeur: 'Martin Dubois',
     montant: '620',
     lien: 'https://exemple-gite-des-monts.fr',
@@ -44,6 +45,7 @@ export const GITE = {
     ]
 };
 export const COURSES = {
+    nom: 'Courses et ravitaillement',
     payeur: 'Claire Perrot',
     montant: '184.50',
     pers: [{ nom: 'Martin Dubois' }, { nom: 'Claire Perrot' }, { nom: 'Bruno Marchand' }]
