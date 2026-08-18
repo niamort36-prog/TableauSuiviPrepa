@@ -160,6 +160,9 @@
            ================================================================== */
         .btn-logi { background: #0f766e; color: white; }
 
+        .logi-oi { font-weight: 800; letter-spacing: 0.04em; margin-top: 4px; }
+        .logi-oi:empty { display: none; }
+
         .subtabs { display: flex; background: #f1f5f9; border-bottom: 2px solid var(--border); overflow-x: auto; }
         .subtab { position: relative; flex: 1; min-width: 118px; background: transparent; border: none; border-bottom: 3px solid transparent; padding: 14px 14px; font-size: 0.95rem; font-weight: 700; color: #64748b; cursor: pointer; white-space: normal; line-height: 1.25; }
         .subtab:hover { background: #e2e8f0; }
@@ -248,8 +251,11 @@
         .centre { display: flex; flex-direction: column; align-items: center; gap: 7px; width: 132px; }
         .num-central input { font-weight: 800; font-size: 1.05rem; }
         .pylone-svg { width: 76px; height: 86px; color: #334155; }
-        .pylone-svg path, .pylone-svg line { stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
-        .pylone-svg circle { fill: currentColor; stroke: none; }
+        .cable-svg  { width: 156px; height: 72px; color: #334155; }
+        .centre-portee { width: 176px; }
+        .pylone-svg path, .pylone-svg line,
+        .cable-svg path, .cable-svg line { stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+        .pylone-svg circle, .cable-svg circle { fill: currentColor; stroke: none; }
 
         /* --- Contacts --- */
         .ct-cat { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
@@ -422,7 +428,7 @@
             .ct-btn { flex: 1 1 auto; }
             /* Le schéma pylône passe en colonne : gauche, centre, droite */
             .sup-schema { grid-template-columns: 1fr; gap: 10px; }
-            .centre { width: 100%; }
+            .centre, .centre-portee { width: 100%; }
             .mo-quand { grid-template-columns: 1fr !important; }
             .mo-st { flex-wrap: wrap; }
             .mo-st input { flex: 1 1 calc(100% - 60px); }
@@ -741,6 +747,7 @@
         <div class="dashboard-container">
             <div class="header-bar" style="background:#0f766e">
                 <h2 id="logi-title" style="margin:0; font-size:1.3rem">LOGISTIQUE &amp; TERRAIN</h2>
+                <div id="logi-oi" class="logi-oi"></div>
                 <div id="logi-sub" style="opacity:0.8"></div>
             </div>
 
@@ -1707,7 +1714,9 @@
             return { num:s.num||'', numG:s.numG||'', numD:s.numD||'',
                      param:s.param||'', temp:s.temp||'', vent:s.vent||'',
                      terre:s.terre||'', ev:s.ev||'', ehd:s.ehd||'', ehg:s.ehg||'',
-                     eld:s.eld||'', elg:s.elg||'', com:s.com||'' };
+                     eld:s.eld||'', elg:s.elg||'',
+                     th:s.th||'',                       // effort Th (ou To) d'une portee
+                     com:s.com||'' };
         }
         function normTech(t) {
             const v = { pylones: [], portees: [] };
@@ -1842,6 +1851,11 @@
             }
             document.getElementById('logi-title').textContent = titre.toUpperCase();
             document.getElementById('logi-sub').textContent = sous;
+
+            // Le ou les numeros d'OI saisis sur la fiche, rappeles ici
+            const oiListe = (PARTAGE && partageProjet) ? (partageProjet.ois || []) : ois;
+            const elOI = document.getElementById('logi-oi');
+            elOI.textContent = oiListe.length ? 'N° OI : ' + oiListe.join('  ·  ') : '';
 
             // Pré-remplit le nom de l'auteur des notes s'il est déjà connu
             const ia = document.getElementById('note-auteur');
@@ -2456,6 +2470,15 @@
             <line x1="61" y1="54" x2="61" y2="62"/><circle cx="61" cy="64" r="2.2"/>
         </svg>`;
 
+        // Une portée se représente par son câble, pas par un support : deux
+        // points d'accrochage et la chaînette entre eux.
+        const CABLE_SVG = `<svg viewBox="0 0 160 74" class="cable-svg" aria-hidden="true">
+            <line x1="10" y1="8" x2="10" y2="22"/><circle cx="10" cy="24" r="2.6"/>
+            <line x1="150" y1="8" x2="150" y2="22"/><circle cx="150" cy="24" r="2.6"/>
+            <path d="M10 26 Q80 72 150 26"/>
+            <path d="M80 27 L80 53" stroke-dasharray="2.5 3"/>
+        </svg>`;
+
         // Vent : exprimé en pascals, "SV" (sans vent) quand la valeur est nulle
         function uniteVent(v) { return (v === '' || v == null || num(v) === 0) ? 'SV' : 'Pa'; }
         function majVent(inp) {
@@ -2473,6 +2496,52 @@
                      : `<input type="${cle === 'num' || cle === 'numG' || cle === 'numD' ? 'text' : 'number'}"
                                placeholder="${cle.startsWith('num') ? 'n°' : '0'}" value="${esc(v)}"
                                onchange="setSup('${type}',${si},'${cle}',this.value)">`}
+            </div>`;
+        }
+
+        // Deux representations : un pylone porte des efforts de chaque cote,
+        // une portee est un cable tendu entre deux supports et ne porte qu'un
+        // effort, Th (ou To).
+        function schemaSupport(type, si, s, ro) {
+            if(type === 'portees') {
+                return `<div class="sup-schema">
+                    <div class="cote">
+                        <div class="cote-titre">◀ Pylône de gauche</div>
+                        ${champSup(type, si, 'numG', 'N° du pylône', ro, s.numG, '', 'num-central')}
+                    </div>
+
+                    <div class="centre centre-portee">
+                        ${CABLE_SVG}
+                        ${champSup(type, si, 'th', 'Th (ou To) — daN', ro, s.th, 'daN')}
+                    </div>
+
+                    <div class="cote">
+                        <div class="cote-titre">Pylône de droite ▶</div>
+                        ${champSup(type, si, 'numD', 'N° du pylône', ro, s.numD, '', 'num-central')}
+                    </div>
+                </div>`;
+            }
+
+            return `<div class="sup-schema">
+                <div class="cote">
+                    <div class="cote-titre">◀ Côté gauche</div>
+                    ${champSup(type, si, 'numG', 'Support gauche', ro, s.numG)}
+                    ${champSup(type, si, 'ehg', 'Horizontal (daN)', ro, s.ehg, 'daN')}
+                    ${champSup(type, si, 'elg', 'Longitudinal (daN)', ro, s.elg, 'daN')}
+                </div>
+
+                <div class="centre">
+                    ${PYLONE_SVG}
+                    ${champSup(type, si, 'num', 'Pylône', ro, s.num, '', 'num-central')}
+                    ${champSup(type, si, 'ev', 'Vertical (daN)', ro, s.ev, 'daN')}
+                </div>
+
+                <div class="cote">
+                    <div class="cote-titre">Côté droit ▶</div>
+                    ${champSup(type, si, 'numD', 'Support droit', ro, s.numD)}
+                    ${champSup(type, si, 'ehd', 'Horizontal (daN)', ro, s.ehd, 'daN')}
+                    ${champSup(type, si, 'eld', 'Longitudinal (daN)', ro, s.eld, 'daN')}
+                </div>
             </div>`;
         }
 
@@ -2500,27 +2569,7 @@
                     ${ro ? '' : `<button class="btn-x" onclick="delSup('${type}',${si})">🗑</button>`}
                 </div>
 
-                <div class="sup-schema">
-                    <div class="cote">
-                        <div class="cote-titre">◀ Côté gauche</div>
-                        ${champSup(type, si, 'numG', 'Support gauche', ro, s.numG)}
-                        ${champSup(type, si, 'ehg', 'Horizontal (daN)', ro, s.ehg, 'daN')}
-                        ${champSup(type, si, 'elg', 'Longitudinal (daN)', ro, s.elg, 'daN')}
-                    </div>
-
-                    <div class="centre">
-                        ${PYLONE_SVG}
-                        ${champSup(type, si, 'num', type === 'portees' ? 'Portée' : 'Pylône', ro, s.num, '', 'num-central')}
-                        ${champSup(type, si, 'ev', 'Vertical (daN)', ro, s.ev, 'daN')}
-                    </div>
-
-                    <div class="cote">
-                        <div class="cote-titre">Côté droit ▶</div>
-                        ${champSup(type, si, 'numD', 'Support droit', ro, s.numD)}
-                        ${champSup(type, si, 'ehd', 'Horizontal (daN)', ro, s.ehd, 'daN')}
-                        ${champSup(type, si, 'eld', 'Longitudinal (daN)', ro, s.eld, 'daN')}
-                    </div>
-                </div>
+                ${schemaSupport(type, si, s, ro)}
 
                 <div style="display:flex;gap:10px;flex-wrap:wrap">
                     ${ro ? `<span class="ro-val">Terre : ${esc(s.terre) || '—'}</span>`

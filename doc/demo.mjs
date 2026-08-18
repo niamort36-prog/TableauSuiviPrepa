@@ -79,10 +79,10 @@ export const TECH = {
         com: "Déposer la chaîne d'ancrage, reposer neuve"
     }],
     portees: [{
-        num: '12 - 13', numG: '12', numD: '13',
+        numG: '12', numD: '13',
         param: '1250', temp: '15', vent: '240',
+        th: '2450',                       // effort Th (ou To) du cable
         terre: 'CC en pied de support',
-        ev: '0', ehd: '160', ehg: '160', eld: '2450', elg: '2450',
         com: 'Brins dans les bretelles de continuité'
     }]
 };

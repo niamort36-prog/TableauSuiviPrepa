@@ -310,7 +310,8 @@
     <h2>6. Logistique &amp; Terrain</h2>
 
     <p>Le bouton <b>🏕️ Logistique</b> ouvre un espace à huit onglets qui rassemble tout ce
-    qui entoure le chantier. <b>Aucune de ces informations n'entre dans le calcul
+    qui entoure le chantier. Son en-tête rappelle la ligne et le <b>numéro d'OI</b> saisi sur
+    la fiche, pour qu'on sache toujours de quel ordre il s'agit. <b>Aucune de ces informations n'entre dans le calcul
     d'avancement</b> : la jauge ne bouge pas quand vous les remplissez.</p>
 
     <p>C'est aussi cet espace, et lui seul, que voient les personnes à qui vous transmettez
@@ -410,10 +411,19 @@
         <figcaption>Le support au centre, ses voisins et les efforts de chaque côté</figcaption>
     </figure>
 
-    <p>Chaque fiche se lit comme un schéma : le support concerné au centre avec son effort
-    vertical, ses voisins de gauche et de droite avec leurs efforts horizontaux et
-    longitudinaux. Au-dessus, le bandeau de paramètres : <b>P</b>, la température en degrés,
-    et le vent en pascals — qui affiche <b>SV</b> dès que la valeur est nulle.</p>
+    <p>Chaque fiche se lit comme un schéma, et la représentation change selon la nature de
+    l'ouvrage.</p>
+
+    <p>Un <b>pylône</b> est dessiné au centre, avec son effort vertical, encadré de ses voisins
+    de gauche et de droite et de leurs efforts horizontaux et longitudinaux.</p>
+
+    <p>Une <b>portée</b> est dessinée par son câble : le pylône de gauche et celui de droite
+    portent chacun leur numéro, et le seul effort demandé est <b>Th (ou To)</b>, sous la
+    chaînette.</p>
+
+    <p>Dans les deux cas, le bandeau du haut donne les paramètres — <b>P</b>, la température en
+    degrés, et le vent en pascals, qui affiche <b>SV</b> dès que la valeur est nulle — et le bas
+    de la fiche reçoit la solution de terre et un commentaire.</p>
 </section>
 
 <section class="suite">
