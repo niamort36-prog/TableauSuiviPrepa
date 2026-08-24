@@ -332,14 +332,32 @@
         <li>Un chantier peut compter plusieurs hébergements — deux gîtes, un gîte et un hôtel —
             et plusieurs dépenses à partager : courses, carburant, péages.</li>
         <li>Ajoutez les personnes présentes, avec leur nombre de nuits pour le gîte.</li>
-        <li>Cochez <b>a payé</b> sur la ligne de celle qui a réglé. Une seule à la fois.</li>
+        <li>Cochez <b>a avancé</b> sur la ligne de celle qui a réglé la facture. Une seule
+            à la fois : c'est elle que les autres doivent rembourser.</li>
+        <li>Cochez <b>a payé</b> au fur et à mesure que chacun la rembourse. La ligne passe
+            au vert, le montant est barré dans le règlement, et le total restant se met à jour.</li>
         <li>Saisissez le montant total : le coût par nuitée et la part de chacun s'affichent,
             puis le <b>règlement</b> — qui doit combien à qui, le payeur exclu.</li>
         <li>Le gîte accepte en plus un <b>lien</b> et des <b>coordonnées GPS</b>, avec ouverture
             directe dans Waze ou Maps.</li>
+        <li>Un champ <b>Remboursement du payeur</b> reçoit un lien Wero, Crédit Mutuel Pay ou
+            autre, ou simplement un numéro de téléphone. Un <b>QR code</b> est affiché à côté :
+            les autres n'ont plus qu'à le scanner pour rembourser.</li>
         <li>Les <b>reçus PDF</b> s'importent sur les deux blocs et se téléchargent ensuite,
             y compris depuis le lien de partage. Trois mégaoctets maximum par fichier.</li>
     </ul>
+
+    <div class="attention">
+        <b>Ne confondez pas les deux cases.</b> <i>A avancé</i> désigne la personne qui a sorti
+        l'argent, une seule par gîte ou par dépense. <i>A payé</i> se coche pour chacun des
+        autres, quand il a remboursé sa part.
+    </div>
+
+    <div class="note">
+        Le QR code est calculé <b>dans votre navigateur</b> : ni le lien ni le numéro ne sont
+        envoyés à un service extérieur. Un lien donne un QR directement exploitable ; un numéro
+        de téléphone seul ouvrira la fiche contact du téléphone qui le scanne.
+    </div>
 
     <div class="note">
         Le bouton <b>Reprendre les personnes des gîtes</b>, sur une dépense, recopie tous les

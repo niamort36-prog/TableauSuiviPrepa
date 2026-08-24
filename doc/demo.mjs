@@ -38,9 +38,10 @@ export const GITE = {
     montant: '620',
     lien: 'https://exemple-gite-des-monts.fr',
     coord: '44.9256, 2.4443',
+    paiement: 'https://wero.example/pay/martin-dubois',   // lien Wero fictif
     pers: [
-        { nom: 'Martin Dubois', nuits: '10' },
-        { nom: 'Claire Perrot', nuits: '10' },
+        { nom: 'Martin Dubois', nuits: '10' },                 // a avance la somme
+        { nom: 'Claire Perrot', nuits: '10', regle: true },    // a rembourse
         { nom: 'Bruno Marchand', nuits: '5' }
     ]
 };

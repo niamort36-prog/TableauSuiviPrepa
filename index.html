@@ -7,6 +7,8 @@
     
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
+    <!-- QR code des remboursements : genere dans le navigateur, rien n'est envoye ailleurs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
     <style>
         :root {
@@ -256,6 +258,24 @@
         .pylone-svg path, .pylone-svg line,
         .cable-svg path, .cable-svg line { stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
         .pylone-svg circle, .cable-svg circle { fill: currentColor; stroke: none; }
+
+        /* Suivi des remboursements */
+        .lg-regle { background: #f0fdf4; }
+        .lg-quitte { display: flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 800; color: #0369a1; white-space: nowrap; cursor: pointer; }
+        .lg-quitte input { width: 17px; height: 17px; cursor: pointer; }
+        .badge-regle { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 10px; padding: 1px 8px; font-size: 0.72rem; font-weight: 800; white-space: nowrap; }
+        .badge-du { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; border-radius: 10px; padding: 1px 8px; font-size: 0.72rem; font-weight: 800; white-space: nowrap; }
+        .lg-regle-vide { color: #cbd5e1; font-weight: 800; }
+        .lg-solde span { color: #059669; }
+        .lg-solde b { color: #059669; font-weight: 600; text-decoration: line-through; }
+
+        /* Moyen de remboursement et QR */
+        .pay-bloc { display: flex; gap: 18px; align-items: flex-start; flex-wrap: wrap; }
+        .pay-champ { display: flex; gap: 8px; align-items: center; flex: 1; min-width: 240px; }
+        .pay-champ input { flex: 1; min-width: 0; }
+        .pay-qr { text-align: center; }
+        .pay-qr img, .pay-qr canvas { display: block; border: 1px solid var(--border); border-radius: 6px; padding: 5px; background: #fff; }
+        .pay-qr span { display: block; font-size: 0.7rem; color: #64748b; font-weight: 700; margin-top: 4px; }
 
         /* Sections Gîtes et Dépenses communes */
         .dep-section { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 4px 0 12px; }
@@ -953,7 +973,9 @@
 
         function entreeVide(kind) {
             return { id: (kind === 'gites' ? 'g' : 'd') + Date.now() + Math.floor(Math.random()*1000),
-                     nom: '', payeur: '', montant: '', lien: '', coord: '', pers: [], recus: [] };
+                     nom: '', payeur: '', montant: '', lien: '', coord: '',
+                     paiement: '',            // lien ou numero pour rembourser le payeur
+                     pers: [], recus: [] };
         }
         let logi = logiVide();
         let piList = [];                              // {lib, coord}
@@ -1781,9 +1803,11 @@
                 montant: (e.montant || e.montant === 0) ? e.montant : '',
                 lien: e.lien || '',
                 coord: e.coord || '',
+                paiement: e.paiement || '',
                 pers: (e.pers || []).map(x => ({
                     nom: x.nom || '',
-                    nuits: (x.nuits || x.nuits === 0) ? x.nuits : ''
+                    nuits: (x.nuits || x.nuits === 0) ? x.nuits : '',
+                    regle: !!x.regle              // cette personne a rembourse sa part
                 })),
                 recus: (e.recus || []).map(r => ({
                     id: r.id || '', nom: r.nom || '',
@@ -1984,16 +2008,20 @@
             return e.pers.length ? m / e.pers.length : 0;
         }
 
+        // Deux notions distinctes, a ne pas confondre :
+        //   « a avance »  : la personne a regle la facture, elle est creanciere
+        //   « a paye »    : la personne a rembourse sa part au payeur
         function persRows(kind, i, ro) {
             const e = entree(kind, i);
             if(!e.pers.length) return '<div class="lg-vide">Aucune personne enregistrée</div>';
             const avecNuits = (kind === 'gites');
             return e.pers.map((p, j) => {
-                const paye = !!p.nom && p.nom === e.payeur;
-                return `<div class="lg-row">
-                ${ro ? (paye ? '<span class="badge-paye">\u2713 a payé</span>' : '')
-                     : `<label class="lg-paye" title="Cocher la personne qui a payé">
-                            <input type="checkbox" ${paye ? 'checked' : ''} onchange="cocherPayeur('${kind}',${i},${j})">a payé
+                const avance = !!p.nom && p.nom === e.payeur;
+                const regle = !!p.regle;
+                return `<div class="lg-row ${regle && !avance ? 'lg-regle' : ''}">
+                ${ro ? (avance ? '<span class="badge-paye">\u2713 a avancé</span>' : '')
+                     : `<label class="lg-paye" title="La personne qui a réglé la facture">
+                            <input type="checkbox" ${avance ? 'checked' : ''} onchange="cocherPayeur('${kind}',${i},${j})">a avancé
                         </label>`}
                 ${ro ? `<span class="lg-name"><b>${esc(p.nom) || '\u2014'}</b></span>`
                      : `<input class="lg-name" placeholder="Nom" value="${esc(p.nom)}" onchange="setPersNom('${kind}',${i},${j},this.value)">`}
@@ -2001,9 +2029,20 @@
                      ? `<span class="lg-nights">${num(p.nuits)} nuit${num(p.nuits) > 1 ? 's' : ''}</span>`
                      : `<input class="lg-nights" type="number" min="0" step="1" placeholder="nuits" value="${esc(p.nuits)}" oninput="setPersNuits('${kind}',${i},${j},this.value)">`)}
                 <span class="lg-part" id="part-${kind}-${i}-${j}">${eur(partDe(kind, i, j))}</span>
+                ${avance ? '<span class="lg-regle-vide">\u2014</span>'
+                         : (ro ? (regle ? '<span class="badge-regle">\u2713 a payé</span>' : '<span class="badge-du">à régler</span>')
+                               : `<label class="lg-quitte" title="La personne a remboursé sa part">
+                                      <input type="checkbox" ${regle ? 'checked' : ''} onchange="basculerRegle('${kind}',${i},${j})">a payé
+                                  </label>`)}
                 ${ro ? '' : `<button class="btn-x" onclick="delPers('${kind}',${i},${j})">🗑</button>`}
             </div>`;
             }).join('');
+        }
+
+        function basculerRegle(kind, i, j) {
+            const p = entree(kind, i).pers[j];
+            p.regle = !p.regle;
+            renderGite();
         }
 
         // Une seule personne peut être le payeur : cocher l'une décoche l'autre.
@@ -2030,15 +2069,30 @@
 
             let regl = '';
             if(m > 0 && !e.payeur) {
-                regl = `<div style="margin-top:10px"><div class="lg-warn">Indiquez qui a payé pour calculer le règlement.</div></div>`;
+                regl = `<div style="margin-top:10px"><div class="lg-warn">Indiquez qui a avancé la somme pour calculer le règlement.</div></div>`;
             } else if(m > 0 && e.payeur) {
-                const dus = e.pers
-                    .map((p, j) => ({ nom: p.nom, part: partDe(kind, i, j) }))
+                const tous = e.pers
+                    .map((p, j) => ({ nom: p.nom, part: partDe(kind, i, j), regle: !!p.regle }))
                     .filter(x => x.nom && x.nom !== e.payeur && x.part > 0.004);
-                if(dus.length) {
+                const dus  = tous.filter(x => !x.regle);
+                const faits = tous.filter(x => x.regle);
+                const somme = l => l.reduce((t, x) => t + x.part, 0);
+
+                if(tous.length) {
+                    let lignes = dus.map(x =>
+                        `<div class="lg-total-line"><span>${esc(x.nom)} doit à ${esc(e.payeur)}</span><b>${eur(x.part)}</b></div>`).join('');
+                    lignes += faits.map(x =>
+                        `<div class="lg-total-line lg-solde"><span>\u2713 ${esc(x.nom)} a payé</span><b>${eur(x.part)}</b></div>`).join('');
+
+                    const reste = somme(dus);
+                    const bilan = reste < 0.005
+                        ? `<div class="lg-total-line" style="margin-top:6px;border-top:1px solid #a7f3d0;padding-top:6px"><span><b>Tout est réglé</b></span><b>\u2713</b></div>`
+                        : `<div class="lg-total-line" style="margin-top:6px;border-top:1px solid #a7f3d0;padding-top:6px"><span><b>Reste à percevoir par ${esc(e.payeur)}</b></span><b>${eur(reste)}</b></div>`;
+
                     regl = `<div style="margin-top:10px;padding-top:10px;border-top:1px solid #a7f3d0">
                         <div style="font-weight:800;color:#065f46;margin-bottom:5px">Règlement</div>
-                        ${dus.map(x => `<div class="lg-total-line"><span>${esc(x.nom)} doit à ${esc(e.payeur)}</span><b>${eur(x.part)}</b></div>`).join('')}
+                        ${lignes}
+                        ${bilan}
                     </div>`;
                 }
             }
@@ -2179,6 +2233,52 @@
             renderGite();
         }
 
+        // --- Moyen de remboursement ------------------------------------------
+        // Un lien Wero, Credit Mutuel Pay ou autre, ou un numero de telephone.
+        // Le QR code est genere dans le navigateur : la valeur ne sort pas d'ici.
+        function estLienPaiement(v) { return /^https?:\/\//i.test(String(v || '').trim()); }
+
+        function ouvrirPaiement(kind, i) {
+            const v = (entree(kind, i).paiement || '').trim();
+            if(!v) return;
+            if(estLienPaiement(v)) { window.open(v, '_blank', 'noopener'); return; }
+            const tel = telBrut(v);
+            if(tel) window.location.href = 'tel:' + tel;
+        }
+
+        function blocPaiement(kind, i, ro) {
+            const e = entree(kind, i);
+            const v = (e.paiement || '').trim();
+            const lien = estLienPaiement(v);
+            if(ro && !v) return '';
+
+            return `<div class="eq-sect">Remboursement du payeur</div>
+                <div class="pay-bloc">
+                    <div class="pay-champ">
+                        ${ro ? `<span class="ro-val" style="word-break:break-all">${esc(v)}</span>`
+                             : `<input class="form-input" placeholder="Lien Wero / Crédit Mutuel Pay, ou numéro de téléphone"
+                                       value="${esc(e.paiement)}" onchange="setEntree('${kind}',${i},'paiement',this.value)">`}
+                        <button class="btn-mini" onclick="ouvrirPaiement('${kind}',${i})" ${v ? '' : 'disabled'}>
+                            ${lien ? 'Ouvrir' : 'Appeler'}
+                        </button>
+                    </div>
+                    ${v ? `<div class="pay-qr"><div data-qr="${esc(v)}"></div>
+                           <span>Scanner pour rembourser</span></div>` : ''}
+                </div>`;
+        }
+
+        // Les QR sont dessines apres coup : le rendu du panneau est une chaine.
+        function majQR() {
+            if(typeof QRCode === 'undefined') return;
+            document.querySelectorAll('#sub-gite [data-qr]').forEach(el => {
+                const v = el.getAttribute('data-qr');
+                el.innerHTML = '';
+                if(!v) return;
+                try { new QRCode(el, { text: v, width: 128, height: 128, correctLevel: QRCode.CorrectLevel.M }); }
+                catch(err) { el.textContent = 'QR indisponible'; }
+            });
+        }
+
         // --- Rendu ------------------------------------------------------------
         function blocEntree(kind, i, ro) {
             const e = entree(kind, i);
@@ -2202,6 +2302,7 @@
                     ${kind === 'gites' ? blocGiteExtra(i, ro) : ''}
                     ${persRows(kind, i, ro)}
                     ${totaux(kind, i)}
+                    ${blocPaiement(kind, i, ro)}
                     ${recusHtml(kind, i, ro)}
                 </div>
             </div>`;
@@ -2225,6 +2326,7 @@
                                   'Aucun gîte enregistré', ro)
                 + sectionDepenses('depenses', '🛒 Dépenses communes', '+ Ajouter une dépense',
                                   'Aucune dépense enregistrée', ro);
+            majQR();
         }
 
         // Recalcule les montants sans reconstruire le panneau : évite de
@@ -2253,7 +2355,7 @@
             renderGite();
         }
         function addPers(kind, i) {
-            entree(kind, i).pers.push({ nom:'', nuits:'' });
+            entree(kind, i).pers.push({ nom:'', nuits:'', regle:false });
             renderGite();
         }
         function delPers(kind, i, j) {
@@ -2279,7 +2381,7 @@
                 if(p.nom && !noms.includes(p.nom)) noms.push(p.nom);
             }));
             if(!noms.length) { alert("Aucune personne n'est encore enregistrée dans les gîtes."); return; }
-            entree('depenses', i).pers = noms.map(n => ({ nom: n, nuits: '' }));
+            entree('depenses', i).pers = noms.map(n => ({ nom: n, nuits: '', regle: false }));
             renderGite();
         }
 
