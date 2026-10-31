@@ -1777,6 +1777,8 @@
             if(confirm("⚠️ ATTENTION : Voulez-vous supprimer DÉFINITIVEMENT ce chantier ?")) {
                 // Les reçus vivent dans un noeud séparé : on les emporte aussi
                 db.ref('recus/' + id).remove().catch(() => {});
+                db.ref('nip/' + id).remove().catch(() => {});
+                db.ref('couvertures/' + id).remove().catch(() => {});
                 db.ref('chantiers/' + id).remove()
                 .catch(e => alert("Erreur suppression: " + e.message));
             }
@@ -2598,6 +2600,14 @@
             return CODES_LIAISON[sel ? sel.value : ''] || '';
         }
 
+        // Le retrait tel que la NIP le decrit : numero, puis creneau.
+        function retraitNip() {
+            const n = String(pv('nip-retrait')).trim();
+            const d = String(pv('nip-debut')).trim(), f = String(pv('nip-fin')).trim();
+            const creneau = (d && f) ? d + ' \u2192 ' + f : (d || f);
+            return [n, creneau].filter(Boolean).join(' \u00b7 ');
+        }
+
         // --- Valeurs reprises de la fiche chantier ---------------------------
         function pdChantier() {
             const sel = document.getElementById('inp-line');
@@ -2978,6 +2988,160 @@
             return (num && /^\d+$/.test(num)) ? 'L' + (520000 + Number(num)) : '';
         }
 
+        // --- Note d'information prealable ------------------------------------
+        // pdf.js n'est charge qu'au moment ou l'on importe une NIP : inutile
+        // de le telecharger pour les chantiers qui n'en ont pas.
+        const PDFJS_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+        const PDFJS_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        let pdfjsPret = null;
+
+        function chargerPdfJs() {
+            if(pdfjsPret) return pdfjsPret;
+            pdfjsPret = new Promise((res, rej) => {
+                const b = document.createElement('script');
+                b.src = PDFJS_URL;
+                b.onload = () => {
+                    const lib = window.pdfjsLib;
+                    if(!lib) { rej(new Error('pdf.js indisponible')); return; }
+                    lib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
+                    res(lib);
+                };
+                b.onerror = () => rej(new Error('pdf.js n\'a pas pu etre telecharge'));
+                document.head.appendChild(b);
+            });
+            return pdfjsPret;
+        }
+
+        // Le texte de toutes les pages, une ligne par ligne du document.
+        async function texteDuPdf(base64) {
+            const lib = await chargerPdfJs();
+            const bin = atob(base64);
+            const buf = new Uint8Array(bin.length);
+            for(let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+            const doc = await lib.getDocument({ data: buf }).promise;
+            let out = '';
+            for(let n = 1; n <= doc.numPages; n++) {
+                const c = await (await doc.getPage(n)).getTextContent();
+                let y = null, ligne = '';
+                c.items.forEach(it => {
+                    const ty = Math.round(it.transform[5]);
+                    if(y !== null && Math.abs(ty - y) > 2) { out += ligne.trim() + '\n'; ligne = ''; }
+                    y = ty;
+                    ligne += it.str;
+                });
+                out += ligne.trim() + '\n';
+            }
+            return out;
+        }
+
+        // Releve des informations d'une NIP. Tout reste modifiable ensuite :
+        // le format du document peut varier, la saisie fait foi.
+        function analyserNip(txt) {
+            const t = txt.replace(/\u00a0/g, ' ');
+            const un_ = (re) => { const m = re.exec(t); return m ? m[1].trim() : ''; };
+            const r = {};
+            r.num     = un_(/Note\s+d.Information\s+Pr.alable\s*:\s*([A-Za-z0-9_\-\/]+)/i);
+            r.indice  = un_(/Indice\s+(\d+)/i);
+            r.retrait = un_(/Retrait\s+n.\s*([A-Z]{2}-?\d+)/i);
+            r.ouvrage = un_(/Retrait\s+n.[^\n]*\n\s*([^\n]+)/i);
+            r.sfpt    = un_(/Mise en oeuvre de\s*(\d+)\s*SFPT/i);
+
+            // Les quatre colonnes Date de debut / Date de fin / CDR / DR.
+            // Selon le document, les valeurs tiennent sur une seule ligne
+            // sous les intitules, ou sur quatre lignes successives.
+            let m = /Date de d.but[^\n]*\n\s*(\d{1,2}\/\d{1,2}\/\d{2,4}\s+\d{1,2}:\d{2})\s+(\d{1,2}\/\d{1,2}\/\d{2,4}\s+\d{1,2}:\d{2})\s+(\S+)\s+(\S+)/i.exec(t);
+            if(!m) m = /Date de d.but\s*\n\s*Date de fin\s*\n\s*CDR[^\n]*\n\s*DR[^\n]*\n\s*([^\n]+)\n\s*([^\n]+)\n\s*([^\n]+)\n\s*([^\n]+)/i.exec(t);
+            if(m) { r.debut = m[1].trim(); r.fin = m[2].trim(); r.cdr = m[3].trim(); r.dr = m[4].trim(); }
+
+            // Ce qui merite d'etre lu avant de partir sur le chantier
+            const infos = [];
+            const horaire = un_(/Retrait\s*:\s*(\d{1,2}h\d{2}[^\n]*)/i);
+            if(horaire) infos.push('Retrait : ' + horaire.replace(/\s+/g, ' '));
+            const consig = un_(/Besoin de consignation\s*:\s*([^\n]+)/i);
+            if(consig) infos.push('Consignation : ' + consig);
+            (t.match(/^\s*-\s*.+$/gm) || []).forEach(l => infos.push(l.replace(/^\s*-\s*/, '\u2022 ').replace(/\s+/g, ' ')));
+            (t.match(/Changement d..tat au cours de la consignation [^:]+:\s*[^\n]+/gi) || [])
+                .filter(l => !/\(aucun\)/i.test(l))
+                .forEach(l => infos.push(l.replace(/\s+/g, ' ')));
+            const ind = /d.sign.e\s*:\s*\n([\s\S]*?)\n\s*Note d.Information/i.exec(t);
+            if(ind && ind[1].trim()) infos.push(ind[1].trim());
+            r.infos = infos.join('\n');
+            return r;
+        }
+
+        async function importerNip(input) {
+            const f = input.files && input.files[0];
+            input.value = '';
+            if(!f) return;
+            if(f.type !== 'application/pdf') { alert("La NIP doit \u00eatre un fichier PDF."); return; }
+            if(f.size > RECU_MAX) { alert("Fichier trop volumineux : 3 Mo maximum."); return; }
+            if(!curId) { alert("Enregistrez d'abord le chantier : la NIP doit lui \u00eatre rattach\u00e9e."); return; }
+
+            const etat = document.getElementById('nip-etat');
+            if(etat) etat.textContent = ' Lecture du document\u2026';
+            try {
+                const data = await lireBase64(f);
+                await db.ref('nip/' + curId).set({ nom: f.name, taille: f.size, date: Date.now(), data: data });
+                nipFichier = { nom: f.name, taille: f.size };
+
+                let releve = null;
+                try { releve = analyserNip(await texteDuPdf(data)); }
+                catch(e) { alert("La NIP est enregistr\u00e9e, mais son texte n'a pas pu \u00eatre lu :\n"
+                                 + e.message + "\n\nRenseignez les champs \u00e0 la main."); }
+
+                if(releve) {
+                    const pose = (cle, val) => { if(String(val || '').trim()) prepa.v[cle] = String(val).trim(); };
+                    pose('an-nip', releve.num + (releve.indice ? ' indice ' + releve.indice : ''));
+                    pose('nip-retrait', releve.retrait);
+                    pose('nip-debut', releve.debut);
+                    pose('nip-fin', releve.fin);
+                    pose('nip-cdr', releve.cdr);
+                    pose('nip-dr', releve.dr);
+                    if(releve.sfpt !== '') prepa.v['nip-sfpt'] = releve.sfpt;
+                    pose('nip-infos', releve.infos);
+                    const vides = ['num', 'retrait', 'debut', 'fin', 'cdr', 'dr']
+                        .filter(k => !String(releve[k] || '').trim());
+                    if(vides.length) alert("NIP enregistr\u00e9e. Ces informations n'ont pas \u00e9t\u00e9 trouv\u00e9es "
+                        + "dans le document et restent \u00e0 saisir :\n\u2022 " + vides.join('\n\u2022 '));
+                }
+                renderPrepa();
+            } catch(e) {
+                if(etat) etat.textContent = '';
+                alert("\u00c9chec de l'import : " + e.message);
+            }
+        }
+
+        let nipFichier = null;
+        async function chargerNip() {
+            nipFichier = null;
+            if(!curId) return;
+            try {
+                const snap = await db.ref('nip/' + curId).once('value');
+                const v = snap.val();
+                if(v) nipFichier = { nom: v.nom, taille: v.taille };
+            } catch(e) {}
+            if(document.getElementById('pdp-annexes')) renderPrepa();
+        }
+
+        async function telechargerNip() {
+            if(!curId) return;
+            const snap = await db.ref('nip/' + curId).once('value');
+            const v = snap.val();
+            if(!v || !v.data) { alert('Aucune NIP enregistr\u00e9e.'); return; }
+            const a = document.createElement('a');
+            a.href = 'data:application/pdf;base64,' + v.data;
+            a.download = v.nom || 'NIP.pdf';
+            a.click();
+        }
+
+        async function retirerNip() {
+            if(!curId || !nipFichier) return;
+            if(!confirm('Retirer la NIP enregistr\u00e9e ? Les informations relev\u00e9es restent en place.')) return;
+            await db.ref('nip/' + curId).remove().catch(() => {});
+            nipFichier = null;
+            renderPrepa();
+        }
+
         // --- Photo de couverture ---------------------------------------------
         // Meme principe que les recus : base64 dans la base, rattache au
         // chantier, jamais dans le depot.
@@ -2989,7 +3153,11 @@
             try {
                 const snap = await db.ref('couvertures/' + curId).once('value');
                 const v = snap.val();
-                photoCouv = v && v.data ? v.data : null;
+                // lireBase64 ne garde que la charge utile : l'entete data:
+                // doit etre reconstituee pour que l'image s'affiche.
+                photoCouv = v && v.data
+                    ? 'data:' + (v.type || 'image/jpeg') + ';base64,' + v.data
+                    : null;
             } catch(e) { photoCouv = null; }
             const z = document.getElementById('cv-photo');
             if(z) z.style.backgroundImage = photoCouv ? `url(${photoCouv})` : '';
@@ -3008,8 +3176,9 @@
             if(etat) etat.textContent = ' Import\u2026';
             try {
                 const data = await lireBase64(f);
-                await db.ref('couvertures/' + curId).set({ nom: f.name, date: Date.now(), data: data });
-                photoCouv = data;
+                await db.ref('couvertures/' + curId)
+                        .set({ nom: f.name, type: f.type, date: Date.now(), data: data });
+                photoCouv = 'data:' + f.type + ';base64,' + data;
                 renderPrepa();
             } catch(e) {
                 if(etat) etat.textContent = '';
@@ -3041,7 +3210,7 @@
             const infos = [
                 ['Travaux', nature],
                 ['P\u00e9riode', c.debut ? 'Du ' + c.debut + ' au ' + c.fin : ''],
-                ['Retrait', chpLie('cv-retrait', c.ois.join(' \u00b7 '), 'N\u00b0 d\'OI et cr\u00e9neau')],
+                ['Retrait', chpLie('cv-retrait', retraitNip() || c.ois.join(' \u00b7 '), 'N\u00b0 d\'OI et cr\u00e9neau')],
                 ['NIP', pv('an-nip')],
                 ['\u00c9quipe', equipeActive + (gmr ? ' (' + esc(gmr) + ')' : '')],
                 ['Pr\u00e9parateur', prep]
@@ -3067,7 +3236,7 @@
                 <div class="cv-barre"></div>
             </div>
             <div class="pd-l pd-aide">
-                <label class="btn-pd">\U0001f5bc Photo de couverture
+                <label class="btn-pd">🖼 Photo de couverture
                     <input type="file" accept="image/jpeg,image/png,image/webp" hidden onchange="importerPhotoCouv(this)">
                 </label>
                 ${photoCouv ? '<button class="btn-pd" onclick="retirerPhotoCouv()">Retirer la photo</button>' : ''}
@@ -3136,7 +3305,25 @@
                             'Matériel ligne', 'Fiches contrôle (manchon, papoto…)', 'Planification des travaux',
                             'Plan de prévention', 'Fiche de suivi métrologie (dynamomètre, théodolite, clé dynamométrique)'];
             return `
-            ${grille('pd-g2', champ('NIP', chp('an-nip')) + champ('Schéma unifilaire — WILLYDOC, mot clef L', auto(unif)))}
+            ${sous('Note d\'information préalable')}
+            <div class="pd-l pd-aide">
+                <label class="btn-pd pre">📎 Importer la NIP (PDF)
+                    <input type="file" accept="application/pdf" hidden onchange="importerNip(this)">
+                </label>
+                ${nipFichier ? `<button class="btn-pd" onclick="telechargerNip()">\u2b07 ${esc(nipFichier.nom)}</button>
+                                <button class="btn-pd" onclick="retirerNip()">Retirer</button>` : ''}
+                <span id="nip-etat"></span>
+                <span>Les informations ci-dessous sont relevées dans le document, et restent modifiables.</span>
+            </div>
+            ${grille('pd-g2', champ('NIP', chp('an-nip', 'NI_26-00000 indice 1'))
+                            + champ('Retrait n°', chp('nip-retrait', 'IG-00000000')))}
+            ${grille('pd-g4', champ('Consignation — début', chp('nip-debut', 'jj/mm/aa hh:mm'))
+                            + champ('Consignation — fin', chp('nip-fin', 'jj/mm/aa hh:mm'))
+                            + champ('CDR — retour à la conduite', chp('nip-cdr'))
+                            + champ('DR — restitution du document', chp('nip-dr')))}
+            ${grille('pd-g2', champ('SFPT mis en œuvre', sel('nip-sfpt', ['0', '1', '2']))
+                            + champ('Schéma unifilaire — WILLYDOC, mot clef L', auto(unif)))}
+            ${champ('Informations importantes', zone('nip-infos', 4))}
             ${sous('Annexes numérotées')}
             ${num.map((t, i) => coche('an-n' + (i + 1), t)).join('')}
             ${sous('Autres pièces jointes')}
@@ -3538,7 +3725,7 @@
             if(el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
-        function goPrepaDoc() { switchScreen('screen-prepadoc'); renderPrepa(); chargerPhotoCouv(); }
+        function goPrepaDoc() { switchScreen('screen-prepadoc'); renderPrepa(); chargerPhotoCouv(); chargerNip(); }
 
         function renderPrepa() {
             const c = pdChantier();
