@@ -6,7 +6,7 @@ Ce dossier contient de quoi le régénérer entièrement.
 | Fichier | Rôle |
 |---|---|
 | `guide.html` | Le texte et la mise en page du guide |
-| `captures/` | Les 18 captures d'écran utilisées |
+| `captures/` | Les 19 captures d'écran utilisées |
 | `demo.mjs` | Le chantier fictif servant aux captures |
 | `shots.mjs` | Crée le chantier de démonstration, prend les captures, puis efface tout |
 | `pdf.mjs` | Convertit `guide.html` en PDF A4 paginé |
@@ -31,7 +31,7 @@ Puis, depuis ce dossier :
 node shots.mjs && node pdf.mjs
 ```
 
-`shots.mjs` crée un chantier fictif dans l'équipe **EEL Aurillac**, prend les 17 captures,
+`shots.mjs` crée un chantier fictif dans l'équipe **EEL Aurillac**, prend les 19 captures,
 puis le supprime. Il affiche en fin d'exécution le nombre de chantiers restants dans cette
 équipe : il doit être à zéro, sans quoi le script sort en erreur.
 

@@ -135,6 +135,25 @@ await page.evaluate(() => { goPrepaDoc(); window.scrollTo(0, 0); });
 await wait(1100);
 await shot('prepa-document');
 
+// Fiche de secours : modèle pré-rempli et coordonnées retrouvées
+await page.evaluate(async () => {
+    window.confirm = () => true; window.alert = () => {};
+    for (const cle of ['se-enc', 'se-grp']) {
+        const b = [...document.querySelectorAll('#pdp-secours .btn-pd.pre')]
+                    .filter(x => x.getAttribute('onclick').includes("'" + cle + "'"))[0];
+        if (b) { b.click(); await new Promise(r => setTimeout(r, 150)); }
+    }
+    lst('sec-sup').push({ sup: '12', coord: '' }, { sup: '13', coord: '' });
+    renderPrepa();
+    await new Promise(r => setTimeout(r, 200));
+    await retrouverCoords();
+    const t = [...document.querySelectorAll('#pdp-secours .pd-sous')]
+                .find(x => x.textContent.includes('Encadrement'));
+    if (t) window.scrollTo(0, t.getBoundingClientRect().top + window.scrollY - 80);
+});
+await wait(1100);
+await shot('prepa-secours');
+
 await page.evaluate(() => goOptions());
 await wait(900);
 await shot('options');

@@ -102,7 +102,7 @@
     <div class="sous">Guide d'installation et d'utilisation</div>
     <div class="barre"></div>
     <div class="meta">Lignes HTB — EEL Limoges &amp; EEL Aurillac</div>
-    <div class="meta">Version du 18 août 2026</div>
+    <div class="meta">Version du 31 octobre 2026</div>
     <div class="lien">niamort36-prog.github.io/TableauSuiviPrepa</div>
 </div>
 
@@ -534,6 +534,19 @@
         que le pourcentage affiché.
     </div>
 
+    <h3>Un document vierge, et des modèles à la demande</h3>
+
+    <p>La préparation s'ouvre <b>vide</b>. Les tableaux qui ont un contenu type — encadrement
+    et groupements de la fiche de secours, habilitations des moyens humains, tâches du mode
+    opératoire, jours de la planification — affichent un bouton <b>✨ Pré-remplir</b> qui
+    insère le modèle du classeur. Rien n'est imposé : vous partez du modèle quand il vous
+    convient, vous saisissez ligne à ligne sinon.</p>
+
+    <div class="note">
+        Si le tableau contient déjà des lignes, le bouton demande confirmation puis ajoute le
+        modèle <b>à la suite</b> : votre saisie n'est jamais écrasée.
+    </div>
+
     <h3>Ce qui se remplit tout seul</h3>
 
     <p>Les informations déjà connues du chantier ne sont pas à ressaisir : le numéro de ligne,
@@ -541,9 +554,45 @@
     Elles apparaissent sur fond gris, et se reportent d'une page à l'autre — vers le compte
     rendu, le REX, la planification, la liste d'outillage.</p>
 
+    <p>La <b>nature des travaux</b> et les <b>remarques importantes</b> reprennent la
+    description et les commentaires saisis sur la fiche du chantier. Corrigez-les ici si
+    besoin ; videz la case pour revenir au texte d'origine.</p>
+
+    <h3>Le code liaison et les coordonnées des pylônes</h3>
+
+    <p>Sur la première page, le <b>code liaison</b> est rempli d'office à partir du numéro de
+    ligne du chantier — la ligne 7008 donne <code>EGUZOL71PLAUD</code>. Il se reporte sur la
+    fiche de secours et sur la page MALT / CC. Vous pouvez le corriger ; videz la case pour
+    revenir à la valeur du référentiel.</p>
+
+    <p>C'est ce code qui donne accès aux pylônes. Sur la <b>fiche de secours</b>, saisissez les
+    numéros de support concernés puis cliquez sur <b>📍 Retrouver les coordonnées</b> :
+    l'application remplit la colonne X ; Y pour chacun. Un support hors de la liaison est
+    signalé, avec la plage réellement couverte.</p>
+
+    <figure>
+        <img src="captures/14-prepa-secours.png" alt="Fiche de secours pré-remplie">
+        <figcaption>L'encadrement et les groupements insérés par le bouton Pré-remplir</figcaption>
+    </figure>
+
+    <div class="attention">
+        Toutes les lignes n'ont pas de code au référentiel — 97 sur les 98 d'EEL Limoges, aucune
+        pour l'instant à EEL Aurillac. Sans code, la case reste à saisir et la recherche de
+        coordonnées le dit franchement.
+    </div>
+
     <p>Les calculs du classeur sont conservés. Sur la page <b>Câbles</b>, choisir le type de
     câble renseigne le diamètre, ω, l'UPK et le fourreau ; la cote C se calcule
     (Ø / 2000 × √(paramètre × 9,81)) et la cote D découle du niveau de tension.</p>
+
+    <h3>Le mode opératoire</h3>
+
+    <p>Le tableau des tâches se découpe : le bouton <b>+ Étape</b> insère une séparation
+    titrée, que l'on nomme librement (« Phase 2 — remplacement des chaînes »), pour grouper
+    les tâches qui vont ensemble.</p>
+
+    <p>Dès qu'un <b>numéro de point d'arrêt</b> est saisi, la ligne se <b>surligne en jaune</b>,
+    à l'écran comme à l'impression. Effacez le numéro et le surlignage disparaît.</p>
 
     <h3>Ce que le remplissage valide</h3>
 
@@ -569,6 +618,10 @@
     page par feuille, sans le sommaire ni les boutons. C'est une mise en page distincte de
     l'A3 de la fiche chantier : les deux ne se gênent pas.</p>
 
+    <p>À l'impression, chaque case est remplacée par son texte complet : une saisie plus longue
+    que la case passe à la ligne au lieu d'être coupée. Les cases restées vides s'impriment
+    comme des encadrés à remplir à la main.</p>
+
     <div class="attention">
         La fiche de secours ne contient que les numéros publics — 18, 15, 17, 112 et SNCF.
         Les noms et numéros de l'encadrement et des groupements sont à saisir : ils sont
@@ -585,7 +638,7 @@
     ni la fiche, ni les options.</p>
 
     <figure>
-        <img src="captures/17-vue-partagee.png" alt="Vue partagée">
+        <img src="captures/18-vue-partagee.png" alt="Vue partagée">
         <figcaption>La vue partagée : un bandeau signale la lecture seule</figcaption>
     </figure>
 
@@ -621,7 +674,7 @@
     chantier en couverture.</p>
 
     <figure>
-        <img src="captures/16-impression-a3.png" alt="Feuille A3">
+        <img src="captures/17-impression-a3.png" alt="Feuille A3">
         <figcaption>Le trait de pli au centre, la fiche sur la moitié droite</figcaption>
     </figure>
 
@@ -648,7 +701,7 @@
     <h2>10. Les options : équipes et lignes</h2>
 
     <figure>
-        <img src="captures/14-options.png" alt="Écran Options">
+        <img src="captures/15-options.png" alt="Écran Options">
         <figcaption>Les équipes en haut, le référentiel de lignes en dessous</figcaption>
     </figure>
 
@@ -693,7 +746,7 @@
     à la fin.</p>
 
     <figure>
-        <img src="captures/15-archives.png" alt="Écran Archives">
+        <img src="captures/16-archives.png" alt="Écran Archives">
         <figcaption>Les chantiers archivés de l'équipe affichée</figcaption>
     </figure>
 
@@ -713,7 +766,7 @@
     <p>Toutes les mises en page s'adaptent à l'écran, en portrait comme en paysage.</p>
 
     <figure>
-        <img src="captures/18-mobile.png" alt="Affichage téléphone" class="tel">
+        <img src="captures/19-mobile.png" alt="Affichage téléphone" class="tel">
         <figcaption>La vue partagée sur téléphone, en portrait</figcaption>
     </figure>
 
