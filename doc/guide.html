@@ -130,7 +130,7 @@
         <li>La préparation de travail</li>
         <li>Partager un chantier en lecture seule</li>
         <li>Imprimer le porte-document A3</li>
-        <li>Les options : équipes et lignes</li>
+        <li>Les options : équipes, lignes et opérateurs</li>
         <li>Les archives</li>
         <li>Sur téléphone</li>
         <li>Questions fréquentes</li>
@@ -591,6 +591,14 @@
     titrée, que l'on nomme librement (« Phase 2 — remplacement des chaînes »), pour grouper
     les tâches qui vont ensemble.</p>
 
+    <p>Les colonnes <b>Tâches à réaliser</b>, <b>Analyse de risques</b> et <b>Actions
+    préventives</b> reprennent les listes déroulantes du classeur : le chevron en haut à
+    droite de la case ouvre les choix, et vous pouvez toujours écrire autre chose. La page
+    <b>MALT / CC</b> fonctionne pareil pour la section et la solution.</p>
+
+    <p>Comme dans le classeur, <b>Entrée</b> valide la case et descend d'une ligne ;
+    <b>Maj + Entrée</b> fait un retour à la ligne dans la case.</p>
+
     <p>Dès qu'un <b>numéro de point d'arrêt</b> est saisi, la ligne se <b>surligne en jaune</b>,
     à l'écran comme à l'impression. Effacez le numéro et le surlignage disparaît.</p>
 
@@ -698,11 +706,11 @@
 
 <!-- ======================================================= 9. OPTIONS ==== -->
 <section>
-    <h2>10. Les options : équipes et lignes</h2>
+    <h2>10. Les options : équipes, lignes et opérateurs</h2>
 
     <figure>
         <img src="captures/15-options.png" alt="Écran Options">
-        <figcaption>Les équipes en haut, le référentiel de lignes en dessous</figcaption>
+        <figcaption>Les équipes, le référentiel de lignes, puis les opérateurs</figcaption>
     </figure>
 
     <h3>Changer d'équipe</h3>
@@ -731,6 +739,30 @@
     <p>Supprimer une ligne utilisée par des chantiers est possible — un avertissement indique
     combien — et ces chantiers restent lisibles : la ligne y est signalée
     <i>(ligne supprimée)</i>.</p>
+
+
+    <h3>Replier la liste des lignes</h3>
+
+    <p>Le référentiel compte près de cent lignes : la liste est donc <b>repliée</b> à
+    l'ouverture. Le bouton <b>▸ Afficher</b> la déroule, <b>▾ Réduire</b> la referme, et
+    l'application retient votre choix sur l'appareil.</p>
+
+    <h3>Les opérateurs et leurs habilitations</h3>
+
+    <p>Le bloc <b>Opérateurs</b> tient la liste des agents de l'équipe : nom, prénom,
+    fonction, et pour chacun ses <b>habilitations avec leur date de validité</b>. Le bouton
+    <b>+ Agent</b> crée une fiche, <b>+ Habilitation</b> ajoute une ligne. Le libellé propose
+    les habilitations courantes (Permis CE, Permis C, H2 V, H1 V) sans vous y obliger.</p>
+
+    <p>Chaque habilitation porte son état, calculé à partir de la date : <b>Valide</b>,
+    <b>Dans n j</b> à moins de soixante jours de l'échéance, ou <b>Périmée</b>. Les comptes
+    remontent en tête de fiche, pour voir d'un coup d'œil qui est à renouveler.</p>
+
+    <div class="attention">
+        Les agents sont <b>propres à l'équipe</b> et enregistrés dans la base, jamais dans le
+        code de l'application : ce dépôt est public, et ce sont des données personnelles.
+        Supprimer un agent efface aussi ses habilitations.
+    </div>
 </section>
 
 <!-- ====================================================== 10. ARCHIVES ==== -->

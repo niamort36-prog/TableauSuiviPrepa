@@ -165,6 +165,40 @@
         .opt-id { flex: 0 0 60px; font-weight: 800; color: var(--primary); }
         .opt-n { flex: 1; font-size: 0.95rem; }
         .opt-used { font-size: 0.75rem; color: #64748b; background: #f1f5f9; border-radius: 10px; padding: 2px 8px; white-space: nowrap; }
+
+        /* Repli de la liste des lignes */
+        .btn-replier { background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.35); color: #fff;
+                       border-radius: 7px; padding: 6px 14px; font-weight: 800; font-size: .82rem; cursor: pointer;
+                       white-space: nowrap; }
+        .btn-replier:hover { background: rgba(255,255,255,.28); }
+
+        /* Operateurs et habilitations */
+        .op-carte { border-bottom: 1px solid #e2e8f0; padding: 14px 20px; }
+        .op-tete { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .op-tete .form-input { flex: 1 1 150px; min-width: 0; }
+        .op-hab-titre { font-size: .7rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em;
+                        color: #64748b; margin: 12px 0 6px; }
+        .op-hab { display: flex; align-items: center; gap: 9px; margin-bottom: 6px; flex-wrap: wrap; }
+        .op-hab .form-input { flex: 1 1 170px; min-width: 0; }
+        .op-hab .form-input[type=date] { flex: 0 0 160px; }
+        .op-hab-vide { color: #94a3b8; font-size: .85rem; margin-bottom: 8px; }
+        .hab-pastille { font-size: .72rem; font-weight: 800; border-radius: 10px; padding: 3px 10px;
+                        white-space: nowrap; border: 1px solid; }
+        .hab-ok { background: #edf8f6; color: #1f5b53; border-color: #b7e3dc; }
+        .hab-bientot { background: #fff8e8; color: #8a5a00; border-color: #fcd98a; }
+        .hab-perimee { background: #fae8e3; color: #9c4433; border-color: #f3cfc7; }
+        .hab-vide { background: #f1f5f9; color: #64748b; border-color: #cbd5e1; }
+
+        /* Telephone : le libelle prend la largeur, la date, l'etat et la
+           suppression tiennent sur le rang suivant. */
+        @media screen and (max-width: 680px) {
+            .op-carte { padding: 12px 14px; }
+            .op-tete .form-input { flex: 1 1 100%; }
+            .op-hab { display: grid; grid-template-columns: 1fr auto auto; gap: 6px; align-items: center;
+                      padding-bottom: 8px; margin-bottom: 8px; border-bottom: 1px dashed #e2e8f0; }
+            .op-hab .form-input:first-child { grid-column: 1 / -1; }
+            .op-hab .form-input[type=date] { width: 100%; }
+        }
         .btn-del-ligne { background: #fae8e3; color: #9c4433; border: 1px solid #f3cfc7; border-radius: 6px; padding: 5px 12px; cursor: pointer; font-weight: bold; white-space: nowrap; }
         .btn-del-ligne:hover { background: #c45a43; color: white; }
 
@@ -314,9 +348,12 @@
                    border: 1px solid #fcd98a; border-radius: 8px; padding: 1px 7px; white-space: nowrap; }
 
         /* Champs */
-        .pd-in, .pd-zone { border: 1px solid #94a3b8; border-radius: 4px; padding: 5px 7px; font-size: .88rem;
+        /* Cases a la maniere du classeur : angles droits, trait fin, et la
+           case active cernee comme la cellule selectionnee d'un tableur. */
+        .pd-in, .pd-zone { border: 1px solid #b4b4b4; border-radius: 2px; padding: 4px 6px; font-size: .88rem;
                            font-family: inherit; background: #fff; width: 100%; min-width: 0; }
-        .pd-in:focus, .pd-zone:focus { outline: 2px solid var(--accent); }
+        .pd-in:focus, .pd-zone:focus { outline: 2px solid var(--accent); outline-offset: -1px;
+                                       background: #f7fcff; }
         .pd-zone { resize: vertical; }
         .pd-auto { background: #f1f5f9; border: 1px solid var(--border); border-radius: 4px; padding: 5px 7px;
                    font-size: .88rem; font-weight: 700; color: var(--primary); display: block; }
@@ -353,6 +390,14 @@
 
         .pd-tab-enveloppe { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
         .pd-aide { font-size: .72rem; color: #64748b; }
+
+        /* Chevron des choix du classeur, sur les cases multilignes */
+        .pd-cell { position: relative; }
+        .pd-choix { position: absolute; top: 1px; right: 1px; width: 17px; height: 17px;
+                    border: none; background: transparent; color: #64748b; cursor: pointer;
+                    opacity: .45; font-size: .7rem; padding: 0; }
+        .pd-choix:hover, .pd-choix:focus { opacity: 1; color: var(--accent); }
+        .pd-cell textarea { padding-right: 18px; }
 
         /* Regime et dispositions, dans la disposition du classeur */
         .pd-regime { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
@@ -707,7 +752,7 @@
             .pd-in, .pd-zone { border: 1px solid #94a3b8; background: #fff; }
             .pd-img { page-break-inside: avoid; }
             .pd-tab, .pd-page-tete { page-break-inside: avoid; }
-            .btn-pd, .pd-sup, .pd-tab-actions, .pd-aide { display: none !important; }
+            .btn-pd, .pd-sup, .pd-tab-actions, .pd-aide, .pd-choix { display: none !important; }
             /* Les invites de saisie sont une aide d'ecran, pas du contenu */
             .pd-in::placeholder, .pd-zone::placeholder { color: transparent !important; }
             /* Le texte fige remplace la case et revient a la ligne */
@@ -869,13 +914,29 @@
         </div>
 
         <div class="dashboard-container">
-            <div class="header-bar">
+            <div class="header-bar" style="display:flex; justify-content:space-between; align-items:center; gap:12px">
                 <h3 style="margin:0; font-size:1.1rem">📋 LIGNES DE <span id="opt-equipe-lbl">—</span> (<span id="opt-count">0</span>)</h3>
+                <button id="opt-bascule" class="btn-replier" onclick="basculerLignes()">▸ Afficher</button>
             </div>
-            <div style="padding:15px 20px; border-bottom:1px solid var(--border)">
-                <input id="opt-filter" class="form-input" placeholder="🔍 Filtrer par code ou par nom..." oninput="renderLignes()" style="width:100%">
+            <div id="opt-corps">
+                <div style="padding:15px 20px; border-bottom:1px solid var(--border)">
+                    <input id="opt-filter" class="form-input" placeholder="🔍 Filtrer par code ou par nom..." oninput="renderLignes()" style="width:100%">
+                </div>
+                <div id="opt-list"></div>
             </div>
-            <div id="opt-list"></div>
+        </div>
+
+        <div class="dashboard-container">
+            <div class="header-bar" style="display:flex; justify-content:space-between; align-items:center; gap:12px">
+                <h3 style="margin:0; font-size:1.1rem">👷 OPÉRATEURS DE <span id="op-equipe-lbl">—</span> (<span id="op-count">0</span>)</h3>
+                <button class="btn-replier" onclick="addOperateur()">+ Agent</button>
+            </div>
+            <div style="padding:12px 20px; border-bottom:1px solid var(--border); color:#64748b; font-size:0.88rem">
+                Les agents et leurs habilitations sont propres à l'équipe, et enregistrés dans la base,
+                jamais dans le code de l'application.
+            </div>
+            <div id="op-list" onfocusout="setTimeout(() => { const c = document.getElementById('op-list');
+                 if(opRenduEnAttente && !c.contains(document.activeElement)) renderOperateurs(); }, 0)"></div>
         </div>
     </div>
 
@@ -986,7 +1047,7 @@
         </div>
         <div class="pd-corps">
             <aside class="pd-sommaire" id="pd-sommaire"></aside>
-            <main class="pd-pages" id="pd-pages"></main>
+            <main class="pd-pages" id="pd-pages" onkeydown="naviguerPrepa(event)"></main>
         </div>
         <div class="footer-sticky">
             <button class="btn-action btn-other" onclick="switchScreen('screen-prepa')">← Retour</button>
@@ -1300,10 +1361,27 @@
         }
         ecouterLignes();
 
+        // --- 4d. OPERATEURS DE L'EQUIPE ACTIVE (temps reel) ---
+        // Noms, prenoms et habilitations sont des donnees personnelles : elles
+        // vivent dans la base, par equipe, et jamais dans ce fichier public.
+        let dbOperateurs = [];
+        let refOperateurs = null;
+        function ecouterOperateurs() {
+            if(PARTAGE) return;
+            if(refOperateurs) refOperateurs.off();
+            refOperateurs = db.ref('operateurs/' + equipeActive);
+            refOperateurs.on('value', snap => {
+                const d = snap.val();
+                dbOperateurs = d ? Object.keys(d).map(k => Object.assign({ id: k }, d[k])) : [];
+                if(document.getElementById('screen-options').classList.contains('active')) renderOperateurs();
+            });
+        }
+        ecouterOperateurs();
+
         function rafraichirEcranCourant() {
             if(document.getElementById('screen-home').classList.contains('active')) renderHome();
             if(document.getElementById('screen-archive').classList.contains('active')) renderGrid('grid-archives', true);
-            if(document.getElementById('screen-options').classList.contains('active')) { renderEquipes(); renderLignes(); }
+            if(document.getElementById('screen-options').classList.contains('active')) { renderEquipes(); renderLignes(); renderOperateurs(); }
         }
 
         function equipeDe(p) { return p.equipe || EQUIPE_DEFAUT; }
@@ -1332,8 +1410,9 @@
             try { localStorage.setItem('suivi-equipe', v); } catch(e) {}
             fillEquipeSelects();
             ecouterLignes();                      // recharge le référentiel de la nouvelle équipe
+            ecouterOperateurs();                  // et ses agents
             // Depuis Options on y reste, pour voir le basculement s'appliquer
-            if(document.getElementById('screen-options').classList.contains('active')) { renderEquipes(); renderLignes(); }
+            if(document.getElementById('screen-options').classList.contains('active')) { renderEquipes(); renderLignes(); renderOperateurs(); }
             else if(document.getElementById('screen-archive').classList.contains('active')) goArchive();
             else goHome();
         }
@@ -1511,7 +1590,7 @@
         }
         function goHome() { switchScreen('screen-home'); renderHome(); }
         function goArchive() { switchScreen('screen-archive'); renderGrid('grid-archives', true); }
-        function goOptions() { switchScreen('screen-options'); fillTensionSelect(); renderEquipes(); renderLignes(); }
+        function goOptions() { switchScreen('screen-options'); fillTensionSelect(); renderEquipes(); renderLignes(); renderOperateurs(); }
         function goPrepa() { switchScreen('screen-prepa'); refreshUI(); }
 
         // --- 7. FONCTION DE SAUVEGARDE (Vers Firebase) ---
@@ -1941,12 +2020,33 @@
             db.ref('equipes/' + e).remove().catch(x => alert("Erreur : " + x.message));
         }
 
+        // Quatre-vingt-dix-huit lignes encombrent l'ecran, surtout sur
+        // telephone : la liste est repliee par defaut, et le choix est retenu.
+        let lignesOuvertes = false;
+        try { lignesOuvertes = localStorage.getItem('suivi-lignes-ouvertes') === '1'; } catch(e) {}
+
+        function basculerLignes() {
+            lignesOuvertes = !lignesOuvertes;
+            try { localStorage.setItem('suivi-lignes-ouvertes', lignesOuvertes ? '1' : '0'); } catch(e) {}
+            majReplieLignes();
+            if(lignesOuvertes) renderLignes();
+        }
+
+        function majReplieLignes() {
+            const corps = document.getElementById('opt-corps');
+            const b = document.getElementById('opt-bascule');
+            if(corps) corps.style.display = lignesOuvertes ? '' : 'none';
+            if(b) b.textContent = lignesOuvertes ? '▾ Réduire' : '▸ Afficher';
+        }
+
         function renderLignes() {
             const c = document.getElementById('opt-list');
             if(!c) return;
             document.getElementById('opt-count').textContent = dbLignes.length;
             const lbl = document.getElementById('opt-equipe-lbl');
             if(lbl) lbl.textContent = equipeActive;
+            majReplieLignes();
+            if(!lignesOuvertes) return;        // rien a dessiner tant que c'est replie
 
             const q = document.getElementById('opt-filter').value.trim().toLowerCase();
             const lst = dbLignes
@@ -1973,6 +2073,137 @@
                 </div>`;
             });
             c.innerHTML = html;
+        }
+
+        // ==================================================================
+        //  OPERATEURS DE L'EQUIPE
+        //  Un agent : nom, prenom, fonction, et ses habilitations datees.
+        // ==================================================================
+        const HABILITATIONS = ['Permis CE', 'Permis C', 'H2 V', 'H1 V'];
+
+        // Jours restants avant echeance ; negatif si l'habilitation est perimee.
+        function joursAvant(fin) {
+            if(!fin) return null;
+            const d = new Date(fin + 'T00:00:00');
+            if(isNaN(d)) return null;
+            const auj = new Date();
+            auj.setHours(0, 0, 0, 0);
+            return Math.round((d - auj) / 86400000);
+        }
+
+        function etatHab(fin) {
+            const j = joursAvant(fin);
+            if(j === null) return { cls: 'hab-vide', txt: 'Sans date' };
+            if(j < 0)      return { cls: 'hab-perimee', txt: 'Périmée (' + (-j) + ' j)' };
+            if(j <= 60)    return { cls: 'hab-bientot', txt: 'Dans ' + j + ' j' };
+            return { cls: 'hab-ok', txt: 'Valide' };
+        }
+
+        function ecrireOperateur(o) {
+            const copie = { nom: o.nom || '', prenom: o.prenom || '', fonction: o.fonction || '',
+                            hab: (o.hab || []).map(h => ({ lib: h.lib || '', fin: h.fin || '' })) };
+            db.ref('operateurs/' + equipeActive + '/' + o.id).set(copie)
+              .catch(e => alert("Enregistrement impossible : " + e.message));
+        }
+
+        function opDe(id) { return dbOperateurs.find(o => o.id === id); }
+
+        function addOperateur() {
+            db.ref('operateurs/' + equipeActive).push()
+              .set({ nom: '', prenom: '', fonction: '', hab: [] })
+              .catch(e => alert("Ajout impossible : " + e.message));
+        }
+
+        function setOp(id, champ, val) {
+            const o = opDe(id);
+            if(!o) return;
+            o[champ] = val;
+            ecrireOperateur(o);
+        }
+
+        function delOperateur(id) {
+            const o = opDe(id);
+            const qui = o ? ((o.prenom + ' ' + o.nom).trim() || 'cet agent') : 'cet agent';
+            if(!confirm('Supprimer ' + qui + ' et ses habilitations ?')) return;
+            db.ref('operateurs/' + equipeActive + '/' + id).remove()
+              .catch(e => alert("Suppression impossible : " + e.message));
+        }
+
+        function addHab(id) {
+            const o = opDe(id);
+            if(!o) return;
+            o.hab = (o.hab || []).concat([{ lib: '', fin: '' }]);
+            ecrireOperateur(o);
+        }
+
+        function setHab(id, i, champ, val) {
+            const o = opDe(id);
+            if(!o || !o.hab || !o.hab[i]) return;
+            o.hab[i][champ] = val;
+            ecrireOperateur(o);
+        }
+
+        function delHab(id, i) {
+            const o = opDe(id);
+            if(!o || !o.hab) return;
+            o.hab.splice(i, 1);
+            ecrireOperateur(o);
+        }
+
+        // Firebase renvoie la liste a chaque ecriture : on ne reconstruit pas
+        // le bloc tant qu'une case y a le focus, sinon la saisie saute.
+        let opRenduEnAttente = false;
+        function renderOperateurs() {
+            const c = document.getElementById('op-list');
+            if(!c) return;
+            if(document.activeElement && c.contains(document.activeElement)) { opRenduEnAttente = true; return; }
+            opRenduEnAttente = false;
+
+            const lbl = document.getElementById('op-equipe-lbl');
+            if(lbl) lbl.textContent = equipeActive;
+            document.getElementById('op-count').textContent = dbOperateurs.length;
+
+            if(!dbOperateurs.length) {
+                c.innerHTML = '<div style="padding:25px;text-align:center;color:#999">Aucun agent enregistré pour cette équipe</div>';
+                return;
+            }
+
+            const tri = dbOperateurs.slice().sort((a, b) =>
+                (a.nom || '').localeCompare(b.nom || '') || (a.prenom || '').localeCompare(b.prenom || ''));
+
+            c.innerHTML = '<datalist id="dl-hab">' +
+                HABILITATIONS.map(h => `<option value="${esc(h)}"></option>`).join('') + '</datalist>' +
+                tri.map(o => {
+                    const hab = o.hab || [];
+                    const perimees = hab.filter(h => { const j = joursAvant(h.fin); return j !== null && j < 0; }).length;
+                    const proches  = hab.filter(h => { const j = joursAvant(h.fin); return j !== null && j >= 0 && j <= 60; }).length;
+                    return `<div class="op-carte">
+                        <div class="op-tete">
+                            <input class="form-input" value="${esc(o.nom)}" placeholder="Nom"
+                                   onchange="setOp('${o.id}','nom',this.value)">
+                            <input class="form-input" value="${esc(o.prenom)}" placeholder="Prénom"
+                                   onchange="setOp('${o.id}','prenom',this.value)">
+                            <input class="form-input" value="${esc(o.fonction)}" placeholder="Fonction"
+                                   onchange="setOp('${o.id}','fonction',this.value)">
+                            ${perimees ? `<span class="hab-pastille hab-perimee">${perimees} périmée${perimees > 1 ? 's' : ''}</span>` : ''}
+                            ${proches ? `<span class="hab-pastille hab-bientot">${proches} à renouveler</span>` : ''}
+                            <button class="btn-del-ligne" onclick="delOperateur('${o.id}')">&#128465; Supprimer</button>
+                        </div>
+                        <div class="op-hab-titre">Habilitations</div>
+                        ${hab.length ? hab.map((h, i) => {
+                            const e = etatHab(h.fin);
+                            return `<div class="op-hab">
+                                <input class="form-input" list="dl-hab" value="${esc(h.lib)}" placeholder="Habilitation"
+                                       onchange="setHab('${o.id}',${i},'lib',this.value)">
+                                <input class="form-input" type="date" value="${esc(h.fin)}"
+                                       onchange="setHab('${o.id}',${i},'fin',this.value)">
+                                <span class="hab-pastille ${e.cls}">${e.txt}</span>
+                                <button class="pd-sup" onclick="delHab('${o.id}',${i})">&times;</button>
+                            </div>`;
+                        }).join('') : '<div class="op-hab-vide">Aucune habilitation enregistrée</div>'}
+                        <button class="btn-pd" onclick="addHab('${o.id}')">+ Habilitation</button>
+                    </div>`;
+                }).join('');
         }
 
         function addLigne() {
@@ -2395,6 +2626,106 @@
         function sous(t)        { return `<div class="pd-sous">${t}</div>`; }
         function exig(t)        { return `<span class="pd-exig">${t}</span>`; }
 
+        // Listes deroulantes du classeur (validations de donnees de la feuille
+        // "Donnees"). Les noms d'agents et les identifiants d'OI en sont exclus :
+        // ce depot est public, ils restent a saisir.
+        const LISTES = {
+                    "taches": [
+                                "Prise de l'A1EC au GdP",
+                                "Identification de la ligne et du Pylône",
+                                "Ascension des monteurs avec la LDV et corde de service",
+                                "VATn + pose de MALT/CC (solution )",
+                                "Explication du mode opératoire aux agents (Exigence 14)",
+                                "Mise en place de la nacelle (callage + LEQ)",
+                                "Dépose de nids après autorisation hiérarchie.",
+                                "Installation du matériel de reprise d'effort (pull-lift daN + élingues +",
+                                "UPK + Dynamo)",
+                                "Reprise en poids",
+                                "Confection de la baguette",
+                                "Remplacement des isolateurs (bascule vieux / neufs)",
+                                "Mise en place de l'échelle à crochet avec potence.",
+                                "Remplacement des isolateurs cassés",
+                                "Même opération sur les autres phases.",
+                                "Explication du mode opératoire au grutier",
+                                "Mesure nouvelle coupe franche et découpe du câble après le manchon.",
+                                "Confection du manchon et de la bretelle de continuités.",
+                                "Réparation des brins sur le CDG avec PR-AR",
+                                "Remplacement de l'étrier par PF + CT.",
+                                "Mise en place de l'échelle à crochet en suspension en bout de console.",
+                                "Rangement du matériel et rapatriement des vieux isos.(stock EEL)",
+                                "Même opération sur les 3 phases.",
+                                "Dépose de tout le matériel et des MALT/CC.",
+                                "Descente des monteurs.",
+                                "Restitution de l'A1EC au GdP",
+                                "Réparation des brins avec GC ou PR-AR",
+                                "Mise enplace de la nacelle MAN. Callage + MALT + LEQ",
+                                "Ascension des monteurs en nacelle."
+                    ],
+                    "risques": [
+                                "Travaux en hauteur",
+                                "Electrique, induction.",
+                                "Manutention",
+                                "Renversement / Equipotencialité",
+                                "Charge en hauteur",
+                                "Projection de matière + plomg dans peinture / incendie",
+                                "Reprise d'effort",
+                                "essai à vide",
+                                "Coactivité",
+                                "Isos porcelaine: coupure",
+                                "Risque de glisser sur les isolateurs",
+                                "Risque de chute du matériel",
+                                "Déshydratation",
+                                "Sauvetage",
+                                "Projection d'huile"
+                    ],
+                    "actions": [
+                                "Ligne de vie + EPI + Lunettes de protection",
+                                "tableau du doc. D sur les MALT",
+                                "Gants, casque et chaussures de sécurité",
+                                "Vérification calage / LEQ",
+                                "Interdiction d'évoluer sous la zone",
+                                "EPI + Lunettes de protection + masque + extincteur",
+                                "Vérification par calcul Céleste",
+                                "Positionnement de l'arrêt de chaine pull-lift",
+                                "Prévenir le gestionnaire du site et balisage du chantier",
+                                "Geste et postures",
+                                "Port des gants en kevlar",
+                                "Echelle",
+                                "Personne sous la charge",
+                                "Prévoir de l'eau",
+                                "kit assujetissement et corde de service dans nacelle",
+                                "EPI + Lunettes de protection"
+                    ],
+                    "maltSect": [
+                                "-",
+                                "50 mm²",
+                                "70 mm²",
+                                "95 mm²",
+                                "120 mm²"
+                    ],
+                    "maltSol": [
+                                "-",
+                                "1A",
+                                "2A",
+                                "3A",
+                                "4A",
+                                "1B",
+                                "2B",
+                                "3B",
+                                "1C",
+                                "2C",
+                                "3C",
+                                "4C",
+                                "5C",
+                                "6C",
+                                "7C",
+                                "8C",
+                                "9C",
+                                "10C",
+                                "Terre tri + cdg aux encadrant"
+                    ]
+        };
+
         // --- Tableaux a lignes variables --------------------------------------
         function lst(c, defaut) {
             if(!prepa.l[c]) prepa.l[c] = (defaut || []).map(o => Object.assign({}, o));
@@ -2410,10 +2741,18 @@
         function addL(c, modele)      { lst(c).push(Object.assign({}, modele)); renderPrepa(); }
         function delL(c, i)           { prepa.l[c].splice(i, 1); renderPrepa(); }
 
-        function cl(c, i, k, ph) {
+        // o : nom d'une liste du classeur. On la propose sans l'imposer,
+        // comme une validation Excel reglee sur "autoriser toute valeur".
+        function cl(c, i, k, ph, o) {
             const v = prepa.l[c][i][k];
             return `<input class="pd-in" value="${esc(v === undefined ? '' : v)}" placeholder="${esc(ph || '')}"
+                           ${o ? `list="dl-${c}-${k}"` : ''}
                            onchange="setL('${c}',${i},'${k}',this.value)">`;
+        }
+
+        function listeHtml(c, k, o) {
+            return `<datalist id="dl-${c}-${k}">${(LISTES[o] || [])
+                .map(x => `<option value="${esc(x)}"></option>`).join('')}</datalist>`;
         }
         function clc(c, i, k) {
             return `<input type="checkbox" ${prepa.l[c][i][k] ? 'checked' : ''}
@@ -2421,11 +2760,47 @@
         }
 
         // Saisie d'une cellule : textarea pour les colonnes marquees m
-        function clm(c, i, k, ph) {
+        function clm(c, i, k, ph, o) {
             const v = prepa.l[c][i][k];
-            return `<textarea class="pd-zone" rows="2" placeholder="${esc(ph || '')}"
+            // Une zone multiligne n'accepte pas de datalist : le choix du
+            // classeur passe par le chevron, la saisie libre reste entiere.
+            return `<div class="pd-cell"><textarea class="pd-zone" rows="2" placeholder="${esc(ph || '')}"
                               oninput="ajusterZone(this)"
-                              onchange="setL('${c}',${i},'${k}',this.value)">${esc(v === undefined ? '' : v)}</textarea>`;
+                              onchange="setL('${c}',${i},'${k}',this.value)">${esc(v === undefined ? '' : v)}</textarea>
+                ${o ? `<select class="pd-choix" title="Choix du classeur" onchange="choisir(this,'${c}',${i},'${k}')">
+                    <option value=""></option>
+                    ${(LISTES[o] || []).map(x => `<option value="${esc(x)}">${esc(x)}</option>`).join('')}
+                </select>` : ''}</div>`;
+        }
+
+        // Dans le classeur, Entree valide la case et descend d'une ligne.
+        // On fait pareil ; Maj+Entree garde le retour a la ligne.
+        function naviguerPrepa(e) {
+            if(e.key !== 'Enter' || e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return;
+            const el = e.target;
+            if(!el.matches || !el.matches('.pd-tab td .pd-in, .pd-tab td .pd-zone')) return;
+            const td = el.closest('td'), tr = td.closest('tr');
+            const col = [...tr.children].indexOf(td);
+            for(let n = tr.nextElementSibling; n; n = n.nextElementSibling) {
+                if(n.classList.contains('pd-sect')) continue;
+                const champ = n.children[col] && n.children[col].querySelector('.pd-in, .pd-zone');
+                if(champ) {
+                    e.preventDefault();
+                    champ.focus();
+                    if(champ.select) champ.select();
+                    return;
+                }
+            }
+        }
+
+        function choisir(sel, c, i, k) {
+            const v = sel.value;
+            sel.value = '';
+            if(!v) return;
+            prepa.l[c][i][k] = v;
+            const z = sel.parentElement.querySelector('textarea');
+            if(z) { z.value = v; ajusterZone(z); }
+            majPrepaEtat();
         }
 
         // Une case de tableau ne doit jamais masquer son texte. On l'etire a
@@ -2452,13 +2827,14 @@
             const rows = lst(cle);
             const lab = t => esc(String(t).replace(/<[^>]*>/g, ''));
             const nb = colonnes.length + 1;
-            return `<div class="pd-tab-enveloppe"><table class="pd-tab pd-cartes">
+            return `${colonnes.filter(c => c.o && !c.m).map(c => listeHtml(cle, c.k, c.o)).join('')}
+            <div class="pd-tab-enveloppe"><table class="pd-tab pd-cartes">
                 <thead><tr>${colonnes.map(c => `<th${c.l ? ' style="width:' + c.l + '"' : ''}>${c.t}</th>`).join('')}<th style="width:34px"></th></tr></thead>
                 <tbody>${rows.length ? rows.map((r, i) => r.sect !== undefined ? `<tr class="pd-sect" data-cle="${cle}" data-i="${i}">
                     <td colspan="${nb - 1}" data-lab="Étape">${cl(cle, i, 'sect', "Titre de l'étape")}</td>
                     <td data-lab=""><button class="pd-sup" onclick="delL('${cle}',${i})">×</button></td>
                 </tr>` : `<tr data-cle="${cle}" data-i="${i}"${o.arret ? ' data-arret="' + o.arret + '"' : ''}${o.arret && String(r[o.arret] || '').trim() ? ' class="pd-arret"' : ''}>
-                    ${colonnes.map(c => `<td data-lab="${lab(c.t)}"${c.c ? ' class="pd-court"' : ''}>${(c.m ? clm : cl)(cle, i, c.k, c.ph || '')}</td>`).join('')}
+                    ${colonnes.map(c => `<td data-lab="${lab(c.t)}"${c.c ? ' class="pd-court"' : ''}>${(c.m ? clm : cl)(cle, i, c.k, c.ph || '', c.o)}</td>`).join('')}
                     <td data-lab=""><button class="pd-sup" onclick="delL('${cle}',${i})">×</button></td>
                 </tr>`).join('')
                 : `<tr><td colspan="${colonnes.length + 1}" class="pd-vide" style="color:#94a3b8;text-align:center;padding:10px">Aucune ligne</td></tr>`}
@@ -2643,7 +3019,7 @@
         { id:'modeop', titre:'Mode opératoire', annexe:'Annexe 5', defaut:true, corps: () => `
             <div class="pd-note">Se référer au DUER pour l'analyse des risques génériques.</div>
             ${grille('pd-g3', champ('PPE ETREN', chp('mo-etren', 'N° ETREN')) + champ('Fiche ETREN signée par le CDT', coche('mo-etren-sig', 'Signée')) + champ('Impact environnemental', sel('mo-env', ['OUI','NON'])))}
-            ${tableau('mo-l', [{k:'t', t:'Tâches à réaliser', l:'26%', m:true}, {k:'r', t:'Analyse de risques', l:'24%', m:true}, {k:'a', t:'Actions préventives', l:'24%', m:true}, {k:'pa', t:'Point d\'arrêt', l:'64px', c:true}, {k:'e', t:'État réalisé', l:'74px', c:true}, {k:'al', t:'Aléa n°', l:'58px', c:true}], {t:'', r:'', a:'', pa:'', e:'', al:''}, [
+            ${tableau('mo-l', [{k:'t', t:'Tâches à réaliser', l:'26%', m:true, o:'taches'}, {k:'r', t:'Analyse de risques', l:'24%', m:true, o:'risques'}, {k:'a', t:'Actions préventives', l:'24%', m:true, o:'actions'}, {k:'pa', t:'Point d\'arrêt', l:'64px', c:true}, {k:'e', t:'État réalisé', l:'74px', c:true}, {k:'al', t:'Aléa n°', l:'58px', c:true}], {t:'', r:'', a:'', pa:'', e:'', al:''}, [
                 {t:'Vérification état initial (terrain, préparation de travail)', r:'', a:'', pa:'1', e:'', al:''},
                 {t:'Pré Job Briefing (PF 1)', r:'', a:'', pa:'', e:'', al:''},
                 {t:'Communication sécurisée (PF 3)', r:'', a:'', pa:'', e:'', al:''},
@@ -2660,7 +3036,7 @@
         `},
 
         { id:'modeop2', titre:'Mode opératoire (suite)', annexe:'Annexe 5', defaut:true, corps: () => `
-            ${tableau('mo2-l', [{k:'t', t:'Tâches à réaliser', l:'26%', m:true}, {k:'r', t:'Analyse de risques', l:'24%', m:true}, {k:'a', t:'Actions préventives', l:'24%', m:true}, {k:'pa', t:'Point d\'arrêt', l:'64px', c:true}, {k:'e', t:'État réalisé', l:'74px', c:true}, {k:'al', t:'Aléa n°', l:'58px', c:true}], {t:'', r:'', a:'', pa:'', e:'', al:''}, null, {etapes:true, arret:'pa'})}
+            ${tableau('mo2-l', [{k:'t', t:'Tâches à réaliser', l:'26%', m:true, o:'taches'}, {k:'r', t:'Analyse de risques', l:'24%', m:true, o:'risques'}, {k:'a', t:'Actions préventives', l:'24%', m:true, o:'actions'}, {k:'pa', t:'Point d\'arrêt', l:'64px', c:true}, {k:'e', t:'État réalisé', l:'74px', c:true}, {k:'al', t:'Aléa n°', l:'58px', c:true}], {t:'', r:'', a:'', pa:'', e:'', al:''}, null, {etapes:true, arret:'pa'})}
         `},
 
         { id:'nacelle', titre:'Mode opératoire nacelle', defaut:false, corps: () => {
@@ -2728,7 +3104,7 @@
             return `
             ${grille('pd-g2', champ('Ouvrage', auto(c.ligne)) + champ('Code liaison', auto(codeLiaison())))}
             ${sous('Gestion des MALT / CC')}
-            ${tableau('mc-l', [{k:'p', t:'N° pylône', l:'120px'}, {k:'s', t:'Section MALT / CC', l:'150px'}, {k:'sol', t:'Solution', m:true}],
+            ${tableau('mc-l', [{k:'p', t:'N° pylône', l:'120px'}, {k:'s', t:'Section MALT / CC', l:'150px', o:'maltSect'}, {k:'sol', t:'Solution', m:true, o:'maltSol'}],
                       {p:'', s:'', sol:''})}
             ${sous('Gestion des aléas ' + exig('Exigences 13 et 16'))}
             ${tableau('mc-al', [{k:'n', t:'N°', l:'54px'}, {k:'an', t:'Analyse', m:true}, {k:'ac', t:'Action', m:true}], {n:'', an:'', ac:''})}`;
