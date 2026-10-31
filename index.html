@@ -428,6 +428,12 @@
         body.prepa-impression #pdp-couverture .cv { height: 100%; }
         body.prepa-impression #pdp-couverture .cv { aspect-ratio: auto; }
 
+        /* Les pages de la NIP, une par feuille */
+        .pd-nip-feuille { display: flex; align-items: flex-start; justify-content: center;
+                          margin-bottom: 14px; }
+        .pd-nip-feuille:last-child { margin-bottom: 0; }
+        .pd-nip-img { max-width: 100%; height: auto; border: 1px solid var(--border); }
+
         /* L'enveloppe que l'on reduit pour tenir sur la feuille. flow-root
            empeche les marges des enfants de s'echapper, sans quoi la
            hauteur mesuree est inferieure a la hauteur reelle. */
@@ -453,8 +459,9 @@
         .cv-infos { display: grid; grid-template-columns: 11cqw 1fr; gap: 1.6% 4%; margin: 0; font-size: 1.85cqw; }
         .cv-infos dt { color: var(--rte-cyan); font-weight: 800; }
         .cv-infos dd { margin: 0; color: #333; white-space: pre-wrap; line-height: 1.4; min-width: 0; }
-        .cv-infos .pd-in { border: none; border-bottom: 1px solid #cbd5e1; border-radius: 0;
-                           padding: 0 0 1px; font-size: inherit; background: transparent; }
+        .cv-infos .pd-in, .cv-infos .pd-zone { border: none; border-bottom: 1px solid #cbd5e1;
+                           border-radius: 0; padding: 0 0 1px; font-size: inherit;
+                           background: transparent; line-height: 1.4; resize: none; }
         .cv-infos .pd-aide { display: block; font-size: 1.4cqw; }
         /* Le bandeau bleu monte a 32 mm du bas sur un A4 : le pied doit
            s'arreter au-dessus. cqw vaut 1 % de la largeur de la couverture. */
@@ -843,6 +850,14 @@
             .pd-tab, .pd-page-tete, .pd-img, .pd-champ { page-break-inside: avoid; }
             .pd-page:last-child { page-break-after: auto; break-after: auto; }
             .pd-in, .pd-zone { border: 1px solid #94a3b8; background: #fff; }
+
+            /* Une page de NIP par feuille, a sa taille d'origine */
+            .pd-nip-feuille { page-break-after: always; break-after: page; margin: 0;
+                              height: 273mm; align-items: center; }
+            .pd-nip-feuille:last-child { page-break-after: auto; break-after: auto; }
+            .pd-nip-img { max-height: 273mm; max-width: 100%; width: auto; border: none; }
+            /* Une NIP en paysage se couche pour occuper la feuille */
+            .pd-nip-img.paysage { transform: rotate(90deg); max-height: 178mm; max-width: 273mm; }
 
             /* La couverture prend la feuille entiere, sans marge */
             @page couverture { size: A4 portrait; margin: 0 0 0 20mm; }
@@ -2605,7 +2620,8 @@
             const n = String(pv('nip-retrait')).trim();
             const d = String(pv('nip-debut')).trim(), f = String(pv('nip-fin')).trim();
             const creneau = (d && f) ? d + ' \u2192 ' + f : (d || f);
-            return [n, creneau].filter(Boolean).join(' \u00b7 ');
+            // Les deux ne tiennent pas sur une ligne de couverture.
+            return [n, creneau].filter(Boolean).join('\n');
         }
 
         // --- Valeurs reprises de la fiche chantier ---------------------------
@@ -2678,6 +2694,14 @@
             return `<input class="pd-in" type="${type || 'text'}" value="${esc(pv(c))}"
                            placeholder="${esc(ph || '')}" onchange="setPV('${c}', this.value)">`;
         }
+        // Variante multiligne, pour les valeurs qui debordent d'une ligne.
+        function chpLieZone(c, source, ph) {
+            const saisi = String(pv(c)).trim();
+            return `<textarea class="pd-zone" rows="2" placeholder="${esc(ph || '')}"
+                              oninput="ajusterZone(this)"
+                              onchange="setPV('${c}', this.value)">${esc(saisi || source || '')}</textarea>`;
+        }
+
         function chpLie(c, source, ph) {
             const saisi = String(pv(c)).trim();
             return `<input class="pd-in" value="${esc(saisi || source || '')}" placeholder="${esc(ph || '')}"
@@ -2905,7 +2929,8 @@
             el.rows = Math.max(2, Math.ceil((h - 10) / lh) + 1);
         }
         function ajusterZones() {
-            document.querySelectorAll('#pd-pages .pd-tab td textarea').forEach(ajusterZone);
+            document.querySelectorAll('#pd-pages .pd-tab td textarea, #pd-pages .cv-infos textarea')
+                    .forEach(ajusterZone);
         }
 
         // Tableau generique. colonnes = [{k, t, l?, m?}] ; m = texte long.
@@ -3083,6 +3108,7 @@
                 const data = await lireBase64(f);
                 await db.ref('nip/' + curId).set({ nom: f.name, taille: f.size, date: Date.now(), data: data });
                 nipFichier = { nom: f.name, taille: f.size };
+                try { await rendreNip(data); } catch(e) { nipImages = []; }
 
                 let releve = null;
                 try { releve = analyserNip(await texteDuPdf(data)); }
@@ -3112,13 +3138,43 @@
         }
 
         let nipFichier = null;
+        let nipImages = [];          // une image par page du PDF, pour l'impression
+
+        // Le navigateur ne sait pas inserer un PDF dans une impression HTML :
+        // on rend donc chaque page en image, a une definition suffisante
+        // pour rester lisible sur le papier.
+        async function rendreNip(base64) {
+            nipImages = [];
+            const lib = await chargerPdfJs();
+            const bin = atob(base64);
+            const buf = new Uint8Array(bin.length);
+            for(let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+            const doc = await lib.getDocument({ data: buf }).promise;
+            for(let n = 1; n <= doc.numPages; n++) {
+                const pg = doc.getPage ? await doc.getPage(n) : null;
+                if(!pg) continue;
+                const base = pg.getViewport({ scale: 1 });
+                // ~150 points par pouce : net a l'impression, raisonnable en memoire
+                const vue = pg.getViewport({ scale: Math.min(2.1, 1600 / base.width) });
+                const c = document.createElement('canvas');
+                c.width = Math.round(vue.width);
+                c.height = Math.round(vue.height);
+                await pg.render({ canvasContext: c.getContext('2d'), viewport: vue }).promise;
+                nipImages.push({ src: c.toDataURL('image/jpeg', 0.82),
+                                 paysage: vue.width > vue.height });
+            }
+        }
         async function chargerNip() {
             nipFichier = null;
             if(!curId) return;
             try {
                 const snap = await db.ref('nip/' + curId).once('value');
                 const v = snap.val();
-                if(v) nipFichier = { nom: v.nom, taille: v.taille };
+                if(v) {
+                    nipFichier = { nom: v.nom, taille: v.taille };
+                    try { await rendreNip(v.data); }
+                    catch(e) { nipImages = []; }
+                }
             } catch(e) {}
             if(document.getElementById('pdp-annexes')) renderPrepa();
         }
@@ -3139,6 +3195,7 @@
             if(!confirm('Retirer la NIP enregistr\u00e9e ? Les informations relev\u00e9es restent en place.')) return;
             await db.ref('nip/' + curId).remove().catch(() => {});
             nipFichier = null;
+            nipImages = [];
             renderPrepa();
         }
 
@@ -3210,7 +3267,7 @@
             const infos = [
                 ['Travaux', nature],
                 ['P\u00e9riode', c.debut ? 'Du ' + c.debut + ' au ' + c.fin : ''],
-                ['Retrait', chpLie('cv-retrait', retraitNip() || c.ois.join(' \u00b7 '), 'N\u00b0 d\'OI et cr\u00e9neau')],
+                ['Retrait', chpLieZone('cv-retrait', retraitNip() || c.ois.join(' \u00b7 '), 'N\u00b0 d\'OI et cr\u00e9neau')],
                 ['NIP', pv('an-nip')],
                 ['\u00c9quipe', equipeActive + (gmr ? ' (' + esc(gmr) + ')' : '')],
                 ['Pr\u00e9parateur', prep]
@@ -3329,6 +3386,16 @@
             ${sous('Autres pièces jointes')}
             ${autres.map((t, i) => coche('an-a' + i, t)).join('')}
             <div class="pd-l"><span class="pd-lab">Autre :</span>${chp('an-autre')}</div>`;
+        }},
+
+        // Le document lui-meme, derriere les annexes. Il n'apparait au
+        // sommaire que si une NIP a ete importee, et se decoche comme le reste.
+        { id:'nip', titre:'NIP (document)', defaut:true, horsCompte:true,
+          dispo: () => nipImages.length > 0, corps: () => {
+            return nipImages.map((im, i) => `<div class="pd-nip-feuille">
+                <img class="pd-nip-img${im.paysage ? ' paysage' : ''}" src="${im.src}"
+                     alt="NIP page ${i + 1}">
+            </div>`).join('');
         }},
 
         { id:'secours', titre:'Fiche de secours', defaut:true, corps: () => {
@@ -3735,7 +3802,7 @@
             // Sommaire : une ligne par page, avec sa case d'affichage
             document.getElementById('pd-sommaire').innerHTML =
                 '<div class="pd-som-titre">Pages de la préparation</div>' +
-                PREPA_PAGES.map(pg => {
+                PREPA_PAGES.filter(pg => !pg.dispo || pg.dispo()).map(pg => {
                     const v = pageVisible(pg.id);
                     return `<div class="pd-som-ligne ${v ? '' : 'masquee'}">
                         <input type="checkbox" ${v ? 'checked' : ''} onchange="basculerPage('${pg.id}')" title="Afficher cette page">
@@ -3751,7 +3818,7 @@
 
             // Pages visibles, les unes sous les autres
             document.getElementById('pd-pages').innerHTML =
-                PREPA_PAGES.filter(pg => pageVisible(pg.id)).map(pg => `
+                PREPA_PAGES.filter(pg => (!pg.dispo || pg.dispo()) && pageVisible(pg.id)).map(pg => `
                     <section class="pd-page" id="pdp-${pg.id}"><div class="pd-fit">
                         <div class="pd-page-tete">
                             <span class="pd-page-titre">${esc(pg.titre)}</span>
@@ -3861,6 +3928,14 @@
             document.querySelectorAll('#pd-pages .pd-page').forEach(sec => {
                 const fit = sec.querySelector('.pd-fit');
                 if(!fit) return;
+                // La NIP est deja paginee : chacune de ses pages a sa feuille.
+                if(sec.id === 'pdp-nip') {
+                    fit.style.transform = 'none';
+                    fit.style.width = A4_UTILE_L + 'px';
+                    sec.style.width = A4_UTILE_L + 'px';
+                    sec.style.height = '';
+                    return;
+                }
                 // La couverture occupe sa feuille entiere, sans marge ni reduction
                 if(sec.id === 'pdp-couverture') {
                     sec.style.width = COUV_L + 'px';
