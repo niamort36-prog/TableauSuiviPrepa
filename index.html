@@ -2981,10 +2981,23 @@
         }
 
         // Bloc de signature : nom, date, visa
-        function signature(prefixe, libelle, exigence) {
+        // Nom effectivement porte par la signature : la saisie si elle
+        // existe, sinon la personne designee sur la fiche du chantier.
+        function nomSignataire(prefixe, role) {
+            const saisi = String(pv(prefixe + '-nom')).trim();
+            if(saisi || !role) return saisi;
+            const c = pdChantier();
+            return (role === 'sup' ? c.cdtSup : c.cdt) || '';
+        }
+
+        // role : 'cdt' ou 'sup'. La signature reprend alors par defaut la
+        // personne designée sur la fiche du chantier — celle qui prepare est
+        // celle qui conduit les travaux. Videz la case pour y revenir.
+        function signature(prefixe, libelle, exigence, role) {
+            const nom = role ? nomSignataire(prefixe, role) : '';
             return `<tr>
                 <td style="font-weight:700">${libelle}${exigence ? ' ' + exig(exigence) : ''}</td>
-                <td>${chp(prefixe + '-nom', 'Nom')}</td>
+                <td>${role ? chpLie(prefixe + '-nom', nom, 'Nom') : chp(prefixe + '-nom', 'Nom')}</td>
                 <td>${chp(prefixe + '-date', '', 'date')}</td>
                 <td>${chp(prefixe + '-visa', 'Visa')}</td>
             </tr>`;
@@ -3272,7 +3285,8 @@
             const code = codeLiaison();
             const nature = String(pv('tv-nature')).trim() || c.desc || '';
             const gmr = String(pv('tv-gmr')).trim();
-            const prep = [pv('sig-prep-nom'), fmtDatePrint(pv('sig-prep-date'))].filter(Boolean).join(' \u2014 ');
+            const prep = [String(pv('sig-prep-nom')).trim() || c.cdt,
+                          fmtDatePrint(pv('sig-prep-date'))].filter(Boolean).join(' \u2014 ');
             const infos = [
                 ['Travaux', nature],
                 ['P\u00e9riode', c.debut ? 'Du ' + c.debut + ' au ' + c.fin : ''],
@@ -3344,9 +3358,9 @@
             <table class="pd-tab">
                 <thead><tr><th style="width:38%"></th><th>Nom</th><th style="width:150px">Date</th><th style="width:130px">Signature</th></tr></thead>
                 <tbody>
-                    ${signature('sig-prep', 'Préparateur')}
-                    ${signature('sig-cdt', 'CDT')}
-                    ${signature('sig-sup', 'Suppléant CDT')}
+                    ${signature('sig-prep', 'Préparateur', '', 'cdt')}
+                    ${signature('sig-cdt', 'CDT', '', 'cdt')}
+                    ${signature('sig-sup', 'Suppléant CDT', '', 'sup')}
                     ${signature('sig-chg', 'Changement de CDT', 'Exigence 12')}
                     ${signature('sig-tech', 'Approbation technique et points d\'arrêts', 'Exigences 6, 8 et 11')}
                 </tbody>
@@ -3750,7 +3764,7 @@
             <table class="pd-tab">
                 <thead><tr><th style="width:38%"></th><th>Nom</th><th style="width:150px">Date</th><th style="width:130px">Signature</th></tr></thead>
                 <tbody>
-                    ${signature('sig-cr-cdt', 'Validation CDT')}
+                    ${signature('sig-cr-cdt', 'Validation CDT', '', 'cdt')}
                     ${signature('sig-cr-mdp', 'Validation MDP ou adjoint')}
                 </tbody>
             </table>`;
@@ -3880,11 +3894,14 @@
         // correspondantes du suivi. On ne fait que cocher : decocher reste
         // la main de l'utilisateur.
         function majAvancementPrepa() {
-            const signe = (a, b) => String(pv(a)).trim() !== '' && String(pv(b)).trim() !== '';
+            // Le nom peut venir de la fiche sans avoir ete saisi : c'est
+            // le nom effectif qui compte, la date reste indispensable.
+            const signe = (p, role) => nomSignataire(p, role) !== ''
+                                    && String(pv(p + '-date')).trim() !== '';
             const faits = [];
-            if(signe('sig-prep-nom', 'sig-prep-date') && signe('sig-cdt-nom', 'sig-cdt-date')) faits.push('pr4');
-            if(signe('sig-tech-nom', 'sig-tech-date')) faits.push('pr5');
-            if(signe('sig-mgmt-nom', 'sig-mgmt-date')) faits.push('pr6');
+            if(signe('sig-prep', 'cdt') && signe('sig-cdt', 'cdt')) faits.push('pr4');
+            if(signe('sig-tech')) faits.push('pr5');
+            if(signe('sig-mgmt')) faits.push('pr6');
 
             let change = false;
             faits.forEach(k => { if(states[k] !== 'yes') { states[k] = 'yes'; change = true; } });
