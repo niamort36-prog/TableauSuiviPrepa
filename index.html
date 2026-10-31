@@ -425,6 +425,16 @@
         body.prepa-impression #pd-pages .pd-img-grille .pd-img { max-height: 70mm; }
         body.prepa-impression #pd-pages .pd-page-images .pd-img { max-height: 245mm; }
         body.prepa-impression #pd-pages .pd-page-images .pd-img-grille .pd-img { max-height: 105mm; }
+        /* La NIP porte deja son propre titre : le bandeau de page ferait
+           deborder la premiere planche sur une feuille de plus. */
+        body.prepa-impression #pdp-nip .pd-page-tete,
+        body.prepa-impression #pdp-sommaire .pd-page-tete { display: none; }
+        /* Une page de NIP occupe une feuille entiere, des la mesure */
+        body.prepa-impression #pd-pages .pd-nip-feuille { height: 273mm; margin: 0; align-items: center; }
+        body.prepa-impression #pd-pages .pd-nip-img { max-height: 273mm; max-width: 100%;
+                       width: auto; border: none; }
+        body.prepa-impression #pd-pages .pd-nip-img.paysage { transform: rotate(90deg);
+                       max-height: 178mm; max-width: 273mm; }
         body.prepa-impression #pdp-couverture .pd-page-tete,
         body.prepa-impression #pdp-couverture .pd-l { display: none !important; }
         body.prepa-impression #pdp-couverture .pd-fige { border: none; padding: 0; min-height: 0;
@@ -432,6 +442,29 @@
         body.prepa-impression #pdp-couverture .pd-fit,
         body.prepa-impression #pdp-couverture .cv { height: 100%; }
         body.prepa-impression #pdp-couverture .cv { aspect-ratio: auto; }
+
+        /* ------------------------------------------------------------------
+           SOMMAIRE, a la charte RTE : titre bleu marine, intitules sur un
+           filet, numero de feuille a droite.
+           ------------------------------------------------------------------ */
+        .som-tete { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
+        .som-titre { margin: 0 0 2px; font-size: 1.9rem; font-weight: 400; color: var(--rte-marine);
+                     letter-spacing: -.01em; }
+        .som-titre b { font-weight: 800; }
+        .som-blocs { display: flex; gap: 10px; flex: 0 0 auto; }
+        .som-blocs span { display: block; width: 58px; height: 42px; }
+        .som-b1 { background: #bfe3f5; }
+        .som-b2 { background: #4bb8e3; }
+        .som-sous { font-size: .68rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase;
+                    color: var(--rte-cyan); margin-bottom: 18px; }
+        .som-l { display: flex; align-items: baseline; gap: 8px; padding: 5px 0;
+                 border-bottom: 1px solid #e8eef4; font-size: .86rem; color: #475569; }
+        .som-l .som-lib { padding-left: 14px; }
+        .som-l .som-fil { flex: 1; }
+        .som-l .som-num { font-variant-numeric: tabular-nums; }
+        .som-l.fort { font-weight: 800; color: var(--rte-marine); border-bottom-color: #cbd5e1; }
+        .som-l.fort .som-lib { padding-left: 0; }
+        .som-l.fort .som-num { color: var(--rte-cyan); }
 
         /* Les pages de la NIP, une par feuille */
         .pd-nip-feuille { display: flex; align-items: flex-start; justify-content: center;
@@ -860,13 +893,9 @@
             .pd-page-images .pd-img, .pd-page-images .pd-img-grille > * {
                 page-break-inside: avoid; break-inside: avoid; }
 
-            /* Une page de NIP par feuille, a sa taille d'origine */
-            .pd-nip-feuille { page-break-after: always; break-after: page; margin: 0;
-                              height: 273mm; align-items: center; }
+            /* Une page de NIP par feuille */
+            .pd-nip-feuille { page-break-after: always; break-after: page; }
             .pd-nip-feuille:last-child { page-break-after: auto; break-after: auto; }
-            .pd-nip-img { max-height: 273mm; max-width: 100%; width: auto; border: none; }
-            /* Une NIP en paysage se couche pour occuper la feuille */
-            .pd-nip-img.paysage { transform: rotate(90deg); max-height: 178mm; max-width: 273mm; }
 
             /* La couverture prend la feuille entiere, sans marge */
             @page couverture { size: A4 portrait; margin: 0 0 0 20mm; }
@@ -3325,6 +3354,32 @@
             </div>`;
         }},
 
+        { id:'sommaire', titre:'Sommaire', defaut:true, horsCompte:true, corps: () => {
+            const lignes = PREPA_PAGES
+                .filter(pg => pg.id !== 'couverture' && (!pg.dispo || pg.dispo()) && pageVisible(pg.id))
+                .map(pg => {
+                    let lib = pg.annexe ? pg.annexe + ' \u2014 ' + pg.titre : pg.titre;
+                    if(pg.id === 'nip') {
+                        const n = String(pv('an-nip')).trim();
+                        lib = 'NIP' + (n ? ' \u2014 ' + n : '');
+                    }
+                    const fort = pg.rang !== 2;
+                    return `<div class="som-l${fort ? ' fort' : ''}">
+                        <span class="som-lib">${esc(lib)}</span>
+                        <span class="som-fil"></span>
+                        <span class="som-num" data-page="${pg.id}"></span>
+                    </div>`;
+                }).join('');
+            return `<div class="som">
+                <div class="som-tete">
+                    <h1 class="som-titre">Som<b>maire</b></h1>
+                    <div class="som-blocs"><span class="som-b1"></span><span class="som-b2"></span></div>
+                </div>
+                <div class="som-sous">Num\u00e9ros des feuilles du document imprim\u00e9</div>
+                ${lignes}
+            </div>`;
+        }},
+
         { id:'travaux', titre:'Travaux à effectuer', defaut:true, corps: () => {
             const c = pdChantier();
             return `
@@ -3373,7 +3428,7 @@
             <div class="pd-note">${exig('Exigence 20')} La préparation de travail et les annexes doivent être conservées 5 ans.</div>`;
         }},
 
-        { id:'annexes', titre:'Annexes', defaut:true, corps: () => {
+        { id:'annexes', titre:'Annexes', rang:2, defaut:true, corps: () => {
             const c = pdChantier();
             const unif = c.numero && /^\d+$/.test(c.numero) ? (520000 + Number(c.numero)) : '';
             const num = ['1 - Moyens humains + véhicules', '2 - Schéma unifilaire', '3 - EDA (avis infoligne)',
@@ -3411,17 +3466,7 @@
             <div class="pd-l"><span class="pd-lab">Autre :</span>${chp('an-autre')}</div>`;
         }},
 
-        // Le document lui-meme, derriere les annexes. Il n'apparait au
-        // sommaire que si une NIP a ete importee, et se decoche comme le reste.
-        { id:'nip', titre:'NIP (document)', defaut:true, horsCompte:true,
-          dispo: () => nipImages.length > 0, corps: () => {
-            return nipImages.map((im, i) => `<div class="pd-nip-feuille">
-                <img class="pd-nip-img${im.paysage ? ' paysage' : ''}" src="${im.src}"
-                     alt="NIP page ${i + 1}">
-            </div>`).join('');
-        }},
-
-        { id:'secours', titre:'Fiche de secours', defaut:true, corps: () => {
+        { id:'secours', titre:'Fiche de secours', rang:2, defaut:true, corps: () => {
             const c = pdChantier();
             // Seuls les numeros publics sont en dur. L'encadrement et les
             // groupements se saisissent : ce depot est public, on n'y met pas
@@ -3463,7 +3508,7 @@
             <img class="pd-img" src="${IMG}secours-01.png" alt="" style="max-width:260px">`;
         }},
 
-        { id:'regles', titre:'Règles qui sauvent', defaut:true, images:true, corps: () => {
+        { id:'regles', titre:'Règles qui sauvent', rang:2, defaut:true, images:true, corps: () => {
             // Le bandeau d'ouverture ne porte aucune case : il n'apporte rien ici.
             let h = '<div class="pd-img-grille">';
             for(let i = 2; i <= 12; i++) {
@@ -3474,6 +3519,16 @@
                 </div>`;
             }
             return h + '</div>';
+        }},
+
+        // Le document lui-meme, derriere la preparation. Il n'apparait au
+        // sommaire que si une NIP a ete importee, et se decoche comme le reste.
+        { id:'nip', titre:'NIP (document)', defaut:true, horsCompte:true,
+          dispo: () => nipImages.length > 0, corps: () => {
+            return nipImages.map((im, i) => `<div class="pd-nip-feuille">
+                <img class="pd-nip-img${im.paysage ? ' paysage' : ''}" src="${im.src}"
+                     alt="NIP page ${i + 1}">
+            </div>`).join('');
         }},
 
         { id:'moyens', titre:'Moyens humains + véhicules', annexe:'Annexe 1', defaut:true, corps: () => {
@@ -3516,11 +3571,11 @@
             ], {etapes:true, arret:'pa'})}
         `},
 
-        { id:'modeop2', titre:'Mode opératoire (suite)', annexe:'Annexe 5', defaut:true, corps: () => `
+        { id:'modeop2', titre:'Mode opératoire (suite)', rang:2, annexe:'Annexe 5', defaut:true, corps: () => `
             ${tableau('mo2-l', [{k:'t', t:'Tâches à réaliser', l:'26%', m:true, o:'taches'}, {k:'r', t:'Analyse de risques', l:'24%', m:true, o:'risques'}, {k:'a', t:'Actions préventives', l:'24%', m:true, o:'actions'}, {k:'pa', t:'Point d\'arrêt', l:'64px', c:true}, {k:'e', t:'État réalisé', l:'74px', c:true}, {k:'al', t:'Aléa n°', l:'58px', c:true}], {t:'', r:'', a:'', pa:'', e:'', al:''}, null, {etapes:true, arret:'pa'})}
         `},
 
-        { id:'nacelle', titre:'Mode opératoire nacelle', defaut:false, corps: () => {
+        { id:'nacelle', titre:'Mode opératoire nacelle', rang:2, defaut:false, corps: () => {
             const etapes = ["Établir le certificat d'adéquation",
                 "Expliquer au chauffeur la nature et la zone d'intervention",
                 "D'un commun accord entre le CDT et le chauffeur, positionner la nacelle ; chaque nouveau déplacement et calage sera validé",
@@ -3542,7 +3597,7 @@
             ${champ('Observations', zone('na-obs', 3))}`;
         }},
 
-        { id:'adequation', titre:"Constat d'adéquation et de conservation", defaut:false, corps: () => {
+        { id:'adequation', titre:"Constat d'adéquation et de conservation", rang:2, defaut:false, corps: () => {
             const ctrl = ["Avoir le rapport de contrôle réglementaire à jour",
                 "Avoir le certificat de conformité et la notice d'utilisation constructeur",
                 "S'assurer visuellement que l'engin est dans un bon état de conservation",
@@ -3854,6 +3909,9 @@
             enveloppeTableaux();
             ajusterZones();
             majPrepaEtat();
+            // Les numeros du sommaire dependent de la mise en page : on les
+            // recalcule une fois le rendu pose.
+            setTimeout(rafraichirPagination, 0);
         }
 
         // Taux de remplissage, page par page, et report sur l'avancement.
@@ -4008,6 +4066,54 @@
             });
         }
 
+        // Nombre de feuilles qu'occupera une page. Les pages reduites en
+        // occupent une par construction ; les autres se remplissent bloc par
+        // bloc, comme le fera le navigateur, aucun bloc n'etant coupe.
+        function compterFeuilles(sec) {
+            if(sec.id === 'pdp-couverture' || sec.classList.contains('pd-fixe')) return 1;
+            const fit = sec.querySelector('.pd-fit');
+            if(!fit) return 1;
+            const blocs = [];
+            [...fit.children].forEach(b => {
+                if(b.classList.contains('pd-img-grille')) blocs.push(...b.children);
+                else blocs.push(b);
+            });
+            let n = 1, h = 0;
+            blocs.forEach(b => {
+                const hb = b.getBoundingClientRect().height;
+                if(h > 0 && h + hb > A4_UTILE_H) { n++; h = hb; } else { h += hb; }
+            });
+            return n;
+        }
+
+        // Numero de la feuille ou commence chaque page. A appeler une fois la
+        // mise a l'echelle faite : c'est elle qui fixe la pagination.
+        let numerosFeuilles = {};
+        function numeroterFeuilles() {
+            let n = 1;
+            numerosFeuilles = {};
+            document.querySelectorAll('#pd-pages .pd-page').forEach(sec => {
+                numerosFeuilles[sec.id.replace('pdp-', '')] = n;
+                n += compterFeuilles(sec);
+            });
+            document.querySelectorAll('#pd-pages .som-num[data-page]').forEach(e => {
+                e.textContent = numerosFeuilles[e.dataset.page] || '';
+            });
+        }
+
+        // Hors impression, on mesure puis on remet tout en place.
+        let paginationEnCours = false;
+        function rafraichirPagination() {
+            if(paginationEnCours || !document.getElementById('pdp-sommaire')) return;
+            paginationEnCours = true;
+            const deja = document.body.classList.contains('prepa-impression');
+            if(!deja) document.body.classList.add('prepa-impression');
+            ajusterFeuilles();
+            numeroterFeuilles();
+            if(!deja) { libererFeuilles(); document.body.classList.remove('prepa-impression'); }
+            paginationEnCours = false;
+        }
+
         function libererFeuilles() {
             document.querySelectorAll('#pd-pages .pd-fit').forEach(f => {
                 f.style.transform = ''; f.style.width = '';
@@ -4025,6 +4131,7 @@
             figerCases();
             document.body.classList.add('prepa-impression');
             ajusterFeuilles();
+            numeroterFeuilles();
             if(a3) a3.disabled = true;
             if(pr) pr.disabled = false;
             const remise = () => {
