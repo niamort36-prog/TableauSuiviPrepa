@@ -401,6 +401,8 @@
 
         .pd-tab-enveloppe { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
         .pd-aide { font-size: .72rem; color: #64748b; }
+        .pd-unite { font-size: .76rem; color: #64748b; white-space: nowrap; flex: 0 0 auto; }
+        .pd-tab td .pd-l { margin-bottom: 0; gap: 6px; flex-wrap: nowrap; }
 
         /* ------------------------------------------------------------------
            Apparence d'impression. Posee sur <body> le temps de mesurer les
@@ -915,7 +917,12 @@
                        border-radius: 0; box-sizing: border-box;
                        /* 20 mm a gauche : la place d'une perforation */
                        padding: 12mm 12mm 12mm 20mm; }
-            .pd-tab, .pd-page-tete, .pd-img, .pd-champ { page-break-inside: avoid; }
+            /* Pas sur le tableau entier : un tableau plus haut qu'une feuille
+               ne peut pas l'honorer, et le navigateur le repousse alors en
+               laissant une feuille blanche. C'est la ligne qu'il faut garder
+               d'un seul tenant. */
+            .pd-page-tete, .pd-img, .pd-champ { page-break-inside: avoid; }
+            .pd-tab tr { page-break-inside: avoid; }
             /* Un tableau qui court sur plusieurs feuilles reprend son entete,
                ce qui remet aussi un peu d'air en haut de la feuille. */
             .pd-tab thead { display: table-header-group; }
@@ -3122,6 +3129,135 @@
             return (num && /^\d+$/.test(num)) ? 'L' + (520000 + Number(num)) : '';
         }
 
+        // --- Paniers Invent'RTE ----------------------------------------------
+        // L'autre application tient l'inventaire. Sa base est fermee : on s'y
+        // connecte en anonyme, le temps de lire un panier, et on recopie la
+        // liste ici pour qu'elle s'imprime et reste lisible hors connexion.
+        const INVENTAIRE = {
+            apiKey: "AIzaSyCq73TBSEROdPNWe58xFBBYJqALDO8pNnU",
+            authDomain: "inventaire-rte.firebaseapp.com",
+            databaseURL: "https://inventaire-rte-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "inventaire-rte",
+            appId: "1:105067826948:web:545a35991a5d9a1ef1ca51"
+        };
+
+        function chargerScript(url) {
+            return new Promise((res, rej) => {
+                if([...document.scripts].some(s => s.src === url)) { res(); return; }
+                const b = document.createElement('script');
+                b.src = url;
+                b.onload = () => res();
+                b.onerror = () => rej(new Error('script indisponible : ' + url));
+                document.head.appendChild(b);
+            });
+        }
+
+        let appInventaire = null;
+        async function baseInventaire() {
+            if(appInventaire) return appInventaire;
+            await chargerScript('https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js');
+            const a = firebase.apps.find(x => x.name === 'inventaire')
+                   || firebase.initializeApp(INVENTAIRE, 'inventaire');
+            if(!a.auth().currentUser) await a.auth().signInAnonymously();
+            appInventaire = a;
+            return a;
+        }
+
+        // Lien de partage d'Invent'RTE : ?equipe=<cle>&panier=<id>
+        function lirePanier(lien) {
+            try {
+                const u = new URL(String(lien || '').trim());
+                const e = u.searchParams.get('equipe'), p = u.searchParams.get('panier');
+                if(e && p) return { equipe: e, panier: String(p).replace(/^b/, '') };
+            } catch(x) {}
+            return null;
+        }
+
+        const INV_FONCTIONS = { ancrage: 'Ancrage', alignement: 'Alignement' };
+        const INV_CHAINES   = { simple: 'Chaîne simple', double: 'Chaîne double',
+                                triple: 'Chaîne triple', quadruple: 'Chaîne quadruple' };
+        const INV_FAISCEAUX = { simple: 'Faisceau simple', double: 'Faisceau double',
+                                triple: 'Faisceau triple', quadruple: 'Faisceau quadruple' };
+
+        // Meme libelle que dans Invent'RTE, pour que les deux se repondent.
+        function libelleOuvrage(g) {
+            if(!g) return '';
+            const tete = (g.kind === 'portee' ? 'Portée ' : 'Pylône ') + (g.name || '');
+            const carac = g.kind === 'portee'
+                ? [INV_FAISCEAUX[g.faisceau]]
+                : [INV_FONCTIONS[g.fonction], INV_CHAINES[g.chaine], INV_FAISCEAUX[g.faisceau]];
+            if(g.cable) carac.push(g.cable);
+            const suite = carac.filter(Boolean).join(' · ');
+            return suite ? tete.trim() + ' — ' + suite : tete.trim();
+        }
+
+        async function importerPanier() {
+            const ref = lirePanier(pv('ou-panier-lien'));
+            if(!ref) {
+                alert("Collez le lien de partage d'un panier Invent'RTE.\n\n"
+                    + "Il ressemble à :\nhttps://\u2026/Inventaire-RTE/?equipe=EL%20Feytiat&panier=1792677398082");
+                return;
+            }
+            const etat = document.getElementById('ou-panier-etat');
+            if(etat) etat.textContent = ' Connexion à Invent\u2019RTE\u2026';
+            try {
+                const bd = (await baseInventaire()).database();
+                const racine = 'profiles/' + ref.equipe + '/';
+                const [panier, pieces_, familles] = await Promise.all([
+                    bd.ref(racine + 'baskets/b' + ref.panier).once('value'),
+                    bd.ref(racine + 'parts').once('value'),
+                    bd.ref(racine + 'families').once('value')
+                ]);
+                const b = panier.val();
+                if(!b) { if(etat) etat.textContent = '';
+                         alert("Panier introuvable dans l'équipe « " + ref.equipe + " ».");
+                         return; }
+
+                const parts = Object.values(pieces_.val() || {});
+                const fams  = Object.values(familles.val() || {});
+                const grp   = b.groups || {};
+
+                const brut = b.items || {};
+                const articles = Array.isArray(brut) ? brut.filter(Boolean) : Object.values(brut).filter(Boolean);
+
+                const bruts = articles.map(it => {
+                    const pi = parts.find(x => x.id === it.partId) || {};
+                    const fa = fams.find(x => x.id == pi.familyId) || {};
+                    return { o: libelleOuvrage(grp[it.groupId]),
+                             d: pi.name || ('Pièce ' + it.partId),
+                             f: fa.name || '', z: pi.location || '',
+                             n: String(it.qty === undefined ? '' : it.qty) };
+                }).sort((a, b2) => (a.o || '\uffff').localeCompare(b2.o || '\uffff', 'fr')
+                                || a.d.localeCompare(b2.d, 'fr'));
+
+                // L'ouvrage devient un intertitre, comme dans Invent'RTE :
+                // le repeter sur chaque article le tronquerait et alourdirait
+                // la feuille pour rien.
+                const lignes = [];
+                let ouvrage = null;
+                bruts.forEach(x => {
+                    if(x.o !== ouvrage) {
+                        ouvrage = x.o;
+                        if(ouvrage) lignes.push({ sect: ouvrage });
+                    }
+                    lignes.push({ d: x.d, f: x.f, z: x.z, n: x.n });
+                });
+
+                if(!bruts.length) { if(etat) etat.textContent = '';
+                                     alert('Ce panier ne contient aucun article.'); return; }
+
+                prepa.l['ou-inv'] = lignes;
+                prepa.v['ou-panier-nom'] = b.name || '';
+                prepa.v['ou-panier-maj'] = new Date().toLocaleDateString('fr-FR');
+                renderPrepa();
+                alert(bruts.length + ' article(s) repris du panier « ' + (b.name || ref.panier) + ' ».');
+            } catch(e) {
+                if(etat) etat.textContent = '';
+                alert("Lecture du panier impossible : " + e.message
+                    + "\n\nVérifiez le lien, et que vous avez accès à Invent\u2019RTE.");
+            }
+        }
+
         // --- Note d'information prealable ------------------------------------
         // pdf.js n'est charge qu'au moment ou l'on importe une NIP : inutile
         // de le telecharger pour les chantiers qui n'en ont pas.
@@ -3780,16 +3916,22 @@
             return `
             ${grille('pd-g2', champ("Date d'utilisation prévue", chp('ad-date', '', 'date')) + champ('Adresse du chantier', chp('ad-adresse')))}
             ${champ('Nature des travaux', zone('ad-nature', 2))}
-            ${grille('pd-g2', champ('Élévateur de personnel', coche('ad-elev', 'Concerné')) + champ('Grue', coche('ad-grue', 'Concernée')))}
+            ${grille('pd-g2', champ('Élévateur de personnel', chp('ad-elev'))
+                            + champ('Grue', chp('ad-grue')))}
             ${grille('pd-g2', champ("Type d'engin", chp('ad-type')) + champ('Immatriculation', chp('ad-immat')))}
             ${champ('Liste des accessoires', zone('ad-acc', 2))}
-            ${sous('Charge à lever')}
             <table class="pd-tab">
-                <thead><tr><th></th><th>Grue</th><th>Unité</th><th>Nacelle</th><th>Unité</th></tr></thead>
+                <thead><tr><th style="width:30%">Charge à lever</th><th>Grue</th><th>Nacelle</th></tr></thead>
                 <tbody>
-                    <tr><td>Poids</td><td>${chp('ad-pg')}</td><td>tonnes</td><td>${chp('ad-pn')}</td><td>daN</td></tr>
-                    <tr><td>Hauteur</td><td>${chp('ad-hg')}</td><td>mètres</td><td>${chp('ad-hn')}</td><td>mètres</td></tr>
-                    <tr><td>Portée</td><td>${chp('ad-og')}</td><td>mètres</td><td>${chp('ad-on')}</td><td>mètres</td></tr>
+                    <tr><td>Poids</td>
+                        <td><div class="pd-l">${chp('ad-pg')}<span class="pd-unite">tonnes</span></div></td>
+                        <td><div class="pd-l">${chp('ad-pn')}<span class="pd-unite">daN</span></div></td></tr>
+                    <tr><td>Hauteur</td>
+                        <td><div class="pd-l">${chp('ad-hg')}<span class="pd-unite">mètres</span></div></td>
+                        <td><div class="pd-l">${chp('ad-hn')}<span class="pd-unite">mètres</span></div></td></tr>
+                    <tr><td>Portée</td>
+                        <td><div class="pd-l">${chp('ad-og')}<span class="pd-unite">mètres</span></div></td>
+                        <td><div class="pd-l">${chp('ad-on')}<span class="pd-unite">mètres</span></div></td></tr>
                 </tbody>
             </table>
             ${champ('Autres (terrain, encombrement)', zone('ad-autres', 2))}
@@ -3886,6 +4028,23 @@
                 ['11 — Petit matériel', ['Collier Petit Jean', 'Pelles / pioches', 'Masses', 'Serre-joint', 'Broches', 'Rallonge électrique']]
             ];
             let h = `${grille('pd-g3', champ('Ouvrage', auto(c.ligne)) + champ('Du', auto(c.debut)) + champ('Au', auto(c.fin)))}`;
+
+            // Panier Invent'RTE : la liste vient de l'inventaire, pas d'ici.
+            const nomPanier = String(pv('ou-panier-nom')).trim();
+            h += sous('Panier Invent\u2019RTE' + (nomPanier ? ' — ' + esc(nomPanier) : ''));
+            h += `<div class="pd-l pd-aide">
+                    ${chp('ou-panier-lien', 'Collez ici le lien de partage du panier')}
+                    <button class="btn-pd pre" onclick="importerPanier()">\u21bb Importer le panier</button>
+                    <span id="ou-panier-etat"></span>
+                 </div>`;
+            if(lst('ou-inv').length) {
+                h += `<div class="pd-aide">Repris de l\u2019inventaire le ${esc(pv('ou-panier-maj'))}.
+                      Les lignes restent modifiables ici.</div>`;
+                h += tableau('ou-inv', [{k:'d', t:'Désignation'}, {k:'f', t:'Famille', l:'22%'},
+                                        {k:'z', t:'Zone', l:'20%'}, {k:'n', t:'Nb', l:'60px', c:true}],
+                             {d:'', f:'', z:'', n:''}, null, {etapes:true});
+            }
+
             groupes.forEach((g, gi) => {
                 h += sous(g[0]);
                 h += `<table class="pd-tab"><thead><tr><th>Désignation</th><th style="width:110px">Caractéristique</th><th style="width:90px">Nombre</th><th style="width:70px">Contrôle</th></tr></thead><tbody>`;
@@ -4251,15 +4410,37 @@
             if(sec.id === 'pdp-couverture' || sec.classList.contains('pd-fixe')) return 1;
             const fit = sec.querySelector('.pd-fit');
             if(!fit) return 1;
+            // Une grille se lit par rangees : empiler ses cases en colonne
+            // doublerait la hauteur annoncee, donc le nombre de feuilles.
             const blocs = [];
             [...fit.children].forEach(b => {
-                if(b.classList.contains('pd-img-grille')) blocs.push(...b.children);
-                else blocs.push(b);
+                if(!b.classList.contains('pd-img-grille')) { blocs.push(b); return; }
+                const cols = Math.max(1, (getComputedStyle(b).gridTemplateColumns || '').split(/\s+/)
+                                           .filter(Boolean).length);
+                const cases = [...b.children];
+                for(let i = 0; i < cases.length; i += cols) {
+                    const rangee = cases.slice(i, i + cols);
+                    blocs.push({
+                        tagName: 'RANGEE',
+                        querySelector: () => null,
+                        getBoundingClientRect: () => ({
+                            height: Math.max(...rangee.map(x => x.getBoundingClientRect().height)) })
+                    });
+                }
             });
             let n = 1, h = 0;
             blocs.forEach(b => {
                 const hb = b.getBoundingClientRect().height;
-                if(h > 0 && h + hb > A4_UTILE_H) { n++; h = hb; } else { h += hb; }
+                // Un tableau se coupe entre ses lignes : il remplit donc la
+                // feuille en cours puis deborde sur les suivantes. Une image
+                // ou un bloc de champs, lui, part en entier a la feuille
+                // suivante s'il n'y tient plus.
+                const secable = b.tagName === 'TABLE' || !!b.querySelector('table');
+                if(secable) {
+                    h += hb;
+                    while(h > A4_UTILE_H) { n++; h -= A4_UTILE_H; }
+                } else if(h > 0 && h + hb > A4_UTILE_H) { n++; h = hb; }
+                else { h += hb; }
             });
             return n;
         }
