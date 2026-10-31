@@ -6,7 +6,7 @@ Ce dossier contient de quoi le régénérer entièrement.
 | Fichier | Rôle |
 |---|---|
 | `guide.html` | Le texte et la mise en page du guide |
-| `captures/` | Les 17 captures d'écran utilisées |
+| `captures/` | Les 18 captures d'écran utilisées |
 | `demo.mjs` | Le chantier fictif servant aux captures |
 | `shots.mjs` | Crée le chantier de démonstration, prend les captures, puis efface tout |
 | `pdf.mjs` | Convertit `guide.html` en PDF A4 paginé |

@@ -127,6 +127,7 @@
                 <li>Notes</li>
             </ol>
         </li>
+        <li>La préparation de travail</li>
         <li>Partager un chantier en lecture seule</li>
         <li>Imprimer le porte-document A3</li>
         <li>Les options : équipes et lignes</li>
@@ -503,16 +504,88 @@
     <b>Effectué</b> barre la note sans la supprimer.</p>
 </section>
 
+<!-- ================================================ 7. PREPARATION ==== -->
+<section>
+    <h2>7. La préparation de travail</h2>
+
+    <p>Le bouton <b>📑 Préparation de travail</b>, en bas de l'écran Prépa, ouvre le document
+    complet : les 21 pages du classeur Excel, les unes sous les autres, que l'on remplit
+    directement et que l'on imprime à la fin.</p>
+
+    <figure>
+        <img src="captures/13-prepa-document.png" alt="Préparation de travail">
+        <figcaption>Le sommaire à gauche, les pages que l'on fait défiler à droite</figcaption>
+    </figure>
+
+    <h3>Choisir les pages</h3>
+
+    <p>Le sommaire liste les 21 pages avec, pour chacune, une case d'affichage et son taux de
+    remplissage. Treize pages sont affichées d'emblée ; les huit autres — mode opératoire
+    nacelle, constat d'adéquation, planification, liste d'outillage, métrologie, manchonnage,
+    PAPOTO, matériel ligne — restent masquées jusqu'à ce que vous les cochiez, exactement comme
+    les feuilles masquées du classeur.</p>
+
+    <p>Trois boutons en bas du sommaire permettent de tout afficher, tout masquer, ou revenir à
+    la sélection par défaut. Un clic sur un titre fait défiler jusqu'à la page.</p>
+
+    <div class="note">
+        <b>Une page masquée ne compte pas</b> dans le taux de remplissage, et ne sort pas à
+        l'impression. Masquer ce qui ne concerne pas le chantier allège donc le document autant
+        que le pourcentage affiché.
+    </div>
+
+    <h3>Ce qui se remplit tout seul</h3>
+
+    <p>Les informations déjà connues du chantier ne sont pas à ressaisir : le numéro de ligne,
+    la tension et le nom de la ligne, les dates de début et de fin, les numéros d'OT et d'OI.
+    Elles apparaissent sur fond gris, et se reportent d'une page à l'autre — vers le compte
+    rendu, le REX, la planification, la liste d'outillage.</p>
+
+    <p>Les calculs du classeur sont conservés. Sur la page <b>Câbles</b>, choisir le type de
+    câble renseigne le diamètre, ω, l'UPK et le fourreau ; la cote C se calcule
+    (Ø / 2000 × √(paramètre × 9,81)) et la cote D découle du niveau de tension.</p>
+
+    <h3>Ce que le remplissage valide</h3>
+
+    <p>Trois signatures de la préparation cochent automatiquement les tâches correspondantes du
+    suivi, et font donc avancer la jauge du chantier :</p>
+
+    <table>
+        <tr><th style="width:52%">Signature renseignée (nom + date)</th><th>Tâche validée</th></tr>
+        <tr><td>Préparateur <b>et</b> CDT</td><td>Signature prépa</td></tr>
+        <tr><td>Approbation technique et points d'arrêts</td><td>Validation technique</td></tr>
+        <tr><td>Validation du management</td><td>Validation hiérarchiques</td></tr>
+    </table>
+
+    <div class="note">
+        La préparation ne fait que <b>cocher</b> ces tâches. Elle ne les décoche jamais : si
+        vous effacez une signature, la tâche reste validée tant que vous ne la décochez pas
+        vous-même sur la fiche.
+    </div>
+
+    <h3>Imprimer</h3>
+
+    <p>Le bouton <b>🖨️ Imprimer</b> sort les pages affichées au format <b>A4 portrait</b>, une
+    page par feuille, sans le sommaire ni les boutons. C'est une mise en page distincte de
+    l'A3 de la fiche chantier : les deux ne se gênent pas.</p>
+
+    <div class="attention">
+        La fiche de secours ne contient que les numéros publics — 18, 15, 17, 112 et SNCF.
+        Les noms et numéros de l'encadrement et des groupements sont à saisir : ils sont
+        enregistrés avec le chantier, et non dans le code de l'application, qui est public.
+    </div>
+</section>
+
 <!-- ====================================================== 7. PARTAGE ==== -->
 <section>
-    <h2>7. Partager un chantier en lecture seule</h2>
+    <h2>8. Partager un chantier en lecture seule</h2>
 
     <p>Depuis l'espace Logistique, le bouton <b>🔗 Lien de partage</b> copie une adresse à
     transmettre. Celui qui l'ouvre ne voit <b>que</b> cet espace : ni la liste des chantiers,
     ni la fiche, ni les options.</p>
 
     <figure>
-        <img src="captures/16-vue-partagee.png" alt="Vue partagée">
+        <img src="captures/17-vue-partagee.png" alt="Vue partagée">
         <figcaption>La vue partagée : un bandeau signale la lecture seule</figcaption>
     </figure>
 
@@ -541,14 +614,14 @@
 
 <!-- ==================================================== 8. IMPRESSION ==== -->
 <section>
-    <h2>8. Imprimer le porte-document A3</h2>
+    <h2>9. Imprimer le porte-document A3</h2>
 
     <p>Le bouton <b>🖨️ Imprimer A3</b> produit une feuille A3 en paysage dont seule la moitié
     droite est occupée. Pliée en son centre, elle devient un porte-document avec la fiche
     chantier en couverture.</p>
 
     <figure>
-        <img src="captures/15-impression-a3.png" alt="Feuille A3">
+        <img src="captures/16-impression-a3.png" alt="Feuille A3">
         <figcaption>Le trait de pli au centre, la fiche sur la moitié droite</figcaption>
     </figure>
 
@@ -572,10 +645,10 @@
 
 <!-- ======================================================= 9. OPTIONS ==== -->
 <section>
-    <h2>9. Les options : équipes et lignes</h2>
+    <h2>10. Les options : équipes et lignes</h2>
 
     <figure>
-        <img src="captures/13-options.png" alt="Écran Options">
+        <img src="captures/14-options.png" alt="Écran Options">
         <figcaption>Les équipes en haut, le référentiel de lignes en dessous</figcaption>
     </figure>
 
@@ -609,7 +682,7 @@
 
 <!-- ====================================================== 10. ARCHIVES ==== -->
 <section>
-    <h2>10. Les archives</h2>
+    <h2>11. Les archives</h2>
 
     <p>Le bouton <b>🗃️ Archiver</b>, sur la fiche, sort le chantier de la liste des travaux
     en cours sans rien perdre. On le retrouve dans l'onglet <b>Archives</b>.</p>
@@ -620,7 +693,7 @@
     à la fin.</p>
 
     <figure>
-        <img src="captures/14-archives.png" alt="Écran Archives">
+        <img src="captures/15-archives.png" alt="Écran Archives">
         <figcaption>Les chantiers archivés de l'équipe affichée</figcaption>
     </figure>
 
@@ -635,12 +708,12 @@
 
 <!-- ===================================================== 11. TELEPHONE ==== -->
 <section>
-    <h2>11. Sur téléphone</h2>
+    <h2>12. Sur téléphone</h2>
 
     <p>Toutes les mises en page s'adaptent à l'écran, en portrait comme en paysage.</p>
 
     <figure>
-        <img src="captures/17-mobile.png" alt="Affichage téléphone" class="tel">
+        <img src="captures/18-mobile.png" alt="Affichage téléphone" class="tel">
         <figcaption>La vue partagée sur téléphone, en portrait</figcaption>
     </figure>
 
@@ -662,7 +735,7 @@
 
 <!-- =========================================================== 12. FAQ ==== -->
 <section>
-    <h2>12. Questions fréquentes</h2>
+    <h2>13. Questions fréquentes</h2>
 
     <h3>Je ne vois pas mes chantiers</h3>
     <p>Vérifiez la pastille d'équipe en haut à gauche. Chaque équipe a sa propre liste ; vous

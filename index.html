@@ -259,6 +259,99 @@
         .cable-svg path, .cable-svg line { stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
         .pylone-svg circle, .cable-svg circle { fill: currentColor; stroke: none; }
 
+        /* ==================================================================
+           PREPARATION DE TRAVAIL — pages que l'on fait defiler
+           ================================================================== */
+        .btn-prepadoc { background: #7c3aed; color: #fff; }
+
+        .pd-entete { display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+                     background: var(--primary); color: #fff; padding: 12px 18px; border-radius: 12px 12px 0 0; }
+        .pd-retour { background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.3); color: #fff;
+                     border-radius: 8px; padding: 7px 14px; font-weight: 700; cursor: pointer; }
+        .pd-titre { font-size: 1.05rem; letter-spacing: .03em; }
+        .pd-titre span { display: block; font-size: .85rem; opacity: .8; font-weight: 600; }
+        .pd-jauge { margin-left: auto; background: rgba(255,255,255,.14); border-radius: 10px; padding: 5px 12px;
+                    font-size: .85rem; font-weight: 700; white-space: nowrap; }
+
+        .pd-corps { display: grid; grid-template-columns: 250px 1fr; gap: 16px; align-items: start;
+                    background: #e2e8f0; padding: 16px; border-radius: 0 0 12px 12px; }
+
+        .pd-sommaire { position: sticky; top: 82px; background: #fff; border: 1px solid var(--border);
+                       border-radius: 10px; padding: 10px; max-height: calc(100vh - 190px); overflow-y: auto; }
+        .pd-som-titre { font-size: .7rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em;
+                        color: #64748b; padding: 4px 6px 8px; }
+        .pd-som-ligne { display: flex; align-items: center; gap: 8px; padding: 5px 6px; border-radius: 6px; font-size: .82rem; }
+        .pd-som-ligne:hover { background: #f1f5f9; }
+        .pd-som-ligne input { width: 15px; height: 15px; cursor: pointer; flex: 0 0 15px; }
+        .pd-som-ligne a { flex: 1; color: var(--primary); font-weight: 600; cursor: pointer; text-decoration: none; min-width: 0; }
+        .pd-som-ligne.masquee a { color: #cbd5e1; text-decoration: line-through; }
+        .pd-som-ligne .pd-som-pc { font-size: .68rem; font-weight: 800; color: #94a3b8; }
+        .pd-som-actions { display: flex; gap: 6px; padding: 8px 4px 2px; border-top: 1px solid var(--border); margin-top: 6px; }
+        .pd-som-actions button { flex: 1; font-size: .7rem; padding: 5px; border: 1px solid var(--border);
+                                 background: #f8fafc; border-radius: 6px; cursor: pointer; font-weight: 700; color: #475569; }
+
+        /* Une page = une feuille */
+        .pd-pages { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+        .pd-page { background: #fff; border: 1px solid var(--border); border-radius: 8px;
+                   padding: 16px 20px 20px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+        .pd-page-tete { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+                        border-bottom: 2px solid var(--primary); padding-bottom: 7px; margin-bottom: 14px; }
+        .pd-page-titre { font-size: 1.05rem; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: .02em; }
+        .pd-annexe { margin-left: auto; font-size: .72rem; font-weight: 800; color: #7c3aed;
+                     background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 10px; padding: 2px 9px; white-space: nowrap; }
+        .pd-exig { font-size: .68rem; font-weight: 800; color: #b45309; background: #fffbeb;
+                   border: 1px solid #fde68a; border-radius: 8px; padding: 1px 7px; white-space: nowrap; }
+
+        /* Champs */
+        .pd-in, .pd-zone { border: 1px solid #94a3b8; border-radius: 4px; padding: 5px 7px; font-size: .88rem;
+                           font-family: inherit; background: #fff; width: 100%; min-width: 0; }
+        .pd-in:focus, .pd-zone:focus { outline: 2px solid var(--accent); }
+        .pd-zone { resize: vertical; }
+        .pd-auto { background: #f1f5f9; border: 1px solid var(--border); border-radius: 4px; padding: 5px 7px;
+                   font-size: .88rem; font-weight: 700; color: var(--primary); display: block; }
+        .pd-l { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; flex-wrap: wrap; }
+        .pd-lab { font-size: .78rem; font-weight: 800; color: #475569; white-space: nowrap; }
+        .pd-lab-l { flex: 0 0 170px; }
+        .pd-grille { display: grid; gap: 8px 14px; margin-bottom: 10px; }
+        .pd-g2 { grid-template-columns: 1fr 1fr; }
+        .pd-g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .pd-g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        .pd-champ { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+        .pd-champ > label { font-size: .7rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: .03em; }
+        .pd-coche { display: flex; align-items: flex-start; gap: 7px; font-size: .86rem; padding: 3px 0; cursor: pointer; }
+        .pd-coche input { width: 16px; height: 16px; margin-top: 2px; flex: 0 0 16px; cursor: pointer; }
+        .pd-sous { font-size: .82rem; font-weight: 800; color: var(--vert, #0f766e); text-transform: uppercase;
+                   letter-spacing: .04em; margin: 16px 0 8px; padding-bottom: 3px; border-bottom: 1px solid var(--border); }
+        .pd-note { font-size: .8rem; color: #475569; background: #f8fafc; border-left: 3px solid var(--border);
+                   padding: 7px 10px; border-radius: 4px; margin: 8px 0; }
+        .pd-fixe { font-size: .86rem; }
+
+        /* Tableaux */
+        .pd-tab { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+        .pd-tab th { background: #f1f5f9; border: 1px solid #94a3b8; padding: 5px 7px; font-size: .7rem;
+                     text-transform: uppercase; letter-spacing: .03em; color: #475569; text-align: left; }
+        .pd-tab td { border: 1px solid #cbd5e1; padding: 3px 5px; vertical-align: top; }
+        .pd-tab td .pd-in, .pd-tab td .pd-zone { border: none; padding: 3px 4px; }
+        .pd-tab td .pd-in:focus { outline: 2px solid var(--accent); border-radius: 3px; }
+        .pd-tab .pd-sect td { background: #e2e8f0; font-weight: 800; color: var(--primary); font-size: .82rem; }
+        .btn-pd { background: transparent; border: 1px dashed #94a3b8; color: #64748b; border-radius: 5px;
+                  padding: 4px 10px; cursor: pointer; font-size: .74rem; font-weight: 700; }
+        .btn-pd:hover { background: #f1f5f9; color: var(--primary); }
+        .pd-sup { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; border-radius: 4px;
+                  padding: 2px 7px; cursor: pointer; font-weight: 800; }
+
+        .pd-img { max-width: 100%; border: 1px solid var(--border); border-radius: 6px; display: block; margin: 8px auto; }
+        .pd-img-grille { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+        @media screen and (max-width: 980px) {
+            .pd-corps { grid-template-columns: 1fr; }
+            .pd-sommaire { position: static; max-height: none; display: none; }
+            .pd-sommaire.ouvert { display: block; }
+            .pd-g2, .pd-g3, .pd-g4 { grid-template-columns: 1fr; }
+            .pd-lab-l { flex: 1 1 100%; }
+            .pd-img-grille { grid-template-columns: 1fr; }
+        }
+
         /* Suivi des remboursements */
         .lg-regle { background: #f0fdf4; }
         .lg-quitte { display: flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 800; color: #0369a1; white-space: nowrap; cursor: pointer; }
@@ -522,6 +615,27 @@
         }
     </style>
 
+    <!-- Impression A4 de la préparation de travail, activée par imprimerPrepa() -->
+    <style id="print-prepa">
+        @media print {
+            @page { size: A4 portrait; margin: 12mm; }
+            html, body { width: auto; height: auto; margin: 0; padding: 0; background: #fff; overflow: visible; }
+            body > *:not(#screen-prepadoc) { display: none !important; }
+            #screen-prepadoc { display: block !important; }
+            .pd-entete, .pd-sommaire, .pd-jauge, .pd-retour, .footer-sticky { display: none !important; }
+            .pd-corps { display: block; padding: 0; background: #fff; border-radius: 0; }
+            .pd-pages { display: block; }
+            .pd-page { page-break-after: always; break-after: page; border: none; box-shadow: none;
+                       padding: 0 0 6mm; border-radius: 0; }
+            .pd-page:last-child { page-break-after: auto; break-after: auto; }
+            .pd-in, .pd-zone { border: 1px solid #94a3b8; background: #fff; }
+            .pd-img { page-break-inside: avoid; }
+            .pd-tab, .pd-page-tete { page-break-inside: avoid; }
+            .btn-pd, .pd-sup { display: none !important; }
+            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+    </style>
+
     <!-- Feuille A3 isolée : cette balise est retirée en mode partage (fin de script) -->
     <style id="print-a3">
         /* ==================================================================
@@ -766,7 +880,29 @@
         </div>
         <div class="footer-sticky">
             <button class="btn-action btn-other" onclick="switchScreen('screen-form')">Retour</button>
+            <button class="btn-action btn-prepadoc" onclick="goPrepaDoc()">📑 Préparation de travail</button>
             <button class="btn-action btn-save" onclick="save(false)">💾 ENREGISTRER TOUT</button>
+        </div>
+    </div>
+
+    <div id="screen-prepadoc" class="screen">
+        <div class="pd-entete">
+            <button class="pd-retour" onclick="switchScreen('screen-prepa')">← Retour</button>
+            <div class="pd-titre">
+                <b>PRÉPARATION DE TRAVAIL</b>
+                <span id="pd-ligne"></span>
+            </div>
+            <div class="pd-jauge"><span id="pd-rempli">0 %</span> rempli</div>
+        </div>
+        <div class="pd-corps">
+            <aside class="pd-sommaire" id="pd-sommaire"></aside>
+            <main class="pd-pages" id="pd-pages"></main>
+        </div>
+        <div class="footer-sticky">
+            <button class="btn-action btn-other" onclick="switchScreen('screen-prepa')">← Retour</button>
+            <button class="btn-action btn-prepadoc" onclick="basculerSommaire()">📑 Pages</button>
+            <button class="btn-action btn-print" onclick="imprimerPrepa()">🖨️ Imprimer</button>
+            <button class="btn-action btn-save" onclick="save(false)">💾 ENREGISTRER</button>
         </div>
     </div>
 
@@ -1361,6 +1497,7 @@
                     chargement: chargement,
                     tech: tech,
                     modeOp: modeOpPropre(),
+                    prepa: prepaPropre(),
                     planning: planningPropre(),
                     notes: notes
                 };
@@ -1412,6 +1549,7 @@
             tech = normTech(p.tech);
             modeOp = normModeOp(p.modeOp);
             moOuverts = {};
+            prepa = normPrepa(p.prepa);
             planning = normPlanning(p.planning);
             notes = normNotes(p.notes);
             semActive = null;
@@ -1473,7 +1611,7 @@
             curId = null; states = {}; ots=[]; ois=[];
             logi = logiVide(); piList = []; contacts = contactsVide(); chargement = [];
             tech = { pylones: [], portees: [] };
-            modeOp = []; moOuverts = {};
+            modeOp = []; moOuverts = {}; prepa = prepaVide();
             planning = {}; notes = []; subActif = 'gite'; semActive = null;
             document.querySelectorAll('input,textarea,select').forEach(i=>i.value='');
             const elDepl = document.getElementById('inp-depl');
@@ -1990,6 +2128,684 @@
             renderModeOp(); renderPlanning(); renderNotes();
             showSub(subActif);
         }
+
+        // ====================================================================
+        // PREPARATION DE TRAVAIL
+        // Reprise du classeur Excel sous forme de pages que l'on fait defiler.
+        // Chaque page peut etre masquee, comme les feuilles masquees du
+        // classeur. Les valeurs vivent dans prepa.v (champs simples) et
+        // prepa.l (tableaux a lignes variables).
+        // ====================================================================
+
+        function prepaVide() { return { pages: {}, v: {}, l: {} }; }
+        let prepa = prepaVide();
+
+        // Forme stable pour la base : on n'ecrit ni les champs vides, ni les
+        // lignes de tableau entierement vides, ni les listes restees vides.
+        // Elles sont recreees a l'affichage par lst().
+        function prepaPropre() {
+            const r = prepaVide();
+            Object.keys(prepa.pages).forEach(k => { r.pages[k] = !!prepa.pages[k]; });
+            Object.keys(prepa.v).forEach(k => {
+                const x = prepa.v[k];
+                if(x === '' || x === false || x === null || x === undefined) return;
+                r.v[k] = x;
+            });
+            Object.keys(prepa.l).forEach(k => {
+                const lignes = (prepa.l[k] || []).filter(o =>
+                    Object.keys(o).some(c => String(o[c] === undefined ? '' : o[c]).trim() !== ''));
+                if(lignes.length) r.l[k] = lignes;
+            });
+            return r;
+        }
+
+        function normPrepa(x) {
+            const r = prepaVide();
+            if(!x) return r;
+            Object.keys(x.pages || {}).forEach(k => { r.pages[k] = !!x.pages[k]; });
+            Object.keys(x.v || {}).forEach(k => { r.v[k] = x.v[k]; });
+            Object.keys(x.l || {}).forEach(k => {
+                r.l[k] = (x.l[k] || []).map(o => Object.assign({}, o));
+            });
+            return r;
+        }
+
+        // --- Valeurs reprises de la fiche chantier ---------------------------
+        function pdChantier() {
+            const sel = document.getElementById('inp-line');
+            const l = dbLignes.find(x => x.id === (sel ? sel.value : '')) || {};
+            const val = id => { const e = document.getElementById(id); return e ? e.value : ''; };
+            return {
+                numero: l.id || '', tension: l.t || '', nomLigne: l.n || '',
+                ligne: ((l.t || '') + ' ' + (l.n || '')).trim() || '—',
+                debut: fmtDatePrint(val('inp-start')), fin: fmtDatePrint(val('inp-end')),
+                cdt: val('inp-cdt'), cdtSup: val('inp-cdt-sup'), desc: val('inp-desc'),
+                ots: ots.slice(), ois: ois.slice()
+            };
+        }
+
+        // --- Champs -----------------------------------------------------------
+        function pv(c)  { const x = prepa.v[c]; return (x === undefined || x === null) ? '' : x; }
+        function setPV(c, val) { prepa.v[c] = val; majPrepaEtat(); }
+        function setPC(c, b)   { prepa.v[c] = !!b; majPrepaEtat(); }
+
+        function chp(c, ph, type) {
+            return `<input class="pd-in" type="${type || 'text'}" value="${esc(pv(c))}"
+                           placeholder="${esc(ph || '')}" onchange="setPV('${c}', this.value)">`;
+        }
+        function zone(c, n, ph) {
+            return `<textarea class="pd-zone" rows="${n || 3}" placeholder="${esc(ph || '')}"
+                              onchange="setPV('${c}', this.value)">${esc(pv(c))}</textarea>`;
+        }
+        function coche(c, lab) {
+            return `<label class="pd-coche"><input type="checkbox" ${pv(c) ? 'checked' : ''}
+                           onchange="setPC('${c}', this.checked)"><span>${lab}</span></label>`;
+        }
+        function sel(c, opts) {
+            return `<select class="pd-in" onchange="setPV('${c}', this.value)">
+                <option value=""></option>
+                ${opts.map(o => `<option value="${esc(o)}" ${pv(c) === o ? 'selected' : ''}>${esc(o)}</option>`).join('')}
+            </select>`;
+        }
+        function auto(v)        { return `<span class="pd-auto">${esc(v) || '—'}</span>`; }
+        function champ(lab, h)  { return `<div class="pd-champ"><label>${lab}</label>${h}</div>`; }
+        function grille(cls, h) { return `<div class="pd-grille ${cls}">${h}</div>`; }
+        function sous(t)        { return `<div class="pd-sous">${t}</div>`; }
+        function exig(t)        { return `<span class="pd-exig">${t}</span>`; }
+
+        // --- Tableaux a lignes variables --------------------------------------
+        function lst(c, defaut) {
+            if(!prepa.l[c]) prepa.l[c] = (defaut || []).map(o => Object.assign({}, o));
+            return prepa.l[c];
+        }
+        function setL(c, i, champ, v) { prepa.l[c][i][champ] = v; majPrepaEtat(); }
+        function addL(c, modele)      { lst(c).push(Object.assign({}, modele)); renderPrepa(); }
+        function delL(c, i)           { prepa.l[c].splice(i, 1); renderPrepa(); }
+
+        function cl(c, i, k, ph) {
+            const v = prepa.l[c][i][k];
+            return `<input class="pd-in" value="${esc(v === undefined ? '' : v)}" placeholder="${esc(ph || '')}"
+                           onchange="setL('${c}',${i},'${k}',this.value)">`;
+        }
+        function clc(c, i, k) {
+            return `<input type="checkbox" ${prepa.l[c][i][k] ? 'checked' : ''}
+                           onchange="setL('${c}',${i},'${k}',this.checked)">`;
+        }
+
+        // Tableau generique : colonnes = [{k, t, l?}], modele = objet vide
+        function tableau(cle, colonnes, modele, defaut) {
+            const rows = lst(cle, defaut);
+            return `<table class="pd-tab">
+                <thead><tr>${colonnes.map(c => `<th${c.l ? ' style="width:' + c.l + '"' : ''}>${c.t}</th>`).join('')}<th style="width:34px"></th></tr></thead>
+                <tbody>${rows.map((r, i) => `<tr>
+                    ${colonnes.map(c => `<td>${cl(cle, i, c.k, c.ph || '')}</td>`).join('')}
+                    <td><button class="pd-sup" onclick="delL('${cle}',${i})">×</button></td>
+                </tr>`).join('')}</tbody>
+            </table>
+            <button class="btn-pd" onclick='addL("${cle}", ${JSON.stringify(modele)})'>+ Ligne</button>`;
+        }
+
+        // Bloc de signature : nom, date, visa
+        function signature(prefixe, libelle, exigence) {
+            return `<tr>
+                <td style="font-weight:700">${libelle}${exigence ? ' ' + exig(exigence) : ''}</td>
+                <td>${chp(prefixe + '-nom', 'Nom')}</td>
+                <td>${chp(prefixe + '-date', '', 'date')}</td>
+                <td>${chp(prefixe + '-visa', 'Visa')}</td>
+            </tr>`;
+        }
+
+        const IMG = 'assets/prepa/';
+
+        // =====================================================================
+        // Description des pages
+        // =====================================================================
+        const PREPA_PAGES = [
+
+        { id:'travaux', titre:'Travaux à effectuer', defaut:true, corps: () => {
+            const c = pdChantier();
+            return `
+            ${grille('pd-g3', champ('N° de ligne', auto(c.numero)) + champ('Tension', auto(c.tension)) + champ('Ligne', auto(c.nomLigne)))}
+            ${grille('pd-g2', champ('Groupement / Équipe', chp('tv-gmr', 'GMR MCO EQUIPE LIGNES LIMOGES'))
+                            + champ('Code liaison', chp('tv-liaison', 'ex : EGUZOL71PLAUD')))}
+            ${sous('Nature des travaux')}
+            ${zone('tv-nature', 4, 'Nature et consistance des travaux')}
+            <div class="pd-note">Repris de la description du chantier : ${esc(c.desc) || '—'}</div>
+            ${sous('Régime et dispositions')}
+            ${grille('pd-g3', coche('tv-a1ec', 'A1EC') + coche('tv-at', 'AT') + coche('tv-pdm', 'Pdm')
+                            + coche('tv-ist', 'IST') + coche('tv-isp', 'ISP') + coche('tv-rpe', 'RPE')
+                            + coche('tv-malt', 'Pose MALT/CC en poste') + coche('tv-fibre', 'Incidence fibre optique'))}
+            ${sous('Dates des travaux')}
+            ${grille('pd-g2', champ('Du', auto(c.debut)) + champ('Au', auto(c.fin)))}
+            ${sous('Visas')}
+            <table class="pd-tab">
+                <thead><tr><th style="width:38%"></th><th>Nom</th><th style="width:150px">Date</th><th style="width:130px">Signature</th></tr></thead>
+                <tbody>
+                    ${signature('sig-prep', 'Préparateur')}
+                    ${signature('sig-cdt', 'CDT')}
+                    ${signature('sig-sup', 'Suppléant CDT')}
+                    ${signature('sig-chg', 'Changement de CDT', 'Exigence 12')}
+                    ${signature('sig-tech', 'Approbation technique et points d\'arrêts', 'Exigences 6, 8 et 11')}
+                </tbody>
+            </table>
+            <div class="pd-note">CDT du chantier : <b>${esc(c.cdt) || '—'}</b> · Suppléant : <b>${esc(c.cdtSup) || '—'}</b></div>
+            ${sous('Ordres')}
+            ${grille('pd-g2', champ('N° OI', auto(c.ois.join('  ·  '))) + champ('N° OT', auto(c.ots.join('  ·  '))))}
+            ${sous('Remarques importantes pour le chantier')}
+            ${zone('tv-remarques', 5)}
+            <div class="pd-note">${exig('Exigence 20')} La préparation de travail et les annexes doivent être conservées 5 ans.</div>`;
+        }},
+
+        { id:'annexes', titre:'Annexes', defaut:true, corps: () => {
+            const c = pdChantier();
+            const unif = c.numero && /^\d+$/.test(c.numero) ? (520000 + Number(c.numero)) : '';
+            const num = ['1 - Moyens humains + véhicules', '2 - Schéma unifilaire', '3 - EDA (avis infoligne)',
+                         '4 - PPE validé (ETREN)', '5 - Mode opératoire + analyse de risques',
+                         '6 - MALT CC + gestion des aléas + points d\'arrêts non programmés',
+                         '7 - REX', '8 - Compte rendu d\'intervention'];
+            const autres = ['Travaux végétation', 'IST', 'ISP', 'SEVESO', 'Plan au 1/1000',
+                            'Coordonnées exploitant', 'Calculs', 'Liste outillage pour travaux',
+                            'Matériel ligne', 'Fiches contrôle (manchon, papoto…)', 'Planification des travaux',
+                            'Plan de prévention', 'Fiche de suivi métrologie (dynamomètre, théodolite, clé dynamométrique)'];
+            return `
+            ${grille('pd-g2', champ('NIP', chp('an-nip')) + champ('Schéma unifilaire — WILLYDOC, mot clef L', auto(unif)))}
+            ${sous('Annexes numérotées')}
+            ${num.map((t, i) => coche('an-n' + (i + 1), t)).join('')}
+            ${sous('Autres pièces jointes')}
+            ${autres.map((t, i) => coche('an-a' + i, t)).join('')}
+            <div class="pd-l"><span class="pd-lab">Autre :</span>${chp('an-autre')}</div>`;
+        }},
+
+        { id:'secours', titre:'Fiche de secours', defaut:true, corps: () => {
+            const c = pdChantier();
+            // Seuls les numeros publics sont en dur. L'encadrement et les
+            // groupements se saisissent : ce depot est public, on n'y met pas
+            // de coordonnees nominatives.
+            const fixes = [['POMPIERS', '18', '112'], ['S.A.M.U.', '15', '112'], ['GENDARMERIE', '17', '112'],
+                           ['SNCF (problème sur voie)', '0 800 120 821', '']];
+            const tel = t => `<a href="tel:${telBrut(t)}" style="color:#0369a1;font-weight:700;text-decoration:none">${esc(t)}</a>`;
+            return `
+            <table class="pd-tab"><thead><tr><th>Secours</th><th style="width:160px">Téléphone</th><th style="width:130px">Portable</th></tr></thead>
+            <tbody>${fixes.map(f => `<tr><td><b>${f[0]}</b></td><td>${tel(f[1])}</td><td>${f[2] ? tel(f[2]) : ''}</td></tr>`).join('')}</tbody></table>
+            <div class="pd-note">Référence à rappeler en cas d'accident avec l'huile :
+            <b>HUILE HYDRAULIQUE</b> — HYDRELF XV 32 / EQUIVIS XV32</div>
+
+            ${sous('Encadrement')}
+            ${tableau('se-enc', [{k:'n', t:'Nom'}, {k:'f', t:'Fonction'},
+                                 {k:'t', t:'Téléphone', l:'150px'}, {k:'p', t:'Portable', l:'140px'}],
+                      {n:'', f:'', t:'', p:''},
+                      [{f:'Cadre astreinte'}, {f:'Directeur'}, {f:'Directeur adjoint'},
+                       {f:'Responsable EEL'}, {f:'Adjoint responsable EEL'},
+                       {f:'Coordonnateur technique'}, {f:'Coordonnateur environnement'}])}
+
+            ${sous('Groupements')}
+            ${tableau('se-grp', [{k:'n', t:'Groupement'}, {k:'t', t:'Téléphone', l:'180px'}],
+                      {n:'', t:''},
+                      [{n:'Casseaux'}, {n:'Boriette'}, {n:'Rueyres'}, {n:'Breuil'}, {n:'Bourbonnais'}])}
+
+            ${sous('Localisation du chantier')}
+            ${grille('pd-g2', champ('Ouvrage', auto(c.ligne)) + champ('Code liaison', auto(pv('tv-liaison'))))}
+            ${tableau('sec-sup', [{k:'sup', t:'N° support', l:'130px'}, {k:'coord', t:'Coordonnées (X ; Y)'}], {sup:'', coord:''})}
+
+            ${sous('Ambulance privée et véhicule sanitaire léger')}
+            <div class="pd-note">Annuaire : <a href="https://annuairesante.ameli.fr" target="_blank" rel="noopener">annuairesante.ameli.fr</a></div>
+            ${champ('Nom et coordonnées de la société la plus proche du chantier', zone('sec-ambu', 3))}
+            <div class="pd-img-grille">
+                <img class="pd-img" src="${IMG}secours-01.png" alt="">
+                <img class="pd-img" src="${IMG}secours-02.png" alt="">
+            </div>`;
+        }},
+
+        { id:'regles', titre:'Règles qui sauvent', defaut:true, corps: () => {
+            let h = `<img class="pd-img" src="${IMG}regles-qui-sauvent-01.png" alt="Règles qui sauvent" style="max-width:420px">`;
+            h += '<div class="pd-img-grille">';
+            for(let i = 2; i <= 12; i++) {
+                const n = String(i).padStart(2, '0');
+                h += `<div>
+                    <img class="pd-img" src="${IMG}regles-qui-sauvent-${n}.png" alt="Règle ${i - 1}">
+                    ${coche('rg-' + i, 'Règle ' + (i - 1) + " — comprise et applicable au chantier")}
+                </div>`;
+            }
+            return h + '</div>';
+        }},
+
+        { id:'moyens', titre:'Moyens humains + véhicules', annexe:'Annexe 1', defaut:true, corps: () => {
+            const c = pdChantier();
+            const veh = ['MAN plateau nacelle (FA 263 WS)', 'Mercedes Unimog grue (3796 HV 15)',
+                         'Nacelle Renault (2439 HV 15)', 'Unimog atelier blanc (HA-288-BS)',
+                         'Unimog atelier (EP-689-AJ)', 'Mercedes Unimog treuil', 'Polaris'];
+            return `
+            ${champ('Ouvrage', auto(c.ligne))}
+            ${sous('Moyens humains nécessaires ' + exig('Exigence 10'))}
+            ${tableau('mh-ag', [{k:'nb', t:'Nombre d\'agents', l:'140px'}, {k:'hab', t:'Habilitation engins et électrique'}],
+                      {nb:'', hab:''}, [{nb:'', hab:'Permis CE'}, {nb:'', hab:'Permis C'}, {nb:'', hab:'H2 V'}, {nb:'', hab:'H1 V'}])}
+            ${sous('Véhicules EEL')}
+            ${veh.map((v, i) => coche('mh-v' + i, v)).join('')}
+            ${sous('Engins de location (certificat d\'adéquation)')}
+            ${tableau('mh-loc', [{k:'engin', t:'Engin'}, {k:'loueur', t:'Loueur'}, {k:'ref', t:'Référence / immatriculation'}], {engin:'', loueur:'', ref:''})}
+            ${sous('Validation du management ' + exig('Exigence 10'))}
+            <table class="pd-tab">
+                <thead><tr><th style="width:38%"></th><th>Nom</th><th style="width:150px">Date</th><th style="width:130px">Signature</th></tr></thead>
+                <tbody>${signature('sig-mgmt', 'Validation du management')}</tbody>
+            </table>`;
+        }},
+
+        { id:'modeop', titre:'Mode opératoire', annexe:'Annexe 5', defaut:true, corps: () => `
+            <div class="pd-note">Se référer au DUER pour l'analyse des risques génériques.</div>
+            ${grille('pd-g3', champ('PPE ETREN', chp('mo-etren', 'N° ETREN')) + champ('Fiche ETREN signée par le CDT', coche('mo-etren-sig', 'Signée')) + champ('Impact environnemental', sel('mo-env', ['OUI','NON'])))}
+            ${tableau('mo-l', [{k:'t', t:'Tâches à réaliser'}, {k:'r', t:'Analyse de risques'}, {k:'a', t:'Actions préventives'}, {k:'pa', t:'Point d\'arrêt', l:'70px'}, {k:'e', t:'État réalisé', l:'90px'}, {k:'al', t:'Aléa n°', l:'70px'}], {t:'', r:'', a:'', pa:'', e:'', al:''}, [
+                {t:'Vérification état initial (terrain, préparation de travail)', r:'', a:'', pa:'1', e:'', al:''},
+                {t:'Pré Job Briefing (PF 1)', r:'', a:'', pa:'', e:'', al:''},
+                {t:'Communication sécurisée (PF 3)', r:'', a:'', pa:'', e:'', al:''},
+                {t:'Prise de l\'A1EC au GdP', r:'', a:'', pa:'', e:'', al:''},
+                {t:'Identification de la ligne et du pylône', r:'confusion', a:'contrôle visuel', pa:'', e:'', al:''},
+                {t:'Explication du mode opératoire aux agents (Exigence 14)', r:'', a:'', pa:'', e:'', al:''},
+                {t:'Ascension des monteurs avec LDV et corde de service', r:'Travaux en hauteur', a:'Ligne de vie + EPI + lunettes de protection', pa:'', e:'', al:''},
+                {t:'VATn + pose de MALT/CC', r:'Électrique, induction', a:'Tableau du doc. D sur les MALT', pa:'', e:'', al:''},
+                {t:'', r:'', a:'', pa:'', e:'', al:''},
+                {t:'Dépose de tout le matériel et des MALT/CC', r:'Électrique, induction', a:'Tableau du doc. D sur les MALT', pa:'', e:'', al:''},
+                {t:'Descente des monteurs', r:'Travaux en hauteur', a:'Ligne de vie + EPI + lunettes de protection', pa:'', e:'', al:''},
+                {t:'Débriefing (PF 6)', r:'', a:'', pa:'', e:'', al:''}
+            ])}
+        `},
+
+        { id:'modeop2', titre:'Mode opératoire (suite)', annexe:'Annexe 5', defaut:true, corps: () => `
+            ${tableau('mo2-l', [{k:'t', t:'Tâches à réaliser'}, {k:'r', t:'Analyse de risques'}, {k:'a', t:'Actions préventives'}, {k:'pa', t:'Point d\'arrêt', l:'70px'}, {k:'e', t:'État réalisé', l:'90px'}, {k:'al', t:'Aléa n°', l:'70px'}], {t:'', r:'', a:'', pa:'', e:'', al:''})}
+        `},
+
+        { id:'nacelle', titre:'Mode opératoire nacelle', defaut:false, corps: () => {
+            const etapes = ["Établir le certificat d'adéquation",
+                "Expliquer au chauffeur la nature et la zone d'intervention",
+                "D'un commun accord entre le CDT et le chauffeur, positionner la nacelle ; chaque nouveau déplacement et calage sera validé",
+                "Mettre la nacelle à la terre (Leq) — privilégier le raccordement au pylône, piquet planté en milieu de portée",
+                "Réaliser la VAT",
+                "Poser les MALT/CC en respectant les distances d'isolement, en commençant par la phase la plus proche de la nacelle",
+                "Poser une Leq débrochable pour avant travaux sur phases"];
+            return `
+            <div class="pd-note">Rappel et chronologie des opérations pour la pose de MALT avec une nacelle élévatrice.
+            À chaque utilisation d'une nacelle, joindre cette fiche à la préparation.</div>
+            ${grille('pd-g3', champ('Phase de travail n°', chp('na-phase')) + champ('Type de nacelle', chp('na-type')) + champ('N° de schéma', chp('na-schema')))}
+            ${champ('Préciser si un ou plusieurs schémas sont joints', chp('na-schemas'))}
+            <div class="pd-note">Avant la rédaction de cette fiche, une visite sur site permettra de choisir la nacelle
+            adaptée à la hauteur d'intervention et au déport.</div>
+            ${sous('À la réception de la nacelle')}
+            ${etapes.map((t, i) => coche('na-e' + i, (i + 1) + ' / ' + t)).join('')}
+            <div class="pd-note">Les opérations 1 à 6 seront surveillées par le CDT depuis le sol. Il se placera à une
+            distance suffisante de manière à évaluer au mieux les distances entre la nacelle et les phases.</div>
+            ${champ('Observations', zone('na-obs', 3))}`;
+        }},
+
+        { id:'adequation', titre:"Constat d'adéquation et de conservation", defaut:false, corps: () => {
+            const ctrl = ["Avoir le rapport de contrôle réglementaire à jour",
+                "Avoir le certificat de conformité et la notice d'utilisation constructeur",
+                "S'assurer visuellement que l'engin est dans un bon état de conservation",
+                "L'engin va reposer sur un sol stable et de résistance suffisante",
+                "Aucun élément mobile ne peut venir le heurter",
+                "Aucun obstacle ne pourra gêner ses mouvements",
+                "Prendre en compte l'environnement électrique pour son positionnement"];
+            return `
+            ${grille('pd-g2', champ("Date d'utilisation prévue", chp('ad-date', '', 'date')) + champ('Adresse du chantier', chp('ad-adresse')))}
+            ${champ('Nature des travaux', zone('ad-nature', 2))}
+            ${grille('pd-g2', champ('Élévateur de personnel', coche('ad-elev', 'Concerné')) + champ('Grue', coche('ad-grue', 'Concernée')))}
+            ${grille('pd-g3', champ("Type d'engin", chp('ad-type')) + champ('Immatriculation', chp('ad-immat')) + champ('Liste des accessoires', chp('ad-acc')))}
+            ${sous('Charge à lever')}
+            <table class="pd-tab">
+                <thead><tr><th></th><th>Grue</th><th>Unité</th><th>Nacelle</th><th>Unité</th></tr></thead>
+                <tbody>
+                    <tr><td>Poids</td><td>${chp('ad-pg')}</td><td>tonnes</td><td>${chp('ad-pn')}</td><td>daN</td></tr>
+                    <tr><td>Hauteur</td><td>${chp('ad-hg')}</td><td>mètres</td><td>${chp('ad-hn')}</td><td>mètres</td></tr>
+                    <tr><td>Portée</td><td>${chp('ad-og')}</td><td>mètres</td><td>${chp('ad-on')}</td><td>mètres</td></tr>
+                </tbody>
+            </table>
+            ${champ('Autres (terrain, encombrement)', zone('ad-autres', 2))}
+            ${sous('Vérifications')}
+            ${ctrl.map((t, i) => coche('ad-c' + i, t)).join('')}
+            <div class="pd-note">Si les conditions ci-dessus sont vérifiées, il y a adéquation.</div>
+            ${grille('pd-g2', champ('Fait à', chp('ad-lieu')) + champ('Le', chp('ad-le', '', 'date')))}
+            <table class="pd-tab">
+                <thead><tr><th></th><th>Pour le chargé de travaux</th><th>Pour le loueur</th></tr></thead>
+                <tbody>
+                    <tr><td>Nom de l'entreprise</td><td>${chp('ad-ent-cdt')}</td><td>${chp('ad-ent-lou')}</td></tr>
+                    <tr><td>Nom du signataire</td><td>${chp('ad-sig-cdt')}</td><td>${chp('ad-sig-lou')}</td></tr>
+                    <tr><td>Habilitation</td><td>${chp('ad-hab-cdt')}</td><td>${chp('ad-hab-lou')}</td></tr>
+                    <tr><td>Signature</td><td>${chp('ad-visa-cdt')}</td><td>${chp('ad-visa-lou')}</td></tr>
+                </tbody>
+            </table>`;
+        }},
+
+        { id:'maltcc', titre:'MALT / CC et gestion des aléas', annexe:'Annexe 6', defaut:true, corps: () => {
+            const c = pdChantier();
+            return `
+            ${grille('pd-g2', champ('Ouvrage', auto(c.ligne)) + champ('Code liaison', auto(pv('tv-liaison'))))}
+            ${sous('Gestion des MALT / CC')}
+            ${tableau('mc-l', [{k:'p', t:'N° pylône', l:'140px'}, {k:'s', t:'Section MALT / CC', l:'160px'}, {k:'sol', t:'Solution'}],
+                      {p:'', s:'', sol:''})}
+            ${sous('Gestion des aléas ' + exig('Exigences 13 et 16'))}
+            ${tableau('mc-al', [{k:'n', t:'N°', l:'60px'}, {k:'an', t:'Analyse'}, {k:'ac', t:'Action'}], {n:'', an:'', ac:''})}`;
+        }},
+
+        { id:'pave', titre:'Pavé 17 et 18', defaut:true, corps: () => `
+            <img class="pd-img" src="${IMG}pave-17-et-18-01.png" alt="Pavé 17">
+            <img class="pd-img" src="${IMG}pave-17-et-18-02.png" alt="Pavé 18">`
+        },
+
+        { id:'schemaop', titre:'Schémas du document opératoire', defaut:true, corps: () => {
+            let h = '';
+            for(let i = 1; i <= 5; i++) {
+                h += `<img class="pd-img" src="${IMG}schema-doc-op-0${i}.png" alt="Schéma ${i}">`;
+            }
+            return h;
+        }},
+
+        { id:'planif', titre:'Planification des travaux', defaut:false, corps: () => {
+            const c = pdChantier();
+            return `
+            ${grille('pd-g3', champ('Ouvrage', auto(c.ligne)) + champ('Du', auto(c.debut)) + champ('Au', auto(c.fin)))}
+            ${tableau('pl-l', [{k:'j', t:'Jour', l:'120px'}, {k:'d', t:'Date', l:'130px'}, {k:'t', t:'Travaux'}],
+                      {j:'', d:'', t:''},
+                      [{j:'Lundi'}, {j:'Mardi'}, {j:'Mercredi'}, {j:'Jeudi'}, {j:'Vendredi'}])}`;
+        }},
+
+        { id:'cables', titre:'Câbles', defaut:true, corps: () => {
+            const c = CABLES.find(x => x.n === pv('ca-type'));
+            const cd = COTE_D[pv('ca-tension')];
+            const par = num(pv('ca-param'));
+            const coteC = (c && par) ? (c.d / 2000 * Math.sqrt(par * 9.81)) : null;
+            return `
+            <div class="pd-note">Pour tout calcul sur les câbles, utiliser le logiciel <b>CELESTE</b>. Joindre à la
+            préparation : les données du canton, la température finale et le paramètre de base, les résultats des calculs
+            (surcharges ponctuelles, efforts horizontaux et verticaux, longueurs naturelles, haubanages…).</div>
+            ${champ('Type de câble', sel('ca-type', CABLES.map(x => x.n)))}
+            ${grille('pd-g4',
+                champ('Diamètre du câble', auto(c ? c.d + ' mm' : ''))
+              + champ('ω', auto(c ? c.w : ''))
+              + champ('UPK', auto(c ? c.u : ''))
+              + champ('Fourreau UPK', auto(c ? c.f : '')))}
+            ${sous('Calcul de la cote C')}
+            ${grille('pd-g3',
+                champ('Niveau de tension', sel('ca-tension', Object.keys(COTE_D)))
+              + champ('Paramètre du conducteur à 15 °C', `<input class="pd-in" type="number" value="${esc(pv('ca-param'))}" oninput="setPV('ca-param', this.value); renderPrepa()">`)
+              + champ('Cote C', auto(coteC === null ? '' : coteC.toFixed(3) + ' m')))}
+            ${champ('Cote D', auto(cd === undefined ? '' : cd + ' cm'))}
+            <div class="pd-note">Cote C = Ø / 2000 × √(paramètre × 9,81)</div>
+            <img class="pd-img" src="${IMG}cables-01.jpg" alt="Schéma câbles">
+            ${champ('Observations', zone('ca-obs', 3))}`;
+        }},
+
+        { id:'outillage', titre:'Liste de matériel chantier lignes', defaut:false, corps: () => {
+            const c = pdChantier();
+            const groupes = [
+                ['1 — Tension', ['Perche VAT', 'Perche de mise à la terre', 'Mise à la terre', 'Terre shunt', 'Terre à rouleau', 'MALT LEC verte']],
+                ['2 — Accès et hauteur', ['Ligne de vie', 'Corde de service', 'Poulie de service', 'Échelle emboîtable', 'Échelle à crochet', 'Canne simple', 'Canne à roulette simple', 'Canne à roulette double', 'Chemin de roulement', 'Quadricycle écart 400']],
+                ['3 — Reprise d\'effort', ['Pull-Lift 750 daN', 'Pull-Lift 1000 daN', 'Pull-Lift 1500 daN', 'Pull-Lift 3000 daN', 'Pull-Lift 4500 daN', 'Pull-Lift 6000 daN', 'Tirfort 1500 daN', 'Tirfort 3000 daN', 'Élingues de tirfor', 'Caisse de reprise d\'effort', 'Reprise de faisceaux']],
+                ['4 — Poulies', ['Poulie de tir à crochet 8 T', 'Poulie de tir à crochet 5 T', 'Poulie de tir à manille 8 T', 'Poulie de tir à manille 5 T', 'Poulie de tir à crochet', 'Poulie de déroulage', 'Poulie 800 alu', 'Chaussette de tir', 'Palan à corde']],
+                ['5 — Élingues et manilles', ['Élingue textile mauve', 'Élingue textile verte', 'Élingue textile jaune', 'Élingue textile rouge', 'Élingue textile marron', 'Élingue dynaone 8000 daN', 'Élingue dynaone 5000 daN', 'Manille 1 T', 'Manille 2 T', 'Manille 5 T', 'Stas', 'Dynamomètre']],
+                ['6 — Élingues acier', ['Élingue acier 1 T', 'Élingue acier 2 T', 'Élingue acier 3 T', 'Élingue acier 4 T', 'Élingue acier 5 T', 'Élingue acier 6 T']],
+                ['7 — Manchonnage', ['UPK mâchoire', 'UPK fourreau', 'Brosse / carde / graisse', 'Presse acier', 'Matrices', 'Moteur essence', 'Flexible', 'Presse titane', 'Manchon : graisse Nétoxal', 'Raccord plage : graisse Contactal', 'Moteur diesel']],
+                ['8 — Coupe et découpe', ['Coupe-câble Ridgid', 'Tronçonneuse à disque', 'Tronçonneuse à bois', 'Scie et lames', 'Essence et mélange', 'Lunettes', 'Casque anti-bruit', 'Chalumeau']],
+                ['9 — Mesure et communication', ['Émetteurs radio', 'Chargeurs', 'Contrôleur de terre', 'Jumelles', 'Théodolite', 'Pied', 'Thermomètre']],
+                ['10 — Divers', ['Débroussailleuse STIHL', 'Coupe-câble hydraulique', 'Clés à choc', 'Clé dynamométrique', 'Balisage support', 'Marteau piqueur', 'Panneaux de travaux']],
+                ['11 — Petit matériel', ['Collier Petit Jean', 'Pelles / pioches', 'Masses', 'Serre-joint', 'Broches', 'Rallonge électrique']]
+            ];
+            let h = `${grille('pd-g3', champ('Ouvrage', auto(c.ligne)) + champ('Du', auto(c.debut)) + champ('Au', auto(c.fin)))}`;
+            groupes.forEach((g, gi) => {
+                h += sous(g[0]);
+                h += `<table class="pd-tab"><thead><tr><th>Désignation</th><th style="width:110px">Caractéristique</th><th style="width:90px">Nombre</th><th style="width:70px">Contrôle</th></tr></thead><tbody>`;
+                g[1].forEach((n, ni) => {
+                    const k = 'ou-' + gi + '-' + ni;
+                    h += `<tr><td>${n}</td><td>${chp(k + '-c')}</td><td>${chp(k + '-n')}</td>
+                          <td style="text-align:center"><input type="checkbox" ${pv(k + '-k') ? 'checked' : ''} onchange="setPC('${k}-k', this.checked)"></td></tr>`;
+                });
+                h += '</tbody></table>';
+            });
+            h += sous('Matériel supplémentaire');
+            h += tableau('ou-plus', [{k:'d', t:'Désignation'}, {k:'n', t:'Nombre', l:'90px'}], {d:'', n:''});
+            return h;
+        }},
+
+        { id:'metrologie', titre:'Métrologie', defaut:false, corps: () => {
+            const c = pdChantier();
+            let h = `${grille('pd-g3', champ('Ouvrage', auto(c.ligne)) + champ('Du', auto(c.debut)) + champ('Au', auto(c.fin)))}`;
+            [['Dynamomètre', 'dy'], ['Clé dynamométrique', 'cd'], ['Théodolite', 'th']].forEach(ap => {
+                h += sous(ap[0]);
+                h += tableau('me-' + ap[1],
+                    [{k:'n', t:'N° appareil', l:'150px'}, {k:'d', t:"Date d'utilisation", l:'140px'}, {k:'o', t:'Opération réalisée'}],
+                    {n:'', d:'', o:''});
+            });
+            h += `<div class="pd-note">Penser à mettre à jour la fiche de suivi.</div>`;
+            return h;
+        }},
+
+        { id:'manchonnage', titre:'Procès-verbal de manchonnage', defaut:false, corps: () => `
+            ${grille('pd-g3', champ('Manchon contrôlé', chp('ma-manchon')) + champ('Dans la portée', chp('ma-portee')) + champ('Au pylône n°', chp('ma-pylone')))}
+            ${grille('pd-g2', champ('Fournisseur', chp('ma-fourn')) + champ('Type de graisse (conforme à la notice constructeur)', chp('ma-graisse')))}
+            ${grille('pd-g2', champ('Type de câble', chp('ma-cable')) + champ('Type de presse / matrices', chp('ma-presse')))}
+            ${sous('Relevés')}
+            ${tableau('ma-l', [{k:'n', t:'N° manchon', l:'110px'}, {k:'c', t:'Cote avant', l:'110px'},
+                               {k:'a', t:'Cote après', l:'110px'}, {k:'o', t:'Observations'}], {n:'', c:'', a:'', o:''})}
+            ${grille('pd-g2', champ('Contrôleur', chp('ma-ctrl')) + champ('Date', chp('ma-date', '', 'date')))}`
+        },
+
+        { id:'papoto', titre:'Méthode PAPOTO', defaut:false, corps: () => {
+            const c = pdChantier();
+            const mes = ['Δ H', 'Portée mesurée (m)', 'Angle horizontal HG', 'Angle vertical VG',
+                         'Angle horizontal H1', 'Angle vertical V1', 'Angle horizontal H2', 'Angle vertical V2',
+                         'Angle horizontal H3', 'Angle vertical V3', 'Angle horizontal HD', 'Angle vertical VD',
+                         'Visée 1-2', 'Visée 2-3', 'Visée 1-3', 'Paramètre mesuré', 'Flèche mesurée',
+                         'Portée lue sur PL (m)', 'Transit (A)'];
+            return `
+            ${grille('pd-g4', champ('Liaison', auto(c.nomLigne)) + champ('Tension', auto(c.tension))
+                            + champ('Date', chp('pa-date', '', 'date')) + champ('Contrôleur', chp('pa-ctrl')))}
+            ${grille('pd-g3', champ('Tachéo n°', chp('pa-tacheo')) + champ('N° support gauche', chp('pa-supg')) + champ('N° support droit', chp('pa-supd')))}
+            <img class="pd-img" src="${IMG}papoto-01.png" alt="Méthode PAPOTO" style="max-width:420px">
+            <div class="pd-note">Dessiner la silhouette des pylônes droite et gauche et désigner le câble mesuré.</div>
+            ${sous('Conditions')}
+            ${grille('pd-g4', champ('Heure', chp('pa-heure')) + champ('T° ambiante', chp('pa-temp'))
+                            + champ('Saison', sel('pa-saison', ['Hiver', 'Printemps', 'Été', 'Automne']))
+                            + champ('Nombre de câbles', chp('pa-nbcables')))}
+            ${grille('pd-g3', champ('Vitesse du vent (m/s) — mini / maxi', chp('pa-vent'))
+                            + champ('Ensoleillement', sel('pa-soleil', ['clair', 'couvert']))
+                            + champ('Aspect du câble', sel('pa-aspect', ['1 an', '5 ans', '15 ans +'])))}
+            ${champ('Distance VG - VD (m)', chp('pa-dist'))}
+            ${sous('Mesures')}
+            <table class="pd-tab"><thead><tr><th>Grandeur</th><th style="width:150px">Terne 1</th><th style="width:150px">Terne 2</th></tr></thead>
+            <tbody>${mes.map((m, i) => `<tr><td>${m}</td><td>${chp('pa-m' + i + '-1')}</td><td>${chp('pa-m' + i + '-2')}</td></tr>`).join('')}</tbody></table>
+            <div class="pd-note">Tolérance : 0,5 % maxi entre les paramètres.</div>`;
+        }},
+
+        { id:'materiel', titre:'Matériel ligne', defaut:false, corps: () => {
+            const c = pdChantier();
+            return `
+            ${champ('Ouvrage', auto(c.ligne))}
+            ${tableau('mt-l', [{k:'s', t:'N° de support', l:'120px'}, {k:'tc', t:'Type de chaînes', l:'150px'},
+                               {k:'ti', t:"Type d'isolement", l:'140px'}, {k:'pc', t:'Pièces de chaînes'},
+                               {k:'f', t:'Fixation à la charpente'}], {s:'', tc:'', ti:'', pc:'', f:''})}
+            ${grille('pd-g2', champ('Ancrage simple', chp('mt-anc-s')) + champ('Ancrage double', chp('mt-anc-d')))}
+            ${sous('Contrôle croisé — PF 5')}
+            ${grille('pd-g2', champ('Réalisé par', chp('mt-pf5-nom')) + champ('Date', chp('mt-pf5-date', '', 'date')))}`;
+        }},
+
+        { id:'cr', titre:"Compte rendu d'intervention", annexe:'Annexe 8', defaut:true, corps: () => {
+            const c = pdChantier();
+            const oui = ['oui', 'non', 'sans objet'];
+            return `
+            ${grille('pd-g3', champ('Ligne', auto(c.ligne)) + champ('Du', auto(c.debut)) + champ('Au', auto(c.fin)))}
+            ${champ('Date du compte rendu', chp('cr-date', '', 'date'))}
+            ${champ('Travaux réalisés', zone('cr-travaux', 6))}
+            ${sous('Ordres de travail')}
+            <table class="pd-tab"><thead><tr><th>OT</th><th style="width:90px">EXE</th><th style="width:90px">PEXE</th><th style="width:130px">Validé dans IPSAm</th></tr></thead>
+            <tbody>${(c.ots.length ? c.ots : ['']).map((o, i) => `<tr>
+                <td>${auto(o)}</td>
+                <td style="text-align:center"><input type="checkbox" ${pv('cr-ot' + i + '-exe') ? 'checked' : ''} onchange="setPC('cr-ot${i}-exe', this.checked)"></td>
+                <td style="text-align:center"><input type="checkbox" ${pv('cr-ot' + i + '-pexe') ? 'checked' : ''} onchange="setPC('cr-ot${i}-pexe', this.checked)"></td>
+                <td style="text-align:center"><input type="checkbox" ${pv('cr-ot' + i + '-ips') ? 'checked' : ''} onchange="setPC('cr-ot${i}-ips', this.checked)"></td>
+            </tr>`).join('')}</tbody></table>
+            ${sous('Suites données ' + exig('Exigence 18'))}
+            ${grille('pd-g2',
+                champ('Infoliaison', sel('cr-info', oui))
+              + champ('Patrimoine mis à jour (Concorde)', sel('cr-patri', oui))
+              + champ('Opérations exécutées (Galilée, L&Moi)', sel('cr-ops', oui))
+              + champ('Mise à jour Willydoc transmise', sel('cr-willy', oui)))}
+            ${sous('Dégâts et remise en état ' + exig('Exigences 15 et 17'))}
+            ${grille('pd-g2',
+                champ('Dégâts', sel('cr-degats', ['oui', 'non']))
+              + champ('Dégâts réglés', sel('cr-degats-regles', ['oui', 'non']))
+              + champ('Travaux de remise en état à prévoir', sel('cr-remise', ['oui', 'non']))
+              + champ('Rendu conforme', sel('cr-conforme', ['oui', 'non'])))}
+            ${champ('Commentaires', zone('cr-comm', 4))}
+            ${sous('Validation ' + exig('Exigence 19'))}
+            <table class="pd-tab">
+                <thead><tr><th style="width:38%"></th><th>Nom</th><th style="width:150px">Date</th><th style="width:130px">Signature</th></tr></thead>
+                <tbody>
+                    ${signature('sig-cr-cdt', 'Validation CDT')}
+                    ${signature('sig-cr-mdp', 'Validation MDP ou adjoint')}
+                </tbody>
+            </table>`;
+        }},
+
+        { id:'rex', titre:'Retour d\'expérience', annexe:'Annexe 7', defaut:true, corps: () => {
+            const c = pdChantier();
+            const rub = [['Préparation', 'prep'], ['Consignation', 'cons'], ['Approvisionnement (commande matériel)', 'appro'],
+                         ['Documents', 'docs'], ['Déroulement du chantier', 'derou'], ['Méthode', 'meth'],
+                         ['Moyens humains', 'mh'], ['Moyens matériels', 'mm'], ['Outillages adaptés', 'out'],
+                         ['Relation avec les tiers', 'tiers'], ['Accès chantier', 'acces']];
+            const sec = [['Détection situation dangereuse', 'dsd'], ['Sécurité des tiers', 'st']];
+            return `
+            ${grille('pd-g3', champ('Ligne', auto(c.ligne)) + champ('Du', auto(c.debut)) + champ('Au', auto(c.fin)))}
+            ${sous('Déroulement ' + exig('Exigences 18 et 20'))}
+            <table class="pd-tab"><thead><tr><th style="width:30%"></th><th style="width:90px">Correct</th><th style="width:90px">Incorrect</th><th>Analyse</th></tr></thead>
+            <tbody>${rub.map(r => `<tr>
+                <td>${r[0]}</td>
+                <td style="text-align:center"><input type="radio" name="rex-${r[1]}" ${pv('rex-' + r[1]) === 'c' ? 'checked' : ''} onchange="setPV('rex-${r[1]}','c')"></td>
+                <td style="text-align:center"><input type="radio" name="rex-${r[1]}" ${pv('rex-' + r[1]) === 'i' ? 'checked' : ''} onchange="setPV('rex-${r[1]}','i')"></td>
+                <td>${chp('rex-' + r[1] + '-a')}</td>
+            </tr>`).join('')}</tbody></table>
+            ${sous('Sécurité')}
+            <table class="pd-tab"><thead><tr><th style="width:30%"></th><th style="width:90px">OUI</th><th style="width:90px">NON</th><th>Analyse</th></tr></thead>
+            <tbody>${sec.map(r => `<tr>
+                <td>${r[0]}</td>
+                <td style="text-align:center"><input type="radio" name="rex-${r[1]}" ${pv('rex-' + r[1]) === 'o' ? 'checked' : ''} onchange="setPV('rex-${r[1]}','o')"></td>
+                <td style="text-align:center"><input type="radio" name="rex-${r[1]}" ${pv('rex-' + r[1]) === 'n' ? 'checked' : ''} onchange="setPV('rex-${r[1]}','n')"></td>
+                <td>${chp('rex-' + r[1] + '-a')}</td>
+            </tr>`).join('')}</tbody></table>
+            ${champ('Enseignements à retenir', zone('rex-ens', 4))}`;
+        }},
+        ];
+
+
+        // --- Visibilite des pages ---------------------------------------------
+        function pageVisible(id) {
+            if(prepa.pages[id] !== undefined) return prepa.pages[id];
+            const pg = PREPA_PAGES.find(x => x.id === id);
+            return pg ? pg.defaut : true;
+        }
+        function basculerPage(id) { prepa.pages[id] = !pageVisible(id); renderPrepa(); }
+        function toutesPages(v)   { PREPA_PAGES.forEach(pg => { prepa.pages[pg.id] = v; }); renderPrepa(); }
+        function pagesParDefaut() { prepa.pages = {}; renderPrepa(); }
+        function basculerSommaire() { document.getElementById('pd-sommaire').classList.toggle('ouvert'); }
+        function allerPage(id) {
+            const el = document.getElementById('pdp-' + id);
+            if(el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function goPrepaDoc() { switchScreen('screen-prepadoc'); renderPrepa(); }
+
+        function renderPrepa() {
+            const c = pdChantier();
+            const lig = document.getElementById('pd-ligne');
+            if(lig) lig.textContent = c.ligne + (c.debut ? '  —  du ' + c.debut + ' au ' + c.fin : '');
+
+            // Sommaire : une ligne par page, avec sa case d'affichage
+            document.getElementById('pd-sommaire').innerHTML =
+                '<div class="pd-som-titre">Pages de la préparation</div>' +
+                PREPA_PAGES.map(pg => {
+                    const v = pageVisible(pg.id);
+                    return `<div class="pd-som-ligne ${v ? '' : 'masquee'}">
+                        <input type="checkbox" ${v ? 'checked' : ''} onchange="basculerPage('${pg.id}')" title="Afficher cette page">
+                        <a onclick="allerPage('${pg.id}')">${esc(pg.titre)}</a>
+                        <span class="pd-som-pc" id="pdpc-${pg.id}"></span>
+                    </div>`;
+                }).join('') +
+                `<div class="pd-som-actions">
+                    <button onclick="toutesPages(true)">Tout afficher</button>
+                    <button onclick="toutesPages(false)">Tout masquer</button>
+                    <button onclick="pagesParDefaut()">Défaut</button>
+                </div>`;
+
+            // Pages visibles, les unes sous les autres
+            document.getElementById('pd-pages').innerHTML =
+                PREPA_PAGES.filter(pg => pageVisible(pg.id)).map(pg => `
+                    <section class="pd-page" id="pdp-${pg.id}">
+                        <div class="pd-page-tete">
+                            <span class="pd-page-titre">${esc(pg.titre)}</span>
+                            ${pg.annexe ? `<span class="pd-annexe">${esc(pg.annexe)}</span>` : ''}
+                        </div>
+                        ${pg.corps()}
+                    </section>`).join('')
+                || '<div class="pd-page" style="text-align:center;color:#94a3b8">Toutes les pages sont masquées.</div>';
+
+            majPrepaEtat();
+        }
+
+        // Taux de remplissage, page par page, et report sur l'avancement.
+        // On compte les champs reellement affiches : une page masquee ne pese
+        // pas dans le total, puisqu'elle ne sera pas remplie.
+        function majPrepaEtat() {
+            let tot = 0, plein = 0;
+            PREPA_PAGES.forEach(pg => {
+                const el = document.getElementById('pdp-' + pg.id);
+                const pc = document.getElementById('pdpc-' + pg.id);
+                if(!el) { if(pc) pc.textContent = ''; return; }
+                const ch = [...el.querySelectorAll('input, textarea, select')];
+                const t = ch.length;
+                const f = ch.filter(x => (x.type === 'checkbox' || x.type === 'radio')
+                                        ? x.checked : String(x.value).trim() !== '').length;
+                tot += t; plein += f;
+                if(pc) pc.textContent = t ? Math.round(f * 100 / t) + '%' : '';
+            });
+            const g = document.getElementById('pd-rempli');
+            if(g) g.textContent = (tot ? Math.round(plein * 100 / tot) : 0) + ' %';
+            majAvancementPrepa();
+        }
+
+        // Les trois signatures de la preparation valident les trois taches
+        // correspondantes du suivi. On ne fait que cocher : decocher reste
+        // la main de l'utilisateur.
+        function majAvancementPrepa() {
+            const signe = (a, b) => String(pv(a)).trim() !== '' && String(pv(b)).trim() !== '';
+            const faits = [];
+            if(signe('sig-prep-nom', 'sig-prep-date') && signe('sig-cdt-nom', 'sig-cdt-date')) faits.push('pr4');
+            if(signe('sig-tech-nom', 'sig-tech-date')) faits.push('pr5');
+            if(signe('sig-mgmt-nom', 'sig-mgmt-date')) faits.push('pr6');
+
+            let change = false;
+            faits.forEach(k => { if(states[k] !== 'yes') { states[k] = 'yes'; change = true; } });
+            if(change) refreshUI();
+        }
+
+        // --- Impression A4 -----------------------------------------------------
+        // La feuille A3 de la fiche et celle de la preparation declarent chacune
+        // un @page : on ne peut pas les laisser actives en meme temps.
+        let impressionPrepa = false;
+        function imprimerPrepa() {
+            const a3 = document.getElementById('print-a3');
+            const pr = document.getElementById('print-prepa');
+            impressionPrepa = true;
+            if(a3) a3.disabled = true;
+            if(pr) pr.disabled = false;
+            const remise = () => {
+                impressionPrepa = false;
+                if(a3) a3.disabled = false;
+                if(pr) pr.disabled = true;
+                window.removeEventListener('afterprint', remise);
+            };
+            window.addEventListener('afterprint', remise);
+            setTimeout(() => window.print(), 60);
+        }
+
+        const CABLES = [{"n": "aster 148", "d": 15.75, "w": 0.407, "u": "14,40 - 16,10", "f": "9 - 24,50"}, {"n": "aster 181,6", "d": 17.5, "w": 0.5, "u": "16,20 - 18,20", "f": "9 - 24,50"}, {"n": "aster 228", "d": 19.6, "w": 0.627, "u": "18,30 - 20,40", "f": "9 - 24,50"}, {"n": "aster 288", "d": 22.05, "w": 0.794, "u": "20,50 - 22,50", "f": "9 - 24,50"}, {"n": "aster 366", "d": 24.85, "w": 1.009, "u": "24,50 - 26,90", "f": "24,50 - 32,00"}, {"n": "aster 570", "d": 31.05, "w": 1.574, "u": "29,50 - 32,00", "f": "24,50 - 32,00"}, {"n": "aster 851", "d": 37.95, "w": 2.354, "u": "36,30 - 38,50", "f": "30,10 - 38,50"}, {"n": "aster 1144", "d": 44, "w": 3.164, "u": "43,10 - 45,50", "f": "38,60 - 48,00"}, {"n": "canna 116,2", "d": 14, "w": 0.432, "u": "12,60 - 14,30", "f": "9 - 24,50"}, {"n": "canna 147,1", "d": 15.75, "w": 0.802, "u": "14,40 - 16,10", "f": "9 - 24,50"}, {"n": "canna 181,6", "d": 17.5, "w": 0.675, "u": "16,20 - 18,20", "f": "9 - 24,50"}, {"n": "canna 228", "d": 19.6, "w": 0.847, "u": "18,30 - 20,40", "f": "9 - 24,50"}, {"n": "canna 288", "d": 22.05, "w": 1.071, "u": "20,50 - 22,50", "f": "9 - 24,50"}, {"n": "canna 356", "d": 24.5, "w": 1.338, "u": "22,60 - 24,50", "f": "9 - 24,50"}, {"n": "canna 366", "d": 24.85, "w": 1.365, "u": "24,50 - 26,90", "f": "24,50 - 32,00"}, {"n": "crocus 147,1", "d": 15.75, "w": 0.547, "u": "14,40 - 16,10", "f": "9 - 24,50"}, {"n": "crocus 228", "d": 19.6, "w": 0.847, "u": "18,30 - 20,40", "f": "9 - 24,50"}, {"n": "crocus 412", "d": 26.4, "w": 1.58, "u": "24,50 - 26,90", "f": "24,50 - 32,00"}, {"n": "crocus 595", "d": 31.6, "w": 2.21, "u": "29,50 - 32,00", "f": "24,50 - 32,00"}, {"n": "crocus 612", "d": 32.2, "w": 2.241, "u": "32,10 - 34,00", "f": "30,10 - 38,50"}, {"n": "crocus 116,2", "d": 14, "w": 0.432, "u": "12,60 - 14,30", "f": "9 - 24,50"}, {"n": "crocus 181,6", "d": 17.5, "w": 0.675, "u": "16,20 - 18,20", "f": "9 - 24,50"}, {"n": "crocus 288", "d": 22.05, "w": 1.071, "u": "20,50 - 22,50", "f": "9 - 24,50"}, {"n": "phlox 59,7", "d": 10, "w": 0.276, "u": "9 - 10,70", "f": "9 - 24,50"}, {"n": "phlox 94,1", "d": 12.6, "w": 0.481, "u": "10,80 - 12,50", "f": "9 - 24,50"}, {"n": "phlox 116,2", "d": 14, "w": 0.624, "u": "12,60 - 14,30", "f": "9 - 24,50"}, {"n": "phlox 147,1", "d": 15.75, "w": 0.79, "u": "14,40 - 16,10", "f": "9 - 24,50"}, {"n": "phlox 181,6", "d": 17.5, "w": 0.975, "u": "16,20 - 18,20", "f": "9 - 24,50"}, {"n": "phlox 228", "d": 19.6, "w": 1.225, "u": "18,30 - 20,40", "f": "9 - 24,50"}, {"n": "phlox 288", "d": 22.05, "w": 1.55, "u": "20,50 - 22,50", "f": "9 - 24,50"}, {"n": "phlox 376", "d": 25.2, "w": 2.2, "u": "24,50 - 26,90", "f": "24,50 - 32,00"}, {"n": "pastel 147,1", "d": 15.75, "w": 0.547, "u": "14,40 - 16,10", "f": "9 - 24,50"}, {"n": "pastel 181,6", "d": 17.5, "w": 0.672, "u": "16,20 - 18,20", "f": "9 - 24,50"}, {"n": "pastel 228", "d": 19.6, "w": 0.848, "u": "18,30 - 20,40", "f": "9 - 24,50"}, {"n": "pastel 288", "d": 22.05, "w": 1.07, "u": "20,50 - 22,50", "f": "9 - 24,50"}, {"n": "pastel 366", "d": 24.85, "w": 1.365, "u": "24,50 - 26,90", "f": "24,50 - 32,00"}, {"n": "pastel 412", "d": 26.4, "w": 1.593, "u": "24,50 - 26,90", "f": "24,50 - 32,00"}, {"n": "petunia 595", "d": 31.6, "w": 2.21, "u": "29,50 - 32,00", "f": "24,50 - 32,00"}, {"n": "petunia 612", "d": 32.1, "w": 2.245, "u": "32,10 - 34,00", "f": "30,10 - 38,50"}];
+        const COTE_D = {"63-90 kV": 30, "225 kV": 50, "400 kV": 50, "CDG": 30};
+
 
         // --- Onglet Gîtes / Dépenses communes --------------------------------
         // Deux listes : les gîtes (répartis au prorata des nuits) et les
@@ -3389,8 +4205,15 @@
             window.print();
         }
 
-        // Ctrl+P doit produire la même feuille que le bouton
-        if(!PARTAGE) window.addEventListener('beforeprint', buildPrintSheet);
+        // La feuille A4 de la préparation ne sert que sur demande
+        (function () {
+            const pr = document.getElementById('print-prepa');
+            if(pr) pr.disabled = true;
+        })();
+
+        // Ctrl+P doit produire la même feuille que le bouton, sauf pendant
+        // l'impression de la préparation, qui a sa propre mise en page.
+        if(!PARTAGE) window.addEventListener('beforeprint', () => { if(!impressionPrepa) buildPrintSheet(); });
 
         // --- 15. AMORCAGE DE LA VUE PARTAGEE --------------------------------
         if(PARTAGE) {
@@ -3418,6 +4241,7 @@
                 chargement = normChargement(p.chargement);
                 tech     = normTech(p.tech);
                 modeOp   = normModeOp(p.modeOp);
+                prepa    = normPrepa(p.prepa);
                 planning = normPlanning(p.planning);
                 notes    = normNotes(p.notes);
                 renderLogi();

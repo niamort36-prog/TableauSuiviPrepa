@@ -128,6 +128,13 @@ for (const [cle, nom] of onglets) {
     await shot(nom);
 }
 
+// Preparation de travail : page de garde, puis sommaire des pages
+await page.evaluate(id => load(id), ID_DEMO);
+await wait(700);
+await page.evaluate(() => { goPrepaDoc(); window.scrollTo(0, 0); });
+await wait(1100);
+await shot('prepa-document');
+
 await page.evaluate(() => goOptions());
 await wait(900);
 await shot('options');
