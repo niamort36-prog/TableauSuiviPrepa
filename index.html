@@ -4,6 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Suivi Chantier - LIVE (Liens Corrigés)</title>
+
+    <!-- Icone de l'application : un pylone, aux couleurs RTE. Les petites
+         tailles sont dessinees a part, sans les details qui deviendraient
+         du bruit sous 48 px. -->
+    <link rel="icon" href="assets/icone.svg" type="image/svg+xml">
+    <link rel="icon" href="assets/icone-32.png" sizes="32x32" type="image/png">
+    <link rel="icon" href="assets/icone-16.png" sizes="16x16" type="image/png">
+    <link rel="apple-touch-icon" href="assets/icone-180.png">
+    <link rel="manifest" href="site.webmanifest">
+    <meta name="theme-color" content="#054191">
+    <meta name="apple-mobile-web-app-title" content="Suivi Chantier">
     
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
@@ -423,7 +434,14 @@
            elles sont le contenu, et gardent une taille lisible. */
         body.prepa-impression #pd-pages .pd-img { max-height: 100mm; width: auto; }
         body.prepa-impression #pd-pages .pd-img-grille .pd-img { max-height: 70mm; }
-        body.prepa-impression #pd-pages .pd-page-images .pd-img { max-height: 245mm; }
+        /* La marge de page ne se reporte pas sur les feuilles de suite :
+           chaque planche porte donc la sienne, sans quoi la deuxieme image
+           commencerait au ras du papier. */
+        body.prepa-impression #pd-pages .pd-page-images .pd-img { max-height: 245mm;
+                       padding: 10mm 0; box-sizing: border-box; }
+        /* Meme raison pour les tableaux d'une page qui court sur plusieurs
+           feuilles : la suivante commencerait sinon au ras du papier. */
+        body.prepa-impression #pd-pages .pd-page:not(.pd-fixe) .pd-tab-enveloppe { padding-top: 8mm; }
         body.prepa-impression #pd-pages .pd-page-images .pd-img-grille .pd-img { max-height: 105mm; }
         /* La NIP porte deja son propre titre : le bandeau de page ferait
            deborder la premiere planche sur une feuille de plus. */
@@ -431,7 +449,8 @@
         body.prepa-impression #pdp-unifilaire .pd-page-tete,
         body.prepa-impression #pdp-sommaire .pd-page-tete { display: none; }
         /* Une page de NIP occupe une feuille entiere, des la mesure */
-        body.prepa-impression #pd-pages .pd-nip-feuille { height: 273mm; margin: 0; align-items: center; }
+        body.prepa-impression #pd-pages .pd-nip-feuille { height: 297mm; margin: 0; align-items: center;
+                       box-sizing: border-box; padding: 12mm 12mm 12mm 20mm; }
         body.prepa-impression #pd-pages .pd-nip-img { max-height: 273mm; max-width: 100%;
                        width: auto; border: none; }
         body.prepa-impression #pd-pages .pd-nip-img.paysage { transform: rotate(90deg);
@@ -478,6 +497,12 @@
            hauteur mesuree est inferieure a la hauteur reelle. */
         .pd-fit { transform-origin: top left; display: flow-root; }
         .pd-page.pd-fixe { overflow: hidden; }
+        /* A la mesure comme a l'impression, la page porte ses marges */
+        body.prepa-impression #pd-pages .pd-page { box-sizing: border-box;
+                       padding: 12mm 12mm 12mm 20mm; }
+        body.prepa-impression #pd-pages #pdp-couverture { padding: 0 0 0 20mm; }
+        body.prepa-impression #pd-pages #pdp-nip,
+        body.prepa-impression #pd-pages #pdp-unifilaire { padding: 0; }
 
         /* ------------------------------------------------------------------
            COUVERTURE, d'apres la charte RTE : bleu marine pour les titres,
@@ -868,9 +893,11 @@
     <!-- Impression A4 de la préparation de travail, activée par imprimerPrepa() -->
     <style id="print-prepa">
         @media print {
-            /* 8 mm de plus a gauche : la place d'une perforation, pour
-               relier les pages en livret sans entamer le contenu. */
-            @page { size: A4 portrait; margin: 12mm 12mm 12mm 20mm; }
+            /* Marge nulle : c'est dans la marge de page que le navigateur
+               imprime l'adresse du site, la date et le numero de feuille.
+               Sans marge, il n'a plus ou les ecrire. Les marges du document
+               sont donc portees par les pages elles-memes, ci-dessous. */
+            @page { size: A4 portrait; margin: 0; }
             /* La marge basse posee en ligne pour le pied collant ajouterait
                une feuille blanche : il faut la forcer a zero. */
             html, body { width: auto; height: auto; margin: 0 !important; padding: 0 !important;
@@ -885,8 +912,13 @@
             /* Une page = une feuille. La hauteur est fixee par le script,
                qui a deja reduit le contenu pour qu'il y tienne. */
             .pd-page { page-break-after: always; break-after: page; border: none; box-shadow: none;
-                       padding: 0; border-radius: 0; }
+                       border-radius: 0; box-sizing: border-box;
+                       /* 20 mm a gauche : la place d'une perforation */
+                       padding: 12mm 12mm 12mm 20mm; }
             .pd-tab, .pd-page-tete, .pd-img, .pd-champ { page-break-inside: avoid; }
+            /* Un tableau qui court sur plusieurs feuilles reprend son entete,
+               ce qui remet aussi un peu d'air en haut de la feuille. */
+            .pd-tab thead { display: table-header-group; }
             .pd-page:last-child { page-break-after: auto; break-after: auto; }
             .pd-in, .pd-zone { border: 1px solid #94a3b8; background: #fff; }
 
@@ -898,9 +930,11 @@
             .pd-nip-feuille { page-break-after: always; break-after: page; }
             .pd-nip-feuille:last-child { page-break-after: auto; break-after: auto; }
 
-            /* La couverture prend la feuille entiere, sans marge */
-            @page couverture { size: A4 portrait; margin: 0 0 0 20mm; }
-            #pdp-couverture { page: couverture; }
+            /* La couverture va a bord perdu, sauf cote reliure */
+            #pdp-couverture { padding: 0 0 0 20mm; }
+            /* Les pieces jointes portent leurs marges planche par planche,
+               pour que la deuxieme feuille en ait autant que la premiere */
+            #pdp-nip, #pdp-unifilaire { padding: 0; }
             * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
     </style>
@@ -3734,10 +3768,12 @@
         }},
 
         { id:'adequation', titre:"Constat d'adéquation et de conservation", rang:2, defaut:false, corps: () => {
-            const ctrl = ["Avoir le rapport de contrôle réglementaire à jour",
+            // Le classeur distingue ce a quoi le loueur s'engage et ce qu'il
+            // faut verifier une fois sur place : les deux listes restent separees.
+            const convient = ["Avoir le rapport de contrôle réglementaire à jour",
                 "Avoir le certificat de conformité et la notice d'utilisation constructeur",
-                "S'assurer visuellement que l'engin est dans un bon état de conservation",
-                "L'engin va reposer sur un sol stable et de résistance suffisante",
+                "S'assurer visuellement que l'engin est dans un bon état de conservation"];
+            const surPlace = ["L'engin va reposer sur un sol stable et de résistance suffisante",
                 "Aucun élément mobile ne peut venir le heurter",
                 "Aucun obstacle ne pourra gêner ses mouvements",
                 "Prendre en compte l'environnement électrique pour son positionnement"];
@@ -3745,7 +3781,8 @@
             ${grille('pd-g2', champ("Date d'utilisation prévue", chp('ad-date', '', 'date')) + champ('Adresse du chantier', chp('ad-adresse')))}
             ${champ('Nature des travaux', zone('ad-nature', 2))}
             ${grille('pd-g2', champ('Élévateur de personnel', coche('ad-elev', 'Concerné')) + champ('Grue', coche('ad-grue', 'Concernée')))}
-            ${grille('pd-g3', champ("Type d'engin", chp('ad-type')) + champ('Immatriculation', chp('ad-immat')) + champ('Liste des accessoires', chp('ad-acc')))}
+            ${grille('pd-g2', champ("Type d'engin", chp('ad-type')) + champ('Immatriculation', chp('ad-immat')))}
+            ${champ('Liste des accessoires', zone('ad-acc', 2))}
             ${sous('Charge à lever')}
             <table class="pd-tab">
                 <thead><tr><th></th><th>Grue</th><th>Unité</th><th>Nacelle</th><th>Unité</th></tr></thead>
@@ -3756,9 +3793,12 @@
                 </tbody>
             </table>
             ${champ('Autres (terrain, encombrement)', zone('ad-autres', 2))}
-            ${sous('Vérifications')}
-            ${ctrl.map((t, i) => coche('ad-c' + i, t)).join('')}
-            <div class="pd-note">Si les conditions ci-dessus sont vérifiées, il y a adéquation.</div>
+            <div class="pd-note">Au regard des travaux à réaliser et des risques encourus énoncés
+                par le chargé de travaux, <b>le loueur convient</b> :</div>
+            ${convient.map((t, i) => coche('ad-c' + i, t)).join('')}
+            ${sous("Sur le chantier s'assurer que")}
+            ${surPlace.map((t, i) => coche('ad-c' + (i + 3), t)).join('')}
+            <div class="pd-note">Si les conditions ci-dessus sont vérifiées, <b>il y a adéquation</b>.</div>
             ${grille('pd-g2', champ('Fait à', chp('ad-lieu')) + champ('Le', chp('ad-le', '', 'date')))}
             <table class="pd-tab">
                 <thead><tr><th></th><th>Pour le chargé de travaux</th><th>Pour le loueur</th></tr></thead>
@@ -4135,7 +4175,8 @@
         // Surface utile d'un A4 portrait a 12 mm de marge, reliure deduite.
         const A4_UTILE_L = (186 - RELIURE) * 96 / 25.4;
         const A4_UTILE_H = 273 * 96 / 25.4;
-        const COUV_L = (210 - RELIURE) * 96 / 25.4;
+        const A4_L = 210 * 96 / 25.4;
+        const A4_H = 297 * 96 / 25.4;
 
         // Composer a la largeur utile puis reduire retrecit aussi la largeur :
         // on compose donc plus large, de sorte qu'apres reduction la page
@@ -4154,14 +4195,14 @@
                    || sec.classList.contains('pd-page-images')) {
                     fit.style.transform = 'none';
                     fit.style.width = A4_UTILE_L + 'px';
-                    sec.style.width = A4_UTILE_L + 'px';
+                    sec.style.width = A4_L + 'px';
                     sec.style.height = '';
                     return;
                 }
                 // La couverture occupe sa feuille entiere, sans marge ni reduction
                 if(sec.id === 'pdp-couverture') {
-                    sec.style.width = COUV_L + 'px';
-                    sec.style.height = (297 * 96 / 25.4 - 2) + 'px';
+                    sec.style.width = A4_L + 'px';
+                    sec.style.height = (A4_H - 2) + 'px';
                     fit.style.width = '100%';
                     return;
                 }
@@ -4190,16 +4231,16 @@
                     // taille normale et on la laisse se couper proprement.
                     fit.style.transform = 'none';
                     fit.style.width = A4_UTILE_L + 'px';
-                    sec.style.width = A4_UTILE_L + 'px';
+                    sec.style.width = A4_L + 'px';
                     sec.style.height = '';
                     return;
                 }
                 fit.style.transform = 'scale(' + k + ')';
                 sec.classList.add('pd-fixe');
-                sec.style.width = A4_UTILE_L + 'px';
+                sec.style.width = A4_L + 'px';
                 // Deux pixels de moins : une hauteur pile egale a la surface
                 // utile fait basculer le navigateur sur une feuille vide.
-                sec.style.height = (A4_UTILE_H - 2) + 'px';
+                sec.style.height = (A4_H - 2) + 'px';
             });
         }
 
