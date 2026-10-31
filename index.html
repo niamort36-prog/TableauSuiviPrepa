@@ -424,6 +424,9 @@
         body.prepa-impression #pdp-couverture .pd-l { display: none !important; }
         body.prepa-impression #pdp-couverture .pd-fige { border: none; padding: 0; min-height: 0;
                        font-size: inherit; background: transparent; }
+        body.prepa-impression #pdp-couverture .pd-fit,
+        body.prepa-impression #pdp-couverture .cv { height: 100%; }
+        body.prepa-impression #pdp-couverture .cv { aspect-ratio: auto; }
 
         /* L'enveloppe que l'on reduit pour tenir sur la feuille. flow-root
            empeche les marges des enfants de s'echapper, sans quoi la
@@ -819,7 +822,9 @@
     <!-- Impression A4 de la préparation de travail, activée par imprimerPrepa() -->
     <style id="print-prepa">
         @media print {
-            @page { size: A4 portrait; margin: 12mm; }
+            /* 8 mm de plus a gauche : la place d'une perforation, pour
+               relier les pages en livret sans entamer le contenu. */
+            @page { size: A4 portrait; margin: 12mm 12mm 12mm 20mm; }
             /* La marge basse posee en ligne pour le pied collant ajouterait
                une feuille blanche : il faut la forcer a zero. */
             html, body { width: auto; height: auto; margin: 0 !important; padding: 0 !important;
@@ -840,7 +845,7 @@
             .pd-in, .pd-zone { border: 1px solid #94a3b8; background: #fff; }
 
             /* La couverture prend la feuille entiere, sans marge */
-            @page couverture { size: A4 portrait; margin: 0; }
+            @page couverture { size: A4 portrait; margin: 0 0 0 20mm; }
             #pdp-couverture { page: couverture; }
             * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
@@ -865,7 +870,8 @@
         #print-sheet .pp-page {
             position: absolute; top: 0; left: 210mm;
             width: 210mm; height: 297mm;
-            box-sizing: border-box; padding: 10mm 7mm 8mm 10mm;
+            /* 8 mm de plus a gauche, cote pli : place pour perforer. */
+            box-sizing: border-box; padding: 10mm 7mm 8mm 18mm;
             overflow: hidden;
         }
         #print-sheet .pp-scale { transform-origin: top left; display: flow-root; }
@@ -3647,9 +3653,15 @@
             document.querySelectorAll(CASES).forEach(el => { el.style.display = ''; });
         }
 
-        // Surface utile d'un A4 portrait a 12 mm de marge, en pixels CSS.
-        const A4_UTILE_L = 186 * 96 / 25.4;
+        // Place reservee a gauche pour la perforation, en millimetres.
+        // Une seule valeur a changer pour elargir ou supprimer la reliure :
+        // elle doit rester accordee aux marges de @page, plus bas.
+        const RELIURE = 8;
+
+        // Surface utile d'un A4 portrait a 12 mm de marge, reliure deduite.
+        const A4_UTILE_L = (186 - RELIURE) * 96 / 25.4;
         const A4_UTILE_H = 273 * 96 / 25.4;
+        const COUV_L = (210 - RELIURE) * 96 / 25.4;
 
         // Composer a la largeur utile puis reduire retrecit aussi la largeur :
         // on compose donc plus large, de sorte qu'apres reduction la page
@@ -3664,7 +3676,7 @@
                 if(!fit) return;
                 // La couverture occupe sa feuille entiere, sans marge ni reduction
                 if(sec.id === 'pdp-couverture') {
-                    sec.style.width = (210 * 96 / 25.4) + 'px';
+                    sec.style.width = COUV_L + 'px';
                     sec.style.height = (297 * 96 / 25.4 - 2) + 'px';
                     fit.style.width = '100%';
                     return;
