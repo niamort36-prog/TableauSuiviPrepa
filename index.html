@@ -418,8 +418,13 @@
         body.prepa-impression #pd-pages .pd-tab td::before { content: none !important; }
         body.prepa-impression #pd-pages .pd-tab td .pd-zone { min-height: 0; height: auto !important;
                        overflow: visible; }
-        body.prepa-impression #pd-pages .pd-img { max-height: 46mm; width: auto; }
-        body.prepa-impression #pd-pages .pd-img-grille .pd-img { max-height: 40mm; }
+        /* Sur une page ordinaire les illustrations restent accessoires et
+           ne doivent pas chasser le formulaire ; sur une page de planches
+           elles sont le contenu, et gardent une taille lisible. */
+        body.prepa-impression #pd-pages .pd-img { max-height: 100mm; width: auto; }
+        body.prepa-impression #pd-pages .pd-img-grille .pd-img { max-height: 70mm; }
+        body.prepa-impression #pd-pages .pd-page-images .pd-img { max-height: 245mm; }
+        body.prepa-impression #pd-pages .pd-page-images .pd-img-grille .pd-img { max-height: 105mm; }
         body.prepa-impression #pdp-couverture .pd-page-tete,
         body.prepa-impression #pdp-couverture .pd-l { display: none !important; }
         body.prepa-impression #pdp-couverture .pd-fige { border: none; padding: 0; min-height: 0;
@@ -850,6 +855,10 @@
             .pd-tab, .pd-page-tete, .pd-img, .pd-champ { page-break-inside: avoid; }
             .pd-page:last-child { page-break-after: auto; break-after: auto; }
             .pd-in, .pd-zone { border: 1px solid #94a3b8; background: #fff; }
+
+            /* Une planche ne doit pas etre coupee en deux feuilles */
+            .pd-page-images .pd-img, .pd-page-images .pd-img-grille > * {
+                page-break-inside: avoid; break-inside: avoid; }
 
             /* Une page de NIP par feuille, a sa taille d'origine */
             .pd-nip-feuille { page-break-after: always; break-after: page; margin: 0;
@@ -3440,7 +3449,7 @@
             <img class="pd-img" src="${IMG}secours-01.png" alt="" style="max-width:260px">`;
         }},
 
-        { id:'regles', titre:'Règles qui sauvent', defaut:true, corps: () => {
+        { id:'regles', titre:'Règles qui sauvent', defaut:true, images:true, corps: () => {
             // Le bandeau d'ouverture ne porte aucune case : il n'apporte rien ici.
             let h = '<div class="pd-img-grille">';
             for(let i = 2; i <= 12; i++) {
@@ -3568,12 +3577,12 @@
             ${tableau('mc-al', [{k:'n', t:'N°', l:'54px'}, {k:'an', t:'Analyse', m:true}, {k:'ac', t:'Action', m:true}], {n:'', an:'', ac:''})}`;
         }},
 
-        { id:'pave', titre:'Pavé 17 et 18', defaut:true, corps: () => `
+        { id:'pave', titre:'Pavé 17 et 18', defaut:true, images:true, corps: () => `
             <img class="pd-img" src="${IMG}pave-17-et-18-01.png" alt="Pavé 17">
             <img class="pd-img" src="${IMG}pave-17-et-18-02.png" alt="Pavé 18">`
         },
 
-        { id:'schemaop', titre:'Schémas du document opératoire', defaut:true, corps: () => {
+        { id:'schemaop', titre:'Schémas du document opératoire', defaut:true, images:true, corps: () => {
             let h = '';
             for(let i = 1; i <= 5; i++) {
                 h += `<img class="pd-img" src="${IMG}schema-doc-op-0${i}.png" alt="Schéma ${i}">`;
@@ -3819,7 +3828,7 @@
             // Pages visibles, les unes sous les autres
             document.getElementById('pd-pages').innerHTML =
                 PREPA_PAGES.filter(pg => (!pg.dispo || pg.dispo()) && pageVisible(pg.id)).map(pg => `
-                    <section class="pd-page" id="pdp-${pg.id}"><div class="pd-fit">
+                    <section class="pd-page${pg.images ? ' pd-page-images' : ''}" id="pdp-${pg.id}"><div class="pd-fit">
                         <div class="pd-page-tete">
                             <span class="pd-page-titre">${esc(pg.titre)}</span>
                             ${pg.annexe ? `<span class="pd-annexe">${esc(pg.annexe)}</span>` : ''}
@@ -3928,8 +3937,9 @@
             document.querySelectorAll('#pd-pages .pd-page').forEach(sec => {
                 const fit = sec.querySelector('.pd-fit');
                 if(!fit) return;
-                // La NIP est deja paginee : chacune de ses pages a sa feuille.
-                if(sec.id === 'pdp-nip') {
+                // Une page de planches ne se reduit pas : les schemas doivent
+                // rester lisibles, quitte a occuper plusieurs feuilles.
+                if(sec.id === 'pdp-nip' || sec.classList.contains('pd-page-images')) {
                     fit.style.transform = 'none';
                     fit.style.width = A4_UTILE_L + 'px';
                     sec.style.width = A4_UTILE_L + 'px';
