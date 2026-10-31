@@ -586,7 +586,7 @@
     description et les commentaires saisis sur la fiche du chantier. Corrigez-les ici si
     besoin ; videz la case pour revenir au texte d'origine.</p>
 
-    <h3>Importer la NIP</h3>
+    <h3>Importer la NIP et le schéma unifilaire</h3>
 
     <p>Sur la page <b>Annexes</b>, le bouton <b>📎 Importer la NIP (PDF)</b> enregistre la note
     d'information préalable avec le chantier et <b>en relève les informations</b> : numéro de NI
@@ -601,9 +601,25 @@
     <p>Le PDF est téléchargeable par tous ceux qui ouvrent le chantier, et le numéro de retrait
     avec son créneau remonte automatiquement sur la <b>couverture</b>.</p>
 
-    <p>Une NIP importée ajoute aussi une page <b>NIP (document)</b> au sommaire, juste après
-    les annexes : elle <b>s'imprime avec la préparation</b>, une feuille par page du PDF, et se
-    décoche comme n'importe quelle autre page. Sans NIP importée, cette page n'apparaît pas.</p>
+    <p>Une NIP importée ajoute aussi une page <b>NIP (document)</b> au sommaire : elle
+    <b>s'imprime avec la préparation</b>, une feuille par page du PDF, et se décoche comme
+    n'importe quelle autre page. Sans NIP importée, cette page n'apparaît pas.</p>
+
+    <h3>Le schéma unifilaire</h3>
+
+    <p>Juste en dessous, le bouton <b>📎 Importer le schéma (PDF)</b> fonctionne de la même
+    façon. En sont relevés le numéro de schéma et son indice, la liaison, la longueur, la
+    plage de pylônes, la nature et la section des câbles, la date de mise à jour, et surtout
+    le <b>tableau des croisements de lignes</b> — quelle portée franchit quel ouvrage.</p>
+
+    <p>Le schéma est souvent en <b>A4 paysage</b> et tient sur plusieurs planches : chacune
+    s'imprime sur sa feuille, couchée pour occuper toute la page.</p>
+
+    <div class="note">
+        Les câbles relevés sont vérifiés contre le référentiel de l'application : un couple
+        nature-section qui n'y figure pas est écarté plutôt que recopié de travers. Il peut
+        donc en manquer, et la case reste à compléter.
+    </div>
 
     <div class="attention">
         La NIP est enregistrée dans la base, avec le chantier, et s'efface avec lui. Elle n'est

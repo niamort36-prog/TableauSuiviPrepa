@@ -428,6 +428,7 @@
         /* La NIP porte deja son propre titre : le bandeau de page ferait
            deborder la premiere planche sur une feuille de plus. */
         body.prepa-impression #pdp-nip .pd-page-tete,
+        body.prepa-impression #pdp-unifilaire .pd-page-tete,
         body.prepa-impression #pdp-sommaire .pd-page-tete { display: none; }
         /* Une page de NIP occupe une feuille entiere, des la mesure */
         body.prepa-impression #pd-pages .pd-nip-feuille { height: 273mm; margin: 0; align-items: center; }
@@ -1831,6 +1832,7 @@
                 // Les reçus vivent dans un noeud séparé : on les emporte aussi
                 db.ref('recus/' + id).remove().catch(() => {});
                 db.ref('nip/' + id).remove().catch(() => {});
+                db.ref('unifilaire/' + id).remove().catch(() => {});
                 db.ref('couvertures/' + id).remove().catch(() => {});
                 db.ref('chantiers/' + id).remove()
                 .catch(e => alert("Erreur suppression: " + e.message));
@@ -3032,6 +3034,28 @@
             </tr>`;
         }
 
+        // Barre d'import d'une piece jointe : importer, telecharger, retirer.
+        function planchesPiece(cle) {
+            return pieces[cle].images.map((im, i) => `<div class="pd-nip-feuille">
+                <img class="pd-nip-img${im.paysage ? ' paysage' : ''}" src="${im.src}"
+                     alt="${esc(PIECES[cle].titre)} \u2014 page ${i + 1}">
+            </div>`).join('');
+        }
+
+        function pieceBoutons(cle, libelle) {
+            const f = pieces[cle].fichier;
+            return `<div class="pd-l pd-aide">
+                <label class="btn-pd pre">📎 ${esc(libelle)}
+                    <input type="file" accept="application/pdf" hidden
+                           onchange="importerPiece('${cle}', this)">
+                </label>
+                ${f ? `<button class="btn-pd" onclick="telechargerPiece('${cle}')">\u2b07 ${esc(f.nom)}</button>
+                       <button class="btn-pd" onclick="retirerPiece('${cle}')">Retirer</button>` : ''}
+                <span id="${cle}-etat"></span>
+                <span>Les informations ci-dessous sont relev\u00e9es dans le document, et restent modifiables.</span>
+            </div>`;
+        }
+
         const IMG = 'assets/prepa/';
 
         // --- Elements calcules de la couverture ------------------------------
@@ -3145,41 +3169,141 @@
             return r;
         }
 
-        async function importerNip(input) {
+        // Un schema unifilaire est un plan : son texte arrive en desordre.
+        // On n'y cherche donc que ce qui s'identifie sans ambiguite.
+        function analyserUnifilaire(txt) {
+            const t = txt.replace(/\u00a0/g, ' ');
+            const un_ = re => { const m = re.exec(t); return m ? m[1].trim() : ''; };
+            const r = {};
+            r.num     = un_(/\b(L\d{6})\b/);
+            r.code    = un_(/\b([A-Z]{5}[LZ]\d\d[A-Z. 0-9]{4,6})\b/);
+            r.liaison = un_(/\b([A-Z][A-Z\- ]{3,}?)\s+L\d{6}\b/);
+            r.tension = un_(/\b(\d{2,3}\s*kV)\b/);
+            r.indice  = un_(/\bind\s*:\s*([A-Z0-9]+)/i);
+            r.maj     = un_(/\n\s*(\d{2}\/\d{2}\/\d{4}[^\n]*)/);
+
+            const longs = [...t.matchAll(/\b(\d{1,3}\.\d{3})\b/g)].map(m => +m[1]);
+            r.longueur = longs.length ? Math.max(...longs).toFixed(3) + ' km' : '';
+
+            const pyl = [...t.matchAll(/Pyl\s*(\d{1,4})/g)].map(m => +m[1]);
+            r.pylones = pyl.length ? 'Pyl ' + Math.min(...pyl) + ' \u2192 ' + Math.max(...pyl) : '';
+
+            // Nature et section : on ne retient que les couples qui existent
+            // au referentiel des cables, sans quoi une longueur collee au nom
+            // produit des valeurs fantaisistes.
+            const connus = new Set(CABLES.map(c => c.n.toLowerCase().replace(',', '.')));
+            const couples = [...t.matchAll(/(\d{2,4})\s*(ASTER|CROCUS|PHLOX|CANNA|PASTEL|PETUNIA)|(ASTER|CROCUS|PHLOX|CANNA|PASTEL|PETUNIA)\s*(\d{2,4})/gi)]
+                .map(m => ((m[2] || m[3]) + ' ' + (m[1] || m[4])).toUpperCase())
+                .filter(x => { const [n, sec] = x.split(' ');
+                               return connus.has((n + ' ' + sec).toLowerCase()); });
+            r.cables = [...new Set(couples)];
+
+            r.croisements = croisementsUnifilaire(t);
+            return r;
+        }
+
+        // Une portee peut etre collee a sa premiere ligne croisee : on coupe
+        // sur la borne qui suit immediatement la premiere.
+        function couperPortee(l) {
+            const m = /^(\d{1,3})-/.exec(l);
+            if(!m) return null;
+            const a = +m[1], reste = l.slice(m[1].length + 1);
+            for(let k = 1; k <= 3 && k <= reste.length; k++) {
+                const b = reste.slice(0, k);
+                if(!/^\d+$/.test(b)) break;
+                const d = +b - a;
+                if(d < 1 || d > 3) continue;
+                const suite = reste.slice(k).trim();
+                if(suite === '' || /^(\d+\s*x\s*)?\d+\s*kV/i.test(suite) || /^&/.test(suite))
+                    return { portee: a + '-' + b, suite: suite };
+            }
+            return null;
+        }
+
+        function croisementsUnifilaire(txt) {
+            const out = [];
+            let dans = false, cour = null;
+            txt.split('\n').map(x => x.trim()).forEach(li => {
+                if(/^CROISEMENT/i.test(li)) { dans = true; cour = null; return; }
+                if(!dans) return;
+                if(/^Port\s*.e\s*Ligne/i.test(li)) return;
+                const p = couperPortee(li);
+                if(p) { cour = { portee: p.portee, lignes: [] }; out.push(cour);
+                        if(p.suite) cour.lignes.push(p.suite); return; }
+                if(cour && /^(&|\d+\s*x\s*)?\s*\d*\s*kV|^\d+\s*kV|^&/i.test(li)) { cour.lignes.push(li); return; }
+                if(cour && cour.lignes.length) dans = false;      // fin du tableau
+            });
+            // Le bloc est repete sur chaque planche du schema
+            const vus = new Set(), net = [];
+            out.forEach(c => {
+                const k = c.portee + '|' + c.lignes.join('|');
+                if(!vus.has(k) && c.lignes.length) { vus.add(k); net.push(c); }
+            });
+            return net.map(c => 'Port\u00e9e ' + c.portee + ' : ' + c.lignes.join(' ; ')).join('\n');
+        }
+
+        // Ce que chaque piece sait relever, et ou le ranger.
+        const RELEVES = {
+            nip: {
+                analyser: analyserNip,
+                poser: r => {
+                    const v = {};
+                    v['an-nip']      = r.num + (r.indice ? ' indice ' + r.indice : '');
+                    v['nip-retrait'] = r.retrait; v['nip-debut'] = r.debut; v['nip-fin'] = r.fin;
+                    v['nip-cdr']     = r.cdr;     v['nip-dr']    = r.dr;
+                    v['nip-sfpt']    = r.sfpt;    v['nip-infos'] = r.infos;
+                    return v;
+                },
+                attendus: { num: 'num\u00e9ro de NI', retrait: 'num\u00e9ro de retrait',
+                            debut: 'd\u00e9but de consignation', fin: 'fin de consignation',
+                            cdr: 'CDR', dr: 'DR' }
+            },
+            unifilaire: {
+                analyser: analyserUnifilaire,
+                poser: r => ({ 'uni-num': r.num, 'uni-indice': r.indice, 'uni-maj': r.maj,
+                               'uni-liaison': [r.tension, r.liaison].filter(Boolean).join(' '),
+                               'uni-long': r.longueur, 'uni-pyl': r.pylones,
+                               'uni-cables': r.cables.join(' \u00b7 '), 'uni-crois': r.croisements }),
+                attendus: { num: 'num\u00e9ro de sch\u00e9ma', indice: 'indice',
+                            longueur: 'longueur', pylones: 'plage de pyl\u00f4nes',
+                            croisements: 'tableau des croisements' }
+            }
+        };
+
+        async function importerPiece(cle, input) {
             const f = input.files && input.files[0];
             input.value = '';
             if(!f) return;
-            if(f.type !== 'application/pdf') { alert("La NIP doit \u00eatre un fichier PDF."); return; }
+            if(f.type !== 'application/pdf') { alert('Le document doit \u00eatre un fichier PDF.'); return; }
             if(f.size > RECU_MAX) { alert("Fichier trop volumineux : 3 Mo maximum."); return; }
-            if(!curId) { alert("Enregistrez d'abord le chantier : la NIP doit lui \u00eatre rattach\u00e9e."); return; }
+            if(!curId) { alert("Enregistrez d'abord le chantier : le document doit lui \u00eatre rattach\u00e9."); return; }
 
-            const etat = document.getElementById('nip-etat');
+            const etat = document.getElementById(cle + '-etat');
             if(etat) etat.textContent = ' Lecture du document\u2026';
             try {
                 const data = await lireBase64(f);
-                await db.ref('nip/' + curId).set({ nom: f.name, taille: f.size, date: Date.now(), data: data });
-                nipFichier = { nom: f.name, taille: f.size };
-                try { await rendreNip(data); } catch(e) { nipImages = []; }
+                await db.ref(cle + '/' + curId)
+                        .set({ nom: f.name, taille: f.size, date: Date.now(), data: data });
+                pieces[cle].fichier = { nom: f.name, taille: f.size };
+                try { await rendreNip(data, cle); } catch(e) { pieces[cle].images = []; }
 
+                const reg = RELEVES[cle];
                 let releve = null;
-                try { releve = analyserNip(await texteDuPdf(data)); }
-                catch(e) { alert("La NIP est enregistr\u00e9e, mais son texte n'a pas pu \u00eatre lu :\n"
+                try { releve = reg.analyser(await texteDuPdf(data)); }
+                catch(e) { alert("Le document est enregistr\u00e9, mais son texte n'a pas pu \u00eatre lu :\n"
                                  + e.message + "\n\nRenseignez les champs \u00e0 la main."); }
 
                 if(releve) {
-                    const pose = (cle, val) => { if(String(val || '').trim()) prepa.v[cle] = String(val).trim(); };
-                    pose('an-nip', releve.num + (releve.indice ? ' indice ' + releve.indice : ''));
-                    pose('nip-retrait', releve.retrait);
-                    pose('nip-debut', releve.debut);
-                    pose('nip-fin', releve.fin);
-                    pose('nip-cdr', releve.cdr);
-                    pose('nip-dr', releve.dr);
-                    if(releve.sfpt !== '') prepa.v['nip-sfpt'] = releve.sfpt;
-                    pose('nip-infos', releve.infos);
-                    const vides = ['num', 'retrait', 'debut', 'fin', 'cdr', 'dr']
-                        .filter(k => !String(releve[k] || '').trim());
-                    if(vides.length) alert("NIP enregistr\u00e9e. Ces informations n'ont pas \u00e9t\u00e9 trouv\u00e9es "
-                        + "dans le document et restent \u00e0 saisir :\n\u2022 " + vides.join('\n\u2022 '));
+                    const vals = reg.poser(releve);
+                    Object.keys(vals).forEach(k => {
+                        if(String(vals[k] === undefined ? '' : vals[k]).trim() !== '')
+                            prepa.v[k] = String(vals[k]).trim();
+                    });
+                    const vides = Object.keys(reg.attendus)
+                        .filter(k => !String(releve[k] === undefined ? '' : releve[k]).trim().length)
+                        .map(k => reg.attendus[k]);
+                    if(vides.length) alert("Document enregistr\u00e9. Ces informations n'ont pas \u00e9t\u00e9 "
+                        + "trouv\u00e9es et restent \u00e0 saisir :\n\u2022 " + vides.join('\n\u2022 '));
                 }
                 renderPrepa();
             } catch(e) {
@@ -3188,14 +3312,22 @@
             }
         }
 
-        let nipFichier = null;
-        let nipImages = [];          // une image par page du PDF, pour l'impression
+        // Les pieces jointes du dossier : meme stockage, meme rendu, meme
+        // page de document. Seul le relevé differe d'une piece a l'autre.
+        const PIECES = {
+            nip:        { titre: 'NIP (document)',               libelle: 'la NIP' },
+            unifilaire: { titre: 'Sch\u00e9ma unifilaire (document)', libelle: 'le sch\u00e9ma unifilaire' }
+        };
+        const pieces = { nip: { fichier: null, images: [] },
+                         unifilaire: { fichier: null, images: [] } };
+
 
         // Le navigateur ne sait pas inserer un PDF dans une impression HTML :
         // on rend donc chaque page en image, a une definition suffisante
         // pour rester lisible sur le papier.
-        async function rendreNip(base64) {
-            nipImages = [];
+        async function rendreNip(base64, cle) {
+            const p = pieces[cle || 'nip'];
+            p.images = [];
             const lib = await chargerPdfJs();
             const bin = atob(base64);
             const buf = new Uint8Array(bin.length);
@@ -3211,42 +3343,40 @@
                 c.width = Math.round(vue.width);
                 c.height = Math.round(vue.height);
                 await pg.render({ canvasContext: c.getContext('2d'), viewport: vue }).promise;
-                nipImages.push({ src: c.toDataURL('image/jpeg', 0.82),
-                                 paysage: vue.width > vue.height });
+                p.images.push({ src: c.toDataURL('image/jpeg', 0.82),
+                                paysage: vue.width > vue.height });
             }
         }
-        async function chargerNip() {
-            nipFichier = null;
-            if(!curId) return;
-            try {
-                const snap = await db.ref('nip/' + curId).once('value');
-                const v = snap.val();
-                if(v) {
-                    nipFichier = { nom: v.nom, taille: v.taille };
-                    try { await rendreNip(v.data); }
-                    catch(e) { nipImages = []; }
-                }
-            } catch(e) {}
+        async function chargerPieces() {
+            for(const cle of Object.keys(pieces)) {
+                pieces[cle] = { fichier: null, images: [] };
+                if(!curId) continue;
+                try {
+                    const v = (await db.ref(cle + '/' + curId).once('value')).val();
+                    if(v) {
+                        pieces[cle].fichier = { nom: v.nom, taille: v.taille };
+                        try { await rendreNip(v.data, cle); } catch(e) { pieces[cle].images = []; }
+                    }
+                } catch(e) {}
+            }
             if(document.getElementById('pdp-annexes')) renderPrepa();
         }
 
-        async function telechargerNip() {
+        async function telechargerPiece(cle) {
             if(!curId) return;
-            const snap = await db.ref('nip/' + curId).once('value');
-            const v = snap.val();
-            if(!v || !v.data) { alert('Aucune NIP enregistr\u00e9e.'); return; }
+            const v = (await db.ref(cle + '/' + curId).once('value')).val();
+            if(!v || !v.data) { alert('Aucun document enregistr\u00e9.'); return; }
             const a = document.createElement('a');
             a.href = 'data:application/pdf;base64,' + v.data;
-            a.download = v.nom || 'NIP.pdf';
+            a.download = v.nom || (cle + '.pdf');
             a.click();
         }
 
-        async function retirerNip() {
-            if(!curId || !nipFichier) return;
-            if(!confirm('Retirer la NIP enregistr\u00e9e ? Les informations relev\u00e9es restent en place.')) return;
-            await db.ref('nip/' + curId).remove().catch(() => {});
-            nipFichier = null;
-            nipImages = [];
+        async function retirerPiece(cle) {
+            if(!curId || !pieces[cle].fichier) return;
+            if(!confirm('Retirer ' + PIECES[cle].libelle + ' ? Les informations relev\u00e9es restent en place.')) return;
+            await db.ref(cle + '/' + curId).remove().catch(() => {});
+            pieces[cle] = { fichier: null, images: [] };
             renderPrepa();
         }
 
@@ -3363,6 +3493,10 @@
                         const n = String(pv('an-nip')).trim();
                         lib = 'NIP' + (n ? ' \u2014 ' + n : '');
                     }
+                    if(pg.id === 'unifilaire') {
+                        const n = String(pv('uni-num')).trim();
+                        lib = 'Sch\u00e9ma unifilaire' + (n ? ' \u2014 ' + n : '');
+                    }
                     const fort = pg.rang !== 2;
                     return `<div class="som-l${fort ? ' fort' : ''}">
                         <span class="som-lib">${esc(lib)}</span>
@@ -3441,24 +3575,27 @@
                             'Plan de prévention', 'Fiche de suivi métrologie (dynamomètre, théodolite, clé dynamométrique)'];
             return `
             ${sous('Note d\'information préalable')}
-            <div class="pd-l pd-aide">
-                <label class="btn-pd pre">📎 Importer la NIP (PDF)
-                    <input type="file" accept="application/pdf" hidden onchange="importerNip(this)">
-                </label>
-                ${nipFichier ? `<button class="btn-pd" onclick="telechargerNip()">\u2b07 ${esc(nipFichier.nom)}</button>
-                                <button class="btn-pd" onclick="retirerNip()">Retirer</button>` : ''}
-                <span id="nip-etat"></span>
-                <span>Les informations ci-dessous sont relevées dans le document, et restent modifiables.</span>
-            </div>
+            ${pieceBoutons('nip', 'Importer la NIP (PDF)')}
             ${grille('pd-g2', champ('NIP', chp('an-nip', 'NI_26-00000 indice 1'))
                             + champ('Retrait n°', chp('nip-retrait', 'IG-00000000')))}
             ${grille('pd-g4', champ('Consignation — début', chp('nip-debut', 'jj/mm/aa hh:mm'))
                             + champ('Consignation — fin', chp('nip-fin', 'jj/mm/aa hh:mm'))
                             + champ('CDR — retour à la conduite', chp('nip-cdr'))
                             + champ('DR — restitution du document', chp('nip-dr')))}
-            ${grille('pd-g2', champ('SFPT mis en œuvre', sel('nip-sfpt', ['0', '1', '2']))
-                            + champ('Schéma unifilaire — WILLYDOC, mot clef L', auto(unif)))}
+            ${champ('SFPT mis en œuvre', sel('nip-sfpt', ['0', '1', '2']))}
             ${champ('Informations importantes', zone('nip-infos', 4))}
+
+            ${sous('Schéma unifilaire')}
+            ${pieceBoutons('unifilaire', 'Importer le schéma (PDF)')}
+            ${grille('pd-g3', champ('N° de schéma', chpLie('uni-num', unif ? 'L' + unif : '', 'L000000'))
+                            + champ('Indice', chp('uni-indice'))
+                            + champ('Liaison', chpLie('uni-liaison', ((c.tension || '') + ' ' + (c.nomLigne || '')).trim())))}
+            ${grille('pd-g3', champ('Longueur', chp('uni-long', 'km'))
+                            + champ('Plage de pylônes', chp('uni-pyl', 'Pyl 1 \u2192 Pyl 100'))
+                            + champ('Câbles', chp('uni-cables')))}
+            ${champ('Mise à jour du schéma', chp('uni-maj'))}
+            ${champ('Croisements de lignes', zone('uni-crois', 5, 'Portée 3-4 : 90 kV \u2026'))}
+            <div class="pd-note">WILLYDOC, mot clef <b>L</b>${unif ? ' \u00b7 ' + unif : ''}</div>
             ${sous('Annexes numérotées')}
             ${num.map((t, i) => coche('an-n' + (i + 1), t)).join('')}
             ${sous('Autres pièces jointes')}
@@ -3521,15 +3658,14 @@
             return h + '</div>';
         }},
 
-        // Le document lui-meme, derriere la preparation. Il n'apparait au
-        // sommaire que si une NIP a ete importee, et se decoche comme le reste.
-        { id:'nip', titre:'NIP (document)', defaut:true, horsCompte:true,
-          dispo: () => nipImages.length > 0, corps: () => {
-            return nipImages.map((im, i) => `<div class="pd-nip-feuille">
-                <img class="pd-nip-img${im.paysage ? ' paysage' : ''}" src="${im.src}"
-                     alt="NIP page ${i + 1}">
-            </div>`).join('');
-        }},
+        // Les pieces jointes, derriere la preparation. Chacune n'apparait au
+        // sommaire que si elle a ete importee, et se decoche comme le reste.
+        { id:'nip', titre:PIECES.nip.titre, defaut:true, horsCompte:true,
+          dispo: () => pieces.nip.images.length > 0, corps: () => planchesPiece('nip') },
+
+        { id:'unifilaire', titre:PIECES.unifilaire.titre, defaut:true, horsCompte:true,
+          dispo: () => pieces.unifilaire.images.length > 0,
+          corps: () => planchesPiece('unifilaire') },
 
         { id:'moyens', titre:'Moyens humains + véhicules', annexe:'Annexe 1', defaut:true, corps: () => {
             const c = pdChantier();
@@ -3870,7 +4006,7 @@
             if(el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
-        function goPrepaDoc() { switchScreen('screen-prepadoc'); renderPrepa(); chargerPhotoCouv(); chargerNip(); }
+        function goPrepaDoc() { switchScreen('screen-prepadoc'); renderPrepa(); chargerPhotoCouv(); chargerPieces(); }
 
         function renderPrepa() {
             const c = pdChantier();
@@ -4014,7 +4150,8 @@
                 if(!fit) return;
                 // Une page de planches ne se reduit pas : les schemas doivent
                 // rester lisibles, quitte a occuper plusieurs feuilles.
-                if(sec.id === 'pdp-nip' || sec.classList.contains('pd-page-images')) {
+                if(sec.id === 'pdp-nip' || sec.id === 'pdp-unifilaire'
+                   || sec.classList.contains('pd-page-images')) {
                     fit.style.transform = 'none';
                     fit.style.width = A4_UTILE_L + 'px';
                     sec.style.width = A4_UTILE_L + 'px';
