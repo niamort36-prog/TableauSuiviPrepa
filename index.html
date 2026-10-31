@@ -391,6 +391,86 @@
         .pd-tab-enveloppe { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
         .pd-aide { font-size: .72rem; color: #64748b; }
 
+        /* ------------------------------------------------------------------
+           Apparence d'impression. Posee sur <body> le temps de mesurer les
+           pages, puis reprise telle quelle par la feuille @media print :
+           ce qui est mesure est exactement ce qui sort de l'imprimante.
+           ------------------------------------------------------------------ */
+        body.prepa-impression #pd-pages .btn-pd,
+        body.prepa-impression #pd-pages .pd-sup,
+        body.prepa-impression #pd-pages .pd-tab-actions,
+        body.prepa-impression #pd-pages .pd-aide,
+        body.prepa-impression #pd-pages .pd-choix { display: none !important; }
+        body.prepa-impression #pd-pages .pd-in::placeholder,
+        body.prepa-impression #pd-pages .pd-zone::placeholder { color: transparent !important; }
+        body.prepa-impression #pd-pages .pd-fige { display: block !important; white-space: pre-wrap;
+                       overflow-wrap: anywhere; font-size: .84rem; line-height: 1.3; padding: 5px 7px;
+                       border: 1px solid #94a3b8; border-radius: 4px; background: #fff; }
+        body.prepa-impression #pd-pages .pd-tab td .pd-fige { border: none; padding: 2px 4px;
+                       min-height: 1.15em; font-size: .82rem; }
+        body.prepa-impression #pd-pages .pd-vide { color: transparent !important; }
+        body.prepa-impression #pd-pages .pd-tab-enveloppe { overflow: visible !important; max-width: none; }
+        body.prepa-impression #pd-pages .pd-tab,
+        body.prepa-impression #pd-pages .pd-tab thead,
+        body.prepa-impression #pd-pages .pd-tab tbody,
+        body.prepa-impression #pd-pages .pd-tab tr,
+        body.prepa-impression #pd-pages .pd-tab td { display: revert !important; }
+        body.prepa-impression #pd-pages .pd-tab td::before { content: none !important; }
+        body.prepa-impression #pd-pages .pd-tab td .pd-zone { min-height: 0; height: auto !important;
+                       overflow: visible; }
+        body.prepa-impression #pd-pages .pd-img { max-height: 46mm; width: auto; }
+        body.prepa-impression #pd-pages .pd-img-grille .pd-img { max-height: 40mm; }
+        body.prepa-impression #pdp-couverture .pd-page-tete,
+        body.prepa-impression #pdp-couverture .pd-l { display: none !important; }
+        body.prepa-impression #pdp-couverture .pd-fige { border: none; padding: 0; min-height: 0;
+                       font-size: inherit; background: transparent; }
+
+        /* L'enveloppe que l'on reduit pour tenir sur la feuille. flow-root
+           empeche les marges des enfants de s'echapper, sans quoi la
+           hauteur mesuree est inferieure a la hauteur reelle. */
+        .pd-fit { transform-origin: top left; display: flow-root; }
+        .pd-page.pd-fixe { overflow: hidden; }
+
+        /* ------------------------------------------------------------------
+           COUVERTURE, d'apres la charte RTE : bleu marine pour les titres,
+           cyan pour les intitules, et les aplats de la maquette en bas.
+           Le bloc garde le rapport d'un A4 portrait quelle que soit sa boite.
+           ------------------------------------------------------------------ */
+        .cv { position: relative; display: grid; grid-template-columns: 51% 49%;
+              aspect-ratio: 210 / 297; background: #fff; overflow: hidden; container-type: inline-size; }
+        .cv-gauche { display: flex; flex-direction: column; padding: 5% 4% 0 6%; min-width: 0; }
+        .cv-logo { width: 17%; min-width: 46px; height: auto; margin-bottom: 11%; }
+        .cv-titre { margin: 0 0 4%; font-size: 6.6cqw; font-weight: 400; line-height: 1.08;
+                    color: var(--rte-marine); letter-spacing: -.01em; }
+        .cv-titre b { font-weight: 800; }
+        .cv-ligne { font-size: 3cqw; line-height: 1.3; color: var(--rte-cyan); margin-bottom: 3%; }
+        .cv-ligne b { color: var(--rte-marine); font-weight: 800; }
+        .cv-codes { font-size: 1.55cqw; font-weight: 800; letter-spacing: .13em; line-height: 2;
+                    color: var(--rte-marine); text-transform: uppercase; margin-bottom: 8%; }
+        .cv-infos { display: grid; grid-template-columns: 11cqw 1fr; gap: 1.6% 4%; margin: 0; font-size: 1.85cqw; }
+        .cv-infos dt { color: var(--rte-cyan); font-weight: 800; }
+        .cv-infos dd { margin: 0; color: #333; white-space: pre-wrap; line-height: 1.4; min-width: 0; }
+        .cv-infos .pd-in { border: none; border-bottom: 1px solid #cbd5e1; border-radius: 0;
+                           padding: 0 0 1px; font-size: inherit; background: transparent; }
+        .cv-infos .pd-aide { display: block; font-size: 1.4cqw; }
+        /* Le bandeau bleu monte a 32 mm du bas sur un A4 : le pied doit
+           s'arreter au-dessus. cqw vaut 1 % de la largeur de la couverture. */
+        .cv-pied { margin-top: auto; padding-bottom: 17cqw;
+                   font-size: 1.35cqw; line-height: 1.6; color: #666; }
+
+        .cv-droite { display: grid; grid-template-rows: 61% 25% 14%; }
+        .cv-photo { background: var(--rte-cyan) center / cover no-repeat; }
+        .cv-blocs { display: grid; grid-template-columns: 1fr 1fr; gap: 3%; padding: 4% 0 0 0; }
+        .cv-b1 { background: #4bb8e3; }
+        .cv-b2 { background: #bfe3f5; }
+        .cv-barre { position: absolute; left: 0; bottom: 3.4%; width: 84%; height: 7.4%;
+                    background: var(--rte-marine); }
+
+        /* La couverture occupe sa feuille entiere, sans la marge de la page */
+        #pdp-couverture { padding: 0; overflow: hidden; }
+        #pdp-couverture .pd-page-tete { margin: 10px 14px 0; }
+        #pdp-couverture .pd-l { margin: 10px 14px 12px; }
+
         /* Chevron des choix du classeur, sur les cases multilignes */
         .pd-cell { position: relative; }
         .pd-choix { position: absolute; top: 1px; right: 1px; width: 17px; height: 17px;
@@ -740,33 +820,28 @@
     <style id="print-prepa">
         @media print {
             @page { size: A4 portrait; margin: 12mm; }
-            html, body { width: auto; height: auto; margin: 0; padding: 0; background: #fff; overflow: visible; }
+            /* La marge basse posee en ligne pour le pied collant ajouterait
+               une feuille blanche : il faut la forcer a zero. */
+            html, body { width: auto; height: auto; margin: 0 !important; padding: 0 !important;
+                         background: #fff; overflow: visible; }
             body > *:not(#screen-prepadoc) { display: none !important; }
             #screen-prepadoc { display: block !important; }
             .pd-entete, .pd-sommaire, .pd-jauge, .pd-retour, .footer-sticky { display: none !important; }
-            .pd-corps { display: block; padding: 0; background: #fff; border-radius: 0; }
-            .pd-pages { display: block; }
+            #screen-prepadoc { padding: 0 !important; margin: 0 !important; }
+            .pd-corps { display: block; padding: 0; margin: 0; background: #fff; border-radius: 0; }
+            .pd-pages { display: block; padding: 0; margin: 0; }
+            .pd-pages > :last-child { margin-bottom: 0 !important; }
+            /* Une page = une feuille. La hauteur est fixee par le script,
+               qui a deja reduit le contenu pour qu'il y tienne. */
             .pd-page { page-break-after: always; break-after: page; border: none; box-shadow: none;
-                       padding: 0 0 6mm; border-radius: 0; }
+                       padding: 0; border-radius: 0; }
+            .pd-tab, .pd-page-tete, .pd-img, .pd-champ { page-break-inside: avoid; }
             .pd-page:last-child { page-break-after: auto; break-after: auto; }
             .pd-in, .pd-zone { border: 1px solid #94a3b8; background: #fff; }
-            .pd-img { page-break-inside: avoid; }
-            .pd-tab, .pd-page-tete { page-break-inside: avoid; }
-            .btn-pd, .pd-sup, .pd-tab-actions, .pd-aide, .pd-choix { display: none !important; }
-            /* Les invites de saisie sont une aide d'ecran, pas du contenu */
-            .pd-in::placeholder, .pd-zone::placeholder { color: transparent !important; }
-            /* Le texte fige remplace la case et revient a la ligne */
-            .pd-fige { display: block !important; white-space: pre-wrap; overflow-wrap: anywhere;
-                       font-size: .84rem; line-height: 1.3; padding: 5px 7px;
-                       border: 1px solid #94a3b8; border-radius: 4px; background: #fff; }
-            .pd-tab td .pd-fige { border: none; padding: 2px 4px; min-height: 1.15em; font-size: .82rem; }
-            /* Un tableau vide s'imprime comme une grille a remplir */
-            .pd-vide { color: transparent !important; }
-            .pd-tab-enveloppe { overflow: visible !important; max-width: none; }
-            .pd-tab, .pd-tab thead, .pd-tab tbody, .pd-tab tr, .pd-tab td { display: revert; }
-            .pd-tab td::before { content: none !important; }
-            .pd-tab td .pd-zone { min-height: 0; height: auto !important; overflow: visible; }
-            .pd-img-grille .pd-img { max-height: 70mm; }
+
+            /* La couverture prend la feuille entiere, sans marge */
+            @page couverture { size: A4 portrait; margin: 0; }
+            #pdp-couverture { page: couverture; }
             * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
     </style>
@@ -2867,10 +2942,133 @@
 
         const IMG = 'assets/prepa/';
 
+        // --- Elements calcules de la couverture ------------------------------
+        // Semaine ISO : la couverture annonce les semaines de chantier.
+        function semaineIso(d) {
+            if(!d) return null;
+            const t = new Date(d + 'T00:00:00');
+            if(isNaN(t)) return null;
+            t.setDate(t.getDate() + 4 - (t.getDay() || 7));      // jeudi de la semaine
+            const jan1 = new Date(t.getFullYear(), 0, 1);
+            return { s: Math.ceil(((t - jan1) / 86400000 + 1) / 7), a: t.getFullYear() };
+        }
+
+        function semainesChantier() {
+            const d = document.getElementById('inp-start'), f = document.getElementById('inp-end');
+            const a = semaineIso(d ? d.value : ''), b = semaineIso(f ? f.value : '');
+            if(!a) return '';
+            const plage = (b && b.s !== a.s) ? a.s + '-' + b.s : String(a.s);
+            return 'Semaines ' + plage + ' \u00b7 ' + a.a;
+        }
+
+        // EGUZOL71PLAUD : le chiffre qui suit la tension numerote la liaison.
+        function numeroLiaison() {
+            const m = /[LZ](\d)(\d)/.exec(codeLiaison());
+            return m ? m[2] : '';
+        }
+
+        // Le schema unifilaire porte le meme numero que la couverture.
+        function numeroUnifilaire(num) {
+            return (num && /^\d+$/.test(num)) ? 'L' + (520000 + Number(num)) : '';
+        }
+
+        // --- Photo de couverture ---------------------------------------------
+        // Meme principe que les recus : base64 dans la base, rattache au
+        // chantier, jamais dans le depot.
+        const PHOTO_MAX = 2 * 1024 * 1024;
+        let photoCouv = null;              // dataURL chargee a la demande
+
+        async function chargerPhotoCouv() {
+            if(!curId) { photoCouv = null; return; }
+            try {
+                const snap = await db.ref('couvertures/' + curId).once('value');
+                const v = snap.val();
+                photoCouv = v && v.data ? v.data : null;
+            } catch(e) { photoCouv = null; }
+            const z = document.getElementById('cv-photo');
+            if(z) z.style.backgroundImage = photoCouv ? `url(${photoCouv})` : '';
+            const b = document.getElementById('cv-photo-etat');
+            if(b) b.textContent = photoCouv ? 'Photo en place' : '';
+        }
+
+        async function importerPhotoCouv(input) {
+            const f = input.files && input.files[0];
+            input.value = '';
+            if(!f) return;
+            if(!/^image\/(jpeg|png|webp)$/.test(f.type)) { alert("Choisissez une image JPEG, PNG ou WebP."); return; }
+            if(f.size > PHOTO_MAX) { alert("Image trop lourde : 2 Mo maximum."); return; }
+            if(!curId) { alert("Enregistrez d'abord le chantier : la photo doit lui \u00eatre rattach\u00e9e."); return; }
+            const etat = document.getElementById('cv-photo-etat');
+            if(etat) etat.textContent = ' Import\u2026';
+            try {
+                const data = await lireBase64(f);
+                await db.ref('couvertures/' + curId).set({ nom: f.name, date: Date.now(), data: data });
+                photoCouv = data;
+                renderPrepa();
+            } catch(e) {
+                if(etat) etat.textContent = '';
+                alert("\u00c9chec de l'import : " + e.message);
+            }
+        }
+
+        async function retirerPhotoCouv() {
+            if(!curId || !photoCouv) return;
+            if(!confirm('Retirer la photo de couverture ?')) return;
+            await db.ref('couvertures/' + curId).remove().catch(() => {});
+            photoCouv = null;
+            renderPrepa();
+        }
+
         // =====================================================================
         // Description des pages
         // =====================================================================
         const PREPA_PAGES = [
+
+        { id:'couverture', titre:'Couverture', defaut:true, horsCompte:true, corps: () => {
+            const c = pdChantier();
+            const n = numeroLiaison();
+            const unif = numeroUnifilaire(c.numero);
+            const code = codeLiaison();
+            const nature = String(pv('tv-nature')).trim() || c.desc || '';
+            const gmr = String(pv('tv-gmr')).trim();
+            const prep = [pv('sig-prep-nom'), fmtDatePrint(pv('sig-prep-date'))].filter(Boolean).join(' \u2014 ');
+            const infos = [
+                ['Travaux', nature],
+                ['P\u00e9riode', c.debut ? 'Du ' + c.debut + ' au ' + c.fin : ''],
+                ['Retrait', chpLie('cv-retrait', c.ois.join(' \u00b7 '), 'N\u00b0 d\'OI et cr\u00e9neau')],
+                ['NIP', pv('an-nip')],
+                ['\u00c9quipe', equipeActive + (gmr ? ' (' + esc(gmr) + ')' : '')],
+                ['Pr\u00e9parateur', prep]
+            ];
+            return `<div class="cv">
+                <div class="cv-gauche">
+                    <img class="cv-logo" src="assets/rte-logo.png" alt="RTE">
+                    <h1 class="cv-titre">Pr\u00e9paration<br><b>de travail</b></h1>
+                    <div class="cv-ligne">Liaison ${esc(c.tension) || '\u2014'}${n ? ' N\u00b0' + n : ''}
+                        <br><b>${esc(c.nomLigne) || '\u2014'}</b></div>
+                    <div class="cv-codes">${[esc(code), unif].filter(Boolean).join(' \u00b7 ') || '\u2014'}
+                        <br>${esc(semainesChantier()) || '\u2014'}</div>
+                    <dl class="cv-infos">${infos.map(([l, v]) => `<dt>${l}</dt><dd>${
+                        /^</.test(String(v)) ? v : (esc(v) || '\u2014')}</dd>`).join('')}</dl>
+                    <div class="cv-pied">RTE \u00b7 ${esc(equipeActive)}<br>
+                        Document de pr\u00e9paration de chantier \u00e0 conserver 5 ans avec ses annexes (exigence 20).<br>
+                        Diffusion restreinte RTE / entreprises intervenantes.</div>
+                </div>
+                <div class="cv-droite">
+                    <div class="cv-photo" id="cv-photo" style="background-image:${photoCouv ? `url(${photoCouv})` : 'none'}"></div>
+                    <div class="cv-blocs"><span class="cv-b1"></span><span class="cv-b2"></span></div>
+                </div>
+                <div class="cv-barre"></div>
+            </div>
+            <div class="pd-l pd-aide">
+                <label class="btn-pd">\U0001f5bc Photo de couverture
+                    <input type="file" accept="image/jpeg,image/png,image/webp" hidden onchange="importerPhotoCouv(this)">
+                </label>
+                ${photoCouv ? '<button class="btn-pd" onclick="retirerPhotoCouv()">Retirer la photo</button>' : ''}
+                <span id="cv-photo-etat"></span>
+                <span>JPEG, PNG ou WebP, 2 Mo au plus. Tout le reste vient de la fiche et de la pr\u00e9paration.</span>
+            </div>`;
+        }},
 
         { id:'travaux', titre:'Travaux à effectuer', defaut:true, corps: () => {
             const c = pdChantier();
@@ -3334,7 +3532,7 @@
             if(el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
-        function goPrepaDoc() { switchScreen('screen-prepadoc'); renderPrepa(); }
+        function goPrepaDoc() { switchScreen('screen-prepadoc'); renderPrepa(); chargerPhotoCouv(); }
 
         function renderPrepa() {
             const c = pdChantier();
@@ -3361,13 +3559,13 @@
             // Pages visibles, les unes sous les autres
             document.getElementById('pd-pages').innerHTML =
                 PREPA_PAGES.filter(pg => pageVisible(pg.id)).map(pg => `
-                    <section class="pd-page" id="pdp-${pg.id}">
+                    <section class="pd-page" id="pdp-${pg.id}"><div class="pd-fit">
                         <div class="pd-page-tete">
                             <span class="pd-page-titre">${esc(pg.titre)}</span>
                             ${pg.annexe ? `<span class="pd-annexe">${esc(pg.annexe)}</span>` : ''}
                         </div>
                         ${pg.corps()}
-                    </section>`).join('')
+                    </div></section>`).join('')
                 || '<div class="pd-page" style="text-align:center;color:#94a3b8">Toutes les pages sont masquées.</div>';
 
             enveloppeTableaux();
@@ -3396,6 +3594,7 @@
                 const el = document.getElementById('pdp-' + pg.id);
                 const pc = document.getElementById('pdpc-' + pg.id);
                 if(!el) { if(pc) pc.textContent = ''; return; }
+                if(pg.horsCompte) { if(pc) pc.textContent = ''; return; }
                 const ch = [...el.querySelectorAll('input, textarea, select')];
                 const t = ch.length;
                 const f = ch.filter(x => (x.type === 'checkbox' || x.type === 'radio')
@@ -3448,15 +3647,89 @@
             document.querySelectorAll(CASES).forEach(el => { el.style.display = ''; });
         }
 
+        // Surface utile d'un A4 portrait a 12 mm de marge, en pixels CSS.
+        const A4_UTILE_L = 186 * 96 / 25.4;
+        const A4_UTILE_H = 273 * 96 / 25.4;
+
+        // Composer a la largeur utile puis reduire retrecit aussi la largeur :
+        // on compose donc plus large, de sorte qu'apres reduction la page
+        // occupe exactement la feuille. Meme dichotomie que la fiche A3.
+        // En deca de ce facteur le texte devient illisible : mieux vaut
+        // laisser la page couler sur deux feuilles que de la rendre inutile.
+        const ECHELLE_MINI = 0.62;
+
+        function ajusterFeuilles() {
+            document.querySelectorAll('#pd-pages .pd-page').forEach(sec => {
+                const fit = sec.querySelector('.pd-fit');
+                if(!fit) return;
+                // La couverture occupe sa feuille entiere, sans marge ni reduction
+                if(sec.id === 'pdp-couverture') {
+                    sec.style.width = (210 * 96 / 25.4) + 'px';
+                    sec.style.height = (297 * 96 / 25.4 - 2) + 'px';
+                    fit.style.width = '100%';
+                    return;
+                }
+                sec.classList.remove('pd-fixe');
+                fit.style.transform = 'none';
+                // Quelques pixels de garde : une mesure au pixel pres finit
+                // toujours par deborder d'une ligne sur la feuille suivante.
+                const cibleH = A4_UTILE_H - 8;
+                const haut_ = () => fit.getBoundingClientRect().height;
+                let W = A4_UTILE_L;
+                fit.style.width = W + 'px';
+                if(haut_() > cibleH) {
+                    const cible = A4_UTILE_L / cibleH;
+                    let bas = A4_UTILE_L, sup = A4_UTILE_L * 3;
+                    for(let i = 0; i < 16; i++) {
+                        W = (bas + sup) / 2;
+                        fit.style.width = W + 'px';
+                        if(W / haut_() < cible) bas = W; else sup = W;
+                    }
+                    W = sup;
+                    fit.style.width = W + 'px';
+                }
+                const k = Math.min(1, cibleH / haut_(), A4_UTILE_L / W);
+                if(k < ECHELLE_MINI) {
+                    // Trop de contenu pour une feuille : on rend la page a sa
+                    // taille normale et on la laisse se couper proprement.
+                    fit.style.transform = 'none';
+                    fit.style.width = A4_UTILE_L + 'px';
+                    sec.style.width = A4_UTILE_L + 'px';
+                    sec.style.height = '';
+                    return;
+                }
+                fit.style.transform = 'scale(' + k + ')';
+                sec.classList.add('pd-fixe');
+                sec.style.width = A4_UTILE_L + 'px';
+                // Deux pixels de moins : une hauteur pile egale a la surface
+                // utile fait basculer le navigateur sur une feuille vide.
+                sec.style.height = (A4_UTILE_H - 2) + 'px';
+            });
+        }
+
+        function libererFeuilles() {
+            document.querySelectorAll('#pd-pages .pd-fit').forEach(f => {
+                f.style.transform = ''; f.style.width = '';
+            });
+            document.querySelectorAll('#pd-pages .pd-page').forEach(sec => {
+                sec.style.width = ''; sec.style.height = '';
+                sec.classList.remove('pd-fixe');
+            });
+        }
+
         function imprimerPrepa() {
             const a3 = document.getElementById('print-a3');
             const pr = document.getElementById('print-prepa');
             impressionPrepa = true;
             figerCases();
+            document.body.classList.add('prepa-impression');
+            ajusterFeuilles();
             if(a3) a3.disabled = true;
             if(pr) pr.disabled = false;
             const remise = () => {
                 impressionPrepa = false;
+                libererFeuilles();
+                document.body.classList.remove('prepa-impression');
                 degelerCases();
                 if(a3) a3.disabled = false;
                 if(pr) pr.disabled = true;
