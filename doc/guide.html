@@ -600,11 +600,18 @@
 
     <h3>Un document vierge, et des modèles à la demande</h3>
 
-    <p>La préparation s'ouvre <b>vide</b>. Les tableaux qui ont un contenu type — encadrement
-    et groupements de la fiche de secours, habilitations des moyens humains, tâches du mode
-    opératoire, jours de la planification — affichent un bouton <b>✨ Pré-remplir</b> qui
-    insère le modèle du classeur. Rien n'est imposé : vous partez du modèle quand il vous
-    convient, vous saisissez ligne à ligne sinon.</p>
+    <p>La préparation s'ouvre <b>vide</b>. Les tableaux qui ont un contenu type —
+    habilitations des moyens humains, tâches du mode opératoire, jours de la planification —
+    affichent un bouton <b>✨ Pré-remplir</b> qui insère le modèle du classeur. Rien n'est
+    imposé : vous partez du modèle quand il vous convient, vous saisissez ligne à ligne
+    sinon.</p>
+
+    <p>Deux endroits arrivent en revanche <b>déjà garnis</b>, parce que le classeur en fait
+    autant. La <b>fiche de secours</b> porte l'encadrement et les groupements enregistrés
+    pour l'équipe (voir plus bas). La page <b>MALT / CC et gestion des aléas</b> s'ouvre avec
+    <b>onze lignes</b> de MALT / CC et <b>quatre lignes d'aléas</b>, ces dernières assez
+    hautes pour être écrites à la main sur le chantier. Dans les deux cas les lignes se
+    modifient, se suppriment, et <b>+ Ligne</b> en ajoute autant qu'il en faut.</p>
 
     <div class="note">
         Si le tableau contient déjà des lignes, le bouton demande confirmation puis ajoute le
@@ -755,9 +762,10 @@
     comme des encadrés à remplir à la main.</p>
 
     <div class="attention">
-        La fiche de secours ne contient que les numéros publics — 18, 15, 17, 112 et SNCF.
-        Les noms et numéros de l'encadrement et des groupements sont à saisir : ils sont
-        enregistrés avec le chantier, et non dans le code de l'application, qui est public.
+        Seuls les numéros publics — 18, 15, 17, 112 et SNCF — sont écrits dans l'application.
+        Les noms et numéros de l'encadrement et des groupements viennent du <b>carnet de
+        secours de l'équipe</b>, enregistré dans la base et jamais dans le code, qui est
+        public.
     </div>
 </section>
 
@@ -870,6 +878,25 @@
     <p>Le référentiel compte près de cent lignes : la liste est donc <b>repliée</b> à
     l'ouverture. Le bouton <b>▸ Afficher</b> la déroule, <b>▾ Réduire</b> la referme, et
     l'application retient votre choix sur l'appareil.</p>
+
+    <h3>Le carnet de secours de l'équipe</h3>
+
+    <p>Le bloc <b>Fiche de secours</b> tient, une fois pour toutes, les contacts que toute
+    fiche reprend : l'<b>encadrement</b> (nom, fonction, téléphone, portable) et les
+    <b>groupements</b> avec leur numéro. <b>+ Contact</b> et <b>+ Groupement</b> ajoutent une
+    ligne, la croix en supprime une, et <b>Ajouter les fonctions du classeur</b> pose d'un
+    coup les sept fonctions type — cadre astreinte, directeur, responsable EEL… — à compléter
+    des noms et des numéros.</p>
+
+    <p>Chaque nouvelle fiche de secours <b>part de ce carnet</b>. Elle vit ensuite sa vie :
+    corrigez-y un numéro, ajoutez un contact propre à ce chantier, le carnet de l'équipe n'y
+    perd rien. À l'inverse, si le carnet a changé depuis, le bouton <b>↻ Reprendre le carnet
+    de l'équipe</b> au bas de la fiche la remet à jour.</p>
+
+    <div class="attention">
+        Le carnet est <b>propre à l'équipe</b> et enregistré dans la base, jamais dans le code
+        de l'application. Basculer d'équipe change de carnet.
+    </div>
 
     <h3>Les opérateurs et leurs habilitations</h3>
 

@@ -193,6 +193,12 @@
         .op-hab .form-input { flex: 1 1 170px; min-width: 0; }
         .op-hab .form-input[type=date] { flex: 0 0 160px; }
         .op-hab-vide { color: #94a3b8; font-size: .85rem; margin-bottom: 8px; }
+        /* Lignes a remplir sur le chantier : la hauteur du classeur. */
+        .pd-tab-haut tbody td { height: 16mm; vertical-align: top; }
+        .pd-tab-haut tbody .pd-zone { min-height: 14mm; }
+        .sec-l  { display: grid; grid-template-columns: 1.3fr 1.4fr 1fr 1fr 34px; gap: 8px; margin-bottom: 7px; align-items: center; }
+        .sec-l2 { grid-template-columns: 1.6fr 1fr 34px; }
+        @media (max-width: 780px) { .sec-l, .sec-l2 { grid-template-columns: 1fr 34px; } }
         .hab-pastille { font-size: .72rem; font-weight: 800; border-radius: 10px; padding: 3px 10px;
                         white-space: nowrap; border: 1px solid; }
         .hab-ok { background: #edf8f6; color: #1f5b53; border-color: #b7e3dc; }
@@ -1128,6 +1134,19 @@
             <div id="op-list" onfocusout="setTimeout(() => { const c = document.getElementById('op-list');
                  if(opRenduEnAttente && !c.contains(document.activeElement)) renderOperateurs(); }, 0)"></div>
         </div>
+
+        <div class="dashboard-container">
+            <div class="header-bar" style="display:flex; justify-content:space-between; align-items:center; gap:12px">
+                <h3 style="margin:0; font-size:1.1rem">&#9742; FICHE DE SECOURS DE <span id="sec-equipe-lbl">&mdash;</span> (<span id="sec-count">0</span>)</h3>
+            </div>
+            <div style="padding:12px 20px; border-bottom:1px solid var(--border); color:#64748b; font-size:0.88rem">
+                L'encadrement et les groupements sont propres à l'équipe, et enregistrés dans la base,
+                jamais dans le code de l'application. Toute fiche de secours part de ce carnet ;
+                elle reste ensuite modifiable chantier par chantier.
+            </div>
+            <div id="sec-list" onfocusout="setTimeout(() => { const c = document.getElementById('sec-list');
+                 if(secRenduEnAttente && !c.contains(document.activeElement)) renderSecours(); }, 0)"></div>
+        </div>
     </div>
 
     <div id="screen-form" class="screen">
@@ -1568,10 +1587,28 @@
         }
         ecouterOperateurs();
 
+        // --- 4e. CARNET DE SECOURS DE L'EQUIPE ACTIVE (temps reel) ---
+        // Noms et numeros de l'encadrement : des donnees nominatives. Elles
+        // vivent dans la base, par equipe, jamais dans ce fichier public.
+        // La fiche de secours d'un chantier en part, puis vit sa vie.
+        let dbSecours = { enc: [], grp: [] };
+        let refSecours = null;
+        function ecouterSecours() {
+            if(PARTAGE) return;
+            if(refSecours) refSecours.off();
+            refSecours = db.ref('secours/' + equipeActive);
+            refSecours.on('value', snap => {
+                const d = snap.val() || {};
+                dbSecours = { enc: d.enc || [], grp: d.grp || [] };
+                if(document.getElementById('screen-options').classList.contains('active')) renderSecours();
+            });
+        }
+        ecouterSecours();
+
         function rafraichirEcranCourant() {
             if(document.getElementById('screen-home').classList.contains('active')) renderHome();
             if(document.getElementById('screen-archive').classList.contains('active')) renderGrid('grid-archives', true);
-            if(document.getElementById('screen-options').classList.contains('active')) { renderEquipes(); renderLignes(); renderOperateurs(); }
+            if(document.getElementById('screen-options').classList.contains('active')) { renderEquipes(); renderLignes(); renderOperateurs(); renderSecours(); }
         }
 
         function equipeDe(p) { return p.equipe || EQUIPE_DEFAUT; }
@@ -1601,8 +1638,9 @@
             fillEquipeSelects();
             ecouterLignes();                      // recharge le référentiel de la nouvelle équipe
             ecouterOperateurs();                  // et ses agents
+            ecouterSecours();                     // et son carnet de secours
             // Depuis Options on y reste, pour voir le basculement s'appliquer
-            if(document.getElementById('screen-options').classList.contains('active')) { renderEquipes(); renderLignes(); renderOperateurs(); }
+            if(document.getElementById('screen-options').classList.contains('active')) { renderEquipes(); renderLignes(); renderOperateurs(); renderSecours(); }
             else if(document.getElementById('screen-archive').classList.contains('active')) goArchive();
             else goHome();
         }
@@ -1780,7 +1818,7 @@
         }
         function goHome() { switchScreen('screen-home'); renderHome(); }
         function goArchive() { switchScreen('screen-archive'); renderGrid('grid-archives', true); }
-        function goOptions() { switchScreen('screen-options'); fillTensionSelect(); renderEquipes(); renderLignes(); renderOperateurs(); }
+        function goOptions() { switchScreen('screen-options'); fillTensionSelect(); renderEquipes(); renderLignes(); renderOperateurs(); renderSecours(); }
         function goPrepa() { switchScreen('screen-prepa'); refreshUI(); }
 
         // --- 7. FONCTION DE SAUVEGARDE (Vers Firebase) ---
@@ -2346,6 +2384,94 @@
         // Firebase renvoie la liste a chaque ecriture : on ne reconstruit pas
         // le bloc tant qu'une case y a le focus, sinon la saisie saute.
         let opRenduEnAttente = false;
+        // ==================================================================
+        //  CARNET DE SECOURS DE L'EQUIPE
+        //  L'encadrement et les groupements, une fois pour toutes.
+        // ==================================================================
+        const SEC_FONCTIONS = ['Cadre astreinte', 'Directeur', 'Directeur adjoint',
+            'Responsable EEL', 'Adjoint responsable EEL',
+            'Coordonnateur technique', 'Coordonnateur environnement'];
+
+        function ecrireSecours() {
+            db.ref('secours/' + equipeActive).set({
+                enc: dbSecours.enc.map(o => ({ n: o.n || '', f: o.f || '', t: o.t || '', p: o.p || '' })),
+                grp: dbSecours.grp.map(o => ({ n: o.n || '', t: o.t || '' }))
+            }).catch(e => alert("Enregistrement impossible : " + e.message));
+        }
+
+        function addSecours(quoi) {
+            dbSecours[quoi] = (dbSecours[quoi] || []).concat([quoi === 'enc' ? { n:'', f:'', t:'', p:'' } : { n:'', t:'' }]);
+            ecrireSecours();
+            renderSecours();
+        }
+        function setSecours(quoi, i, champ, val) {
+            if(!dbSecours[quoi] || !dbSecours[quoi][i]) return;
+            dbSecours[quoi][i][champ] = val;
+            ecrireSecours();
+        }
+        function delSecours(quoi, i) {
+            const l = dbSecours[quoi] || [];
+            const qui = (l[i] && (l[i].n || l[i].f)) || 'cette ligne';
+            if(!confirm('Supprimer ' + qui + ' du carnet de secours ?')) return;
+            dbSecours[quoi] = l.filter((x, k) => k !== i);
+            ecrireSecours();
+            renderSecours();
+        }
+        // Le squelette du classeur : les fonctions, sans les personnes.
+        function squeletteSecours() {
+            if((dbSecours.enc || []).length || (dbSecours.grp || []).length) {
+                if(!confirm('Le carnet contient déjà des lignes.\n\nAjouter les fonctions à la suite ?')) return;
+            }
+            dbSecours.enc = (dbSecours.enc || []).concat(SEC_FONCTIONS.map(f => ({ n:'', f:f, t:'', p:'' })));
+            ecrireSecours();
+            renderSecours();
+        }
+
+        let secRenduEnAttente = false;
+        function renderSecours() {
+            const c = document.getElementById('sec-list');
+            if(!c) return;
+            if(document.activeElement && c.contains(document.activeElement)) { secRenduEnAttente = true; return; }
+            secRenduEnAttente = false;
+
+            const lbl = document.getElementById('sec-equipe-lbl');
+            if(lbl) lbl.textContent = equipeActive;
+            const n = (dbSecours.enc || []).length + (dbSecours.grp || []).length;
+            document.getElementById('sec-count').textContent = n;
+
+            const enc = dbSecours.enc || [], grp = dbSecours.grp || [];
+            c.innerHTML = `
+            <datalist id="dl-sec-f">${SEC_FONCTIONS.map(f => `<option value="${esc(f)}"></option>`).join('')}</datalist>
+            <div class="op-carte">
+                <div class="op-hab-titre">Encadrement</div>
+                ${enc.length ? enc.map((o, i) => `<div class="sec-l">
+                    <input class="form-input" value="${esc(o.n)}" placeholder="Nom"
+                           onchange="setSecours('enc',${i},'n',this.value)">
+                    <input class="form-input" list="dl-sec-f" value="${esc(o.f)}" placeholder="Fonction"
+                           onchange="setSecours('enc',${i},'f',this.value)">
+                    <input class="form-input" value="${esc(o.t)}" placeholder="Téléphone"
+                           onchange="setSecours('enc',${i},'t',this.value)">
+                    <input class="form-input" value="${esc(o.p)}" placeholder="Portable"
+                           onchange="setSecours('enc',${i},'p',this.value)">
+                    <button class="pd-sup" onclick="delSecours('enc',${i})">&times;</button>
+                </div>`).join('') : '<div class="op-hab-vide">Aucun contact d\u2019encadrement enregistré</div>'}
+                <div class="pd-l">
+                    <button class="btn-pd" onclick="addSecours('enc')">+ Contact</button>
+                    <button class="btn-pd" onclick="squeletteSecours()">Ajouter les fonctions du classeur</button>
+                </div>
+
+                <div class="op-hab-titre">Groupements</div>
+                ${grp.length ? grp.map((o, i) => `<div class="sec-l sec-l2">
+                    <input class="form-input" value="${esc(o.n)}" placeholder="Groupement"
+                           onchange="setSecours('grp',${i},'n',this.value)">
+                    <input class="form-input" value="${esc(o.t)}" placeholder="Téléphone"
+                           onchange="setSecours('grp',${i},'t',this.value)">
+                    <button class="pd-sup" onclick="delSecours('grp',${i})">&times;</button>
+                </div>`).join('') : '<div class="op-hab-vide">Aucun groupement enregistré</div>'}
+                <button class="btn-pd" onclick="addSecours('grp')">+ Groupement</button>
+            </div>`;
+        }
+
         function renderOperateurs() {
             const c = document.getElementById('op-list');
             if(!c) return;
@@ -3033,13 +3159,16 @@
         // par un bouton, jamais impose.
         // opt : { etapes } ajoute un bouton de separation titree,
         //       { arret } nomme la colonne qui surligne la ligne en jaune.
+        // opt.defaut : les lignes que le tableau porte des sa premiere
+        // ouverture, comme le classeur qui arrive avec ses lignes tracees.
+        // opt.haut   : des lignes assez hautes pour etre ecrites a la main.
         function tableau(cle, colonnes, modele, modeleRempli, opt) {
             const o = opt || {};
-            const rows = lst(cle);
+            const rows = lst(cle, o.defaut);
             const lab = t => esc(String(t).replace(/<[^>]*>/g, ''));
             const nb = colonnes.length + 1;
             return `${colonnes.filter(c => c.o && !c.m).map(c => listeHtml(cle, c.k, c.o)).join('')}
-            <div class="pd-tab-enveloppe"><table class="pd-tab pd-cartes">
+            <div class="pd-tab-enveloppe"><table class="pd-tab pd-cartes${o.haut ? ' pd-tab-haut' : ''}">
                 <thead><tr>${colonnes.map(c => `<th${c.l ? ' style="width:' + c.l + '"' : ''}>${c.t}</th>`).join('')}<th style="width:34px"></th></tr></thead>
                 <tbody>${rows.length ? rows.map((r, i) => r.sect !== undefined ? `<tr class="pd-sect" data-cle="${cle}" data-i="${i}">
                     <td colspan="${nb - 1}" data-lab="Étape">${cl(cle, i, 'sect', "Titre de l'étape")}</td>
@@ -3056,6 +3185,11 @@
                 ${o.etapes ? `<button class="btn-pd" onclick="addL(&#39;${cle}&#39;, {sect:&#39;&#39;})">+ Étape</button>` : ''}
                 ${modeleRempli ? `<button class="btn-pd pre" onclick="preRemplir(&#39;${cle}&#39;, ${esc(JSON.stringify(modeleRempli))})">\u2728 Pré-remplir</button>` : ''}
             </div>`;
+        }
+
+        // n lignes vierges, pretes a etre ecrites a la main sur le chantier.
+        function vides(n, modele) {
+            return Array.from({ length: n }, () => Object.assign({}, modele));
         }
 
         // Insere le modele propose, sans ecraser une saisie en cours
@@ -3640,6 +3774,31 @@
         // =====================================================================
         // Description des pages
         // =====================================================================
+        // La fiche part du carnet de l'equipe. Sans carnet, elle garde le
+        // squelette du classeur : les fonctions a remplir a la main.
+        function carnetEnc() {
+            if((dbSecours.enc || []).length)
+                return dbSecours.enc.map(o => ({ n:o.n||'', f:o.f||'', t:o.t||'', p:o.p||'' }));
+            return SEC_FONCTIONS.map(f => ({ f: f }));
+        }
+        function carnetGrp() {
+            if((dbSecours.grp || []).length)
+                return dbSecours.grp.map(o => ({ n:o.n||'', t:o.t||'' }));
+            return [];
+        }
+        function reprendreCarnet() {
+            if(!(dbSecours.enc || []).length && !(dbSecours.grp || []).length) {
+                alert("Aucun carnet de secours n'est enregistré pour " + equipeActive + ".\n\n"
+                    + "Renseignez-le dans Options, il servira ensuite à toutes les fiches.");
+                return;
+            }
+            if(!confirm('Remplacer l\u2019encadrement et les groupements de cette fiche\n'
+                      + 'par le carnet de ' + equipeActive + ' ?')) return;
+            delete prepa.l['se-enc'];
+            delete prepa.l['se-grp'];
+            renderPrepa();
+        }
+
         // Les onze familles d'outillage du classeur, dans son ordre.
         const OUTILLAGE = [
                 ['1 — Tension', ['Perche VAT', 'Perche de mise à la terre', 'Mise à la terre', 'Terre shunt', 'Terre à rouleau', 'MALT LEC verte']],
@@ -3840,15 +3999,16 @@
             ${sous('Encadrement')}
             ${tableau('se-enc', [{k:'n', t:'Nom', l:'26%'}, {k:'f', t:'Fonction'},
                                  {k:'t', t:'Téléphone', l:'150px', c:true}, {k:'p', t:'Portable', l:'140px', c:true}],
-                      {n:'', f:'', t:'', p:''},
-                      [{f:'Cadre astreinte'}, {f:'Directeur'}, {f:'Directeur adjoint'},
-                       {f:'Responsable EEL'}, {f:'Adjoint responsable EEL'},
-                       {f:'Coordonnateur technique'}, {f:'Coordonnateur environnement'}])}
+                      {n:'', f:'', t:'', p:''}, null, {defaut: carnetEnc()})}
 
             ${sous('Groupements')}
             ${tableau('se-grp', [{k:'n', t:'Groupement'}, {k:'t', t:'Téléphone', l:'180px'}],
-                      {n:'', t:''},
-                      [{n:'Casseaux'}, {n:'Boriette'}, {n:'Rueyres'}, {n:'Breuil'}, {n:'Bourbonnais'}])}
+                      {n:'', t:''}, null, {defaut: carnetGrp()})}
+            <div class="pd-l">
+                <button class="btn-pd" onclick="reprendreCarnet()">\u21bb Reprendre le carnet de l\u2019équipe</button>
+                <span class="pd-aide">Remplace l\u2019encadrement et les groupements de cette fiche par ceux
+                    enregistrés pour ${esc(equipeActive)} dans les options.</span>
+            </div>
 
             ${sous('Localisation du chantier')}
             ${grille('pd-g2', champ('Ouvrage', auto(c.ligne)) + champ('Code liaison', auto(codeLiaison())))}
@@ -4027,9 +4187,10 @@
             ${grille('pd-g2', champ('Ouvrage', auto(c.ligne)) + champ('Code liaison', auto(codeLiaison())))}
             ${sous('Gestion des MALT / CC')}
             ${tableau('mc-l', [{k:'p', t:'N° pylône', l:'120px'}, {k:'s', t:'Section MALT / CC', l:'150px', o:'maltSect'}, {k:'sol', t:'Solution', m:true, o:'maltSol'}],
-                      {p:'', s:'', sol:''})}
+                      {p:'', s:'', sol:''}, null, {defaut: vides(11, {p:'', s:'', sol:''})})}
             ${sous('Gestion des aléas ' + exig('Exigences 13 et 16'))}
-            ${tableau('mc-al', [{k:'n', t:'N°', l:'54px'}, {k:'an', t:'Analyse', m:true}, {k:'ac', t:'Action', m:true}], {n:'', an:'', ac:''})}`;
+            ${tableau('mc-al', [{k:'n', t:'N°', l:'54px'}, {k:'an', t:'Analyse', m:true}, {k:'ac', t:'Action', m:true}],
+                      {n:'', an:'', ac:''}, null, {haut: true, defaut: vides(4, {n:'', an:'', ac:''})})}`;
         }},
 
         { id:'pave', titre:'Pavé 17 et 18', defaut:true, images:true, corps: () => `
