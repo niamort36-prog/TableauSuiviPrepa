@@ -541,6 +541,22 @@
            empeche les marges des enfants de s'echapper, sans quoi la
            hauteur mesuree est inferieure a la hauteur reelle. */
         .pd-fit { transform-origin: top left; display: flow-root; }
+        /* Une feuille decoupee par nos soins : elle porte ses marges, son
+           folio, et rien ne la coupe en deux. */
+        .pd-feuille-doc { display: none; }
+        .pd-feuille-fit { transform-origin: top left; display: flow-root; }
+        .pd-folio { display: none; }
+        body.prepa-impression #pd-pages .pd-feuille-doc {
+            display: block; position: relative; box-sizing: border-box;
+            width: 210mm; height: 297mm; overflow: hidden;
+            padding: 12mm 12mm 12mm 20mm; background: #fff; }
+        body.prepa-impression #pd-pages .pd-folio {
+            display: block; position: absolute; right: 12mm; bottom: 6mm;
+            font-size: .72rem; font-weight: 700; color: #64748b; }
+        /* Une page decoupee n'a plus de marges propres : chacune de ses
+           feuilles porte les siennes. Idem pour le saut de page. */
+        body.prepa-impression #pd-pages .pd-page.pd-decoupe { padding: 0; }
+        body.prepa-impression #pd-pages .pd-page { position: relative; }
         .pd-page.pd-fixe { overflow: hidden; }
         /* A la mesure comme a l'impression, la page porte ses marges */
         body.prepa-impression #pd-pages .pd-page { box-sizing: border-box;
@@ -970,6 +986,12 @@
                ce qui remet aussi un peu d'air en haut de la feuille. */
             .pd-tab thead { display: table-header-group; }
             .pd-page:last-child { page-break-after: auto; break-after: auto; }
+            /* Chaque feuille decoupee est une page, et une seule */
+            .pd-feuille-doc { page-break-after: always; break-after: page;
+                              page-break-inside: avoid; break-inside: avoid; }
+            .pd-page:last-child .pd-feuille-doc:last-child {
+                page-break-after: auto; break-after: auto; }
+            .pd-page.pd-decoupe { padding: 0; page-break-after: auto; break-after: auto; }
             .pd-in, .pd-zone { border: 1px solid #94a3b8; background: #fff; }
 
             /* Une planche ne doit pas etre coupee en deux feuilles */
@@ -4901,116 +4923,222 @@
         // petit qui se lise encore au pied d'un pylone, par mauvais temps.
         const ECHELLE_MINI = 0.70;
 
+        // Hauteur utile d'une feuille. Quelques pixels de garde : une mesure
+        // au pixel pres finit toujours par deborder d'une ligne.
+        const FEUILLE_H = A4_UTILE_H - 8;
+
+        // Une page de planches ne se reduit pas beaucoup : les schemas
+        // doivent rester lisibles, quitte a prendre une feuille de plus.
+        function echelleMini(sec) {
+            return (sec.classList.contains('pd-page-images')
+                 || sec.id === 'pdp-nip' || sec.id === 'pdp-unifilaire') ? 0.85 : ECHELLE_MINI;
+        }
+
+        // --- Les morceaux indivisibles d'un bloc -----------------------------
+        // Un tableau se coupe entre ses lignes, une grille entre ses rangees ;
+        // tout le reste part d'un seul tenant.
+        function atomesDe(bloc) {
+            const h = e => e.getBoundingClientRect().height;
+            if(bloc.classList && bloc.classList.contains('pd-saut')) return [{ h: 0, saut: true }];
+            const tab = bloc.tagName === 'TABLE' ? bloc : bloc.querySelector('table');
+            if(tab && tab.tBodies.length && tab.tBodies[0].rows.length > 2) {
+                const tete = tab.tHead ? h(tab.tHead) : 0;
+                const hors = Math.max(0, h(bloc) - h(tab));   // enveloppe, titre, marges
+                return [...tab.tBodies[0].rows].map((tr, i) => ({
+                    h: h(tr) + (i === 0 ? tete + hors : 0), tete: tete + hors, tab: bloc, tr: tr }));
+            }
+            if(bloc.classList && bloc.classList.contains('pd-img-grille')) {
+                const cols = Math.max(1, (getComputedStyle(bloc).gridTemplateColumns || '')
+                                          .split(/\s+/).filter(Boolean).length);
+                const cases = [...bloc.children], out = [];
+                for(let i = 0; i < cases.length; i += cols) {
+                    const r = cases.slice(i, i + cols);
+                    out.push({ h: Math.max(...r.map(h)), grille: bloc, cases: r });
+                }
+                return out;
+            }
+            return [{ h: h(bloc), bloc: bloc }];
+        }
+
+        // --- Repartition en feuilles -----------------------------------------
+        // Rend un tableau de feuilles, chacune une liste d'atomes. La tete
+        // d'un tableau repart sur la feuille suivante : on la recompte.
+        function repartir(atomes, lim) {
+            const feuilles = [[]];
+            let haut = 0;
+            atomes.forEach(a => {
+                if(a.saut) { if(feuilles[feuilles.length - 1].length) { feuilles.push([]); haut = 0; } return; }
+                const courante = feuilles[feuilles.length - 1];
+                // Premiere ligne d'un tableau sur une nouvelle feuille :
+                // elle emporte l'en-tete avec elle.
+                const dejaLa = a.tab && courante.some(x => x.tab === a.tab);
+                const hb = a.tr && !dejaLa && a.tete !== undefined ? a.h + (courante.length ? a.tete : 0) : a.h;
+                if(haut > 0 && haut + hb > lim) { feuilles.push([]); haut = 0; }
+                feuilles[feuilles.length - 1].push(a);
+                haut += hb;
+            });
+            return feuilles.filter(x => x.length);
+        }
+
+        // --- Fabrication des feuilles ----------------------------------------
+        function batirFeuilles(sec, feuilles, W, k) {
+            const fit = sec.querySelector('.pd-fit');
+            sec.querySelectorAll(':scope > .pd-feuille-doc').forEach(e => e.remove());
+            fit.style.display = 'none';
+            sec.classList.add('pd-decoupe');
+            feuilles.forEach(atomes => {
+                const f = document.createElement('div');
+                f.className = 'pd-feuille-doc';
+                const dedans = document.createElement('div');
+                dedans.className = 'pd-feuille-fit';
+                dedans.style.width = W + 'px';
+                dedans.style.transform = 'scale(' + k + ')';
+                let i = 0;
+                while(i < atomes.length) {
+                    const a = atomes[i];
+                    if(a.bloc) { dedans.appendChild(a.bloc.cloneNode(true)); i++; continue; }
+                    if(a.tab) {
+                        const copie = a.tab.cloneNode(true);
+                        const corps = copie.querySelector('tbody');
+                        corps.innerHTML = '';
+                        while(i < atomes.length && atomes[i].tab === a.tab) {
+                            corps.appendChild(atomes[i].tr.cloneNode(true)); i++;
+                        }
+                        dedans.appendChild(copie);
+                        continue;
+                    }
+                    if(a.grille) {
+                        const copie = a.grille.cloneNode(false);
+                        while(i < atomes.length && atomes[i].grille === a.grille) {
+                            atomes[i].cases.forEach(c => copie.appendChild(c.cloneNode(true))); i++;
+                        }
+                        dedans.appendChild(copie);
+                        continue;
+                    }
+                    i++;
+                }
+                dedans.querySelectorAll('[id]').forEach(e => e.removeAttribute('id'));
+                f.appendChild(dedans);
+                const folio = document.createElement('span');
+                folio.className = 'pd-folio';
+                f.appendChild(folio);
+                sec.appendChild(f);
+            });
+        }
+
+        function folioNeuf() {
+            const e = document.createElement('span');
+            e.className = 'pd-folio';
+            return e;
+        }
+
+        // --- Mise en feuilles de toutes les pages ----------------------------
         function ajusterFeuilles() {
             document.querySelectorAll('#pd-pages .pd-page').forEach(sec => {
                 const fit = sec.querySelector('.pd-fit');
                 if(!fit) return;
-                // Une page de planches ne se reduit pas : les schemas doivent
-                // rester lisibles, quitte a occuper plusieurs feuilles.
-                if(sec.id === 'pdp-nip' || sec.id === 'pdp-unifilaire'
-                   || sec.classList.contains('pd-page-images')) {
-                    fit.style.transform = 'none';
-                    fit.style.width = A4_UTILE_L + 'px';
-                    sec.style.width = A4_L + 'px';
-                    sec.style.height = '';
-                    return;
-                }
-                // La couverture occupe sa feuille entiere, sans marge ni reduction
+                sec.querySelectorAll(':scope > .pd-feuille-doc').forEach(e => e.remove());
+                sec.querySelectorAll('.pd-folio').forEach(e => e.remove());
+                fit.style.display = '';
+                sec.classList.remove('pd-fixe', 'pd-decoupe');
+                fit.style.transform = 'none';
+
+                // La couverture occupe sa feuille entiere, sans marge ni folio
                 if(sec.id === 'pdp-couverture') {
                     sec.style.width = A4_L + 'px';
                     sec.style.height = (A4_H - 2) + 'px';
                     fit.style.width = '100%';
                     return;
                 }
-                sec.classList.remove('pd-fixe');
-                fit.style.transform = 'none';
-                // Quelques pixels de garde : une mesure au pixel pres finit
-                // toujours par deborder d'une ligne sur la feuille suivante.
-                const cibleH = A4_UTILE_H - 8;
-                const haut_ = () => fit.getBoundingClientRect().height;
-                let W = A4_UTILE_L;
-                fit.style.width = W + 'px';
-                if(haut_() > cibleH) {
-                    const cible = A4_UTILE_L / cibleH;
-                    let bas = A4_UTILE_L, sup = A4_UTILE_L * 3;
-                    for(let i = 0; i < 16; i++) {
-                        W = (bas + sup) / 2;
-                        fit.style.width = W + 'px';
-                        if(W / haut_() < cible) bas = W; else sup = W;
-                    }
-                    W = sup;
-                    fit.style.width = W + 'px';
-                }
-                const k = Math.min(1, cibleH / haut_(), A4_UTILE_L / W);
-                if(k < ECHELLE_MINI) {
-                    // Trop de contenu pour une feuille : on rend la page a sa
-                    // taille normale et on la laisse se couper proprement.
-                    fit.style.transform = 'none';
+                // Les planches d'une piece jointe portent deja leur feuille
+                if(sec.id === 'pdp-nip' || sec.id === 'pdp-unifilaire') {
                     fit.style.width = A4_UTILE_L + 'px';
                     sec.style.width = A4_L + 'px';
                     sec.style.height = '';
+                    sec.querySelectorAll('.pd-nip-feuille').forEach(p => p.appendChild(folioNeuf()));
                     return;
                 }
-                fit.style.transform = 'scale(' + k + ')';
+
+                const mini = echelleMini(sec);
+                // La reduction change le corps du texte : la classe doit etre
+                // posee avant de mesurer, sinon on mesure autre chose.
                 sec.classList.add('pd-fixe');
-                sec.style.width = A4_L + 'px';
-                // Deux pixels de moins : une hauteur pile egale a la surface
-                // utile fait basculer le navigateur sur une feuille vide.
-                sec.style.height = (A4_H - 2) + 'px';
-            });
-        }
+                const haut_ = () => fit.getBoundingClientRect().height;
 
-        // Nombre de feuilles qu'occupera une page. Les pages reduites en
-        // occupent une par construction ; les autres se remplissent bloc par
-        // bloc, comme le fera le navigateur, aucun bloc n'etant coupe.
-        function compterFeuilles(sec) {
-            if(sec.id === 'pdp-couverture' || sec.classList.contains('pd-fixe')) return 1;
-            const fit = sec.querySelector('.pd-fit');
-            if(!fit) return 1;
-            // Une grille se lit par rangees : empiler ses cases en colonne
-            // doublerait la hauteur annoncee, donc le nombre de feuilles.
-            const blocs = [];
-            [...fit.children].forEach(b => {
-                if(!b.classList.contains('pd-img-grille')) { blocs.push(b); return; }
-                const cols = Math.max(1, (getComputedStyle(b).gridTemplateColumns || '').split(/\s+/)
-                                           .filter(Boolean).length);
-                const cases = [...b.children];
-                for(let i = 0; i < cases.length; i += cols) {
-                    const rangee = cases.slice(i, i + cols);
-                    blocs.push({
-                        tagName: 'RANGEE',
-                        querySelector: () => null,
-                        getBoundingClientRect: () => ({
-                            height: Math.max(...rangee.map(x => x.getBoundingClientRect().height)) })
-                    });
+                // Tient-elle en N feuilles, et a quelle reduction ?
+                // Reduire retrecit aussi la largeur : on compose donc a
+                // A4_UTILE_L / k, de sorte qu'apres reduction la page occupe
+                // exactement la largeur utile. On part de la reduction qu'il
+                // faudrait au mieux, puis on descend tant que la decoupe
+                // demande une feuille de trop.
+                const essayer = N => {
+                    fit.style.width = A4_UTILE_L + 'px';
+                    let k = Math.min(1, (N * FEUILLE_H) / Math.max(1, haut_()));
+                    for(let essai = 0; essai < 16 && k >= mini - 1e-6; essai++) {
+                        const W = A4_UTILE_L / k;
+                        fit.style.width = W + 'px';
+                        const atomes = [];
+                        [...fit.children].forEach(b => atomes.push(...atomesDe(b)));
+                        const feuilles = repartir(atomes, FEUILLE_H / k);
+                        if(feuilles.length <= N) return { k: k, W: W, feuilles: feuilles };
+                        k -= 0.025;
+                    }
+                    return null;
+                };
+
+                // Le moins de feuilles possible, et sur ce nombre la plus
+                // grande taille possible. Une page remplit ainsi ses feuilles
+                // au lieu d'en laisser une derniere presque vide.
+                let e = null;
+                for(let N = 1; N <= 14 && !e; N++) e = essayer(N);
+                if(!e) {              // garde-fou : on rend la page telle quelle
+                    fit.style.width = A4_UTILE_L + 'px';
+                    fit.style.transform = 'none';
+                    sec.classList.remove('pd-fixe');
+                    sec.style.width = A4_L + 'px';
+                    sec.style.height = '';
+                    sec.appendChild(folioNeuf());
+                    return;
                 }
+
+                // On decoupe soi-meme : le navigateur couperait ou il veut,
+                // et priverait les feuilles suivantes de leurs marges.
+                fit.style.transform = 'none';
+                sec.style.width = A4_L + 'px';
+                sec.style.height = '';
+                batirFeuilles(sec, e.feuilles, e.W, e.k);
             });
-            let n = 1, h = 0;
-            blocs.forEach(b => {
-                const hb = b.getBoundingClientRect().height;
-                // Un tableau se coupe entre ses lignes : il remplit donc la
-                // feuille en cours puis deborde sur les suivantes. Une image
-                // ou un bloc de champs, lui, part en entier a la feuille
-                // suivante s'il n'y tient plus.
-                const secable = b.tagName === 'TABLE' || !!b.querySelector('table');
-                if(secable) {
-                    h += hb;
-                    while(h > A4_UTILE_H) { n++; h -= A4_UTILE_H; }
-                } else if(h > 0 && h + hb > A4_UTILE_H) { n++; h = hb; }
-                else { h += hb; }
-            });
-            return n;
         }
 
-        // Numero de la feuille ou commence chaque page. A appeler une fois la
-        // mise a l'echelle faite : c'est elle qui fixe la pagination.
+        // Nombre de feuilles qu'occupe une page, une fois la mise en feuilles
+        // faite : il n'y a plus a le deviner, elles sont la.
+        function compterFeuilles(sec) {
+            const n = sec.querySelectorAll(':scope > .pd-feuille-doc').length;
+            if(n) return n;
+            if(sec.id === 'pdp-nip' || sec.id === 'pdp-unifilaire') {
+                return Math.max(1, sec.querySelectorAll('.pd-nip-feuille').length);
+            }
+            return 1;
+        }
+
+        // Numero de la feuille ou commence chaque page, et folio de chacune.
+        // A appeler une fois la mise en feuilles faite : c'est elle qui fixe
+        // la pagination.
         let numerosFeuilles = {};
         function numeroterFeuilles() {
             let n = 1;
             numerosFeuilles = {};
             document.querySelectorAll('#pd-pages .pd-page').forEach(sec => {
                 numerosFeuilles[sec.id.replace('pdp-', '')] = n;
-                n += compterFeuilles(sec);
+                const folios = sec.querySelectorAll('.pd-folio');
+                const nb = compterFeuilles(sec);
+                // La couverture ne porte pas de folio : elle est la feuille 1.
+                folios.forEach((e, i) => { e.textContent = (n + i) + ' / @'; });
+                n += nb;
+            });
+            const total = n - 1;
+            document.querySelectorAll('#pd-pages .pd-folio').forEach(e => {
+                e.textContent = e.textContent.replace('@', total);
             });
             document.querySelectorAll('#pd-pages .som-num[data-page]').forEach(e => {
                 e.textContent = numerosFeuilles[e.dataset.page] || '';
@@ -5031,12 +5159,14 @@
         }
 
         function libererFeuilles() {
+            document.querySelectorAll('#pd-pages .pd-feuille-doc').forEach(e => e.remove());
+            document.querySelectorAll('#pd-pages .pd-folio').forEach(e => e.remove());
             document.querySelectorAll('#pd-pages .pd-fit').forEach(f => {
-                f.style.transform = ''; f.style.width = '';
+                f.style.transform = ''; f.style.width = ''; f.style.display = '';
             });
             document.querySelectorAll('#pd-pages .pd-page').forEach(sec => {
                 sec.style.width = ''; sec.style.height = '';
-                sec.classList.remove('pd-fixe');
+                sec.classList.remove('pd-fixe', 'pd-decoupe');
             });
         }
 
