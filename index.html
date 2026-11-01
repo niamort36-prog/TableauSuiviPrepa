@@ -483,7 +483,7 @@
         /* La marge de page ne se reporte pas sur les feuilles de suite :
            chaque planche porte donc la sienne, sans quoi la deuxieme image
            commencerait au ras du papier. */
-        body.prepa-impression #pd-pages .pd-page-images .pd-img { max-height: 245mm;
+        body.prepa-impression #pd-pages .pd-page-images .pd-img { max-height: 239mm;
                        padding: 10mm 0; box-sizing: border-box; }
         /* Meme raison pour les tableaux d'une page qui court sur plusieurs
            feuilles : la suivante commencerait sinon au ras du papier. */
@@ -493,7 +493,7 @@
         body.prepa-impression #pd-pages .pd-sch-outils,
         body.prepa-impression #pd-pages .pd-sch-reglage,
         body.prepa-impression #pd-pages .pd-sch-liens { display: none !important; }
-        body.prepa-impression #pd-pages .pd-sch-svg { max-height: 232mm; }
+        body.prepa-impression #pd-pages .pd-sch-svg { max-height: 226mm; }
         /* Le halo ne marque qu'une selection a l'ecran */
         body.prepa-impression #pd-pages .sch-sel { display: none; }
         /* La NIP porte deja son propre titre : le bandeau de page ferait
@@ -502,9 +502,9 @@
         body.prepa-impression #pdp-unifilaire .pd-page-tete,
         body.prepa-impression #pdp-sommaire .pd-page-tete { display: none; }
         /* Une page de NIP occupe une feuille entiere, des la mesure */
-        body.prepa-impression #pd-pages .pd-nip-feuille { height: 296mm; margin: 0; align-items: center;
+        body.prepa-impression #pd-pages .pd-nip-feuille { height: 290mm; margin: 0; align-items: center;
                        box-sizing: border-box; padding: 12mm 11mm 11mm 20mm; position: relative; }
-        body.prepa-impression #pd-pages .pd-nip-img { max-height: 273mm; max-width: 100%;
+        body.prepa-impression #pd-pages .pd-nip-img { max-height: 267mm; max-width: 100%;
                        width: auto; border: none; }
         body.prepa-impression #pd-pages .pd-nip-img.paysage { transform: rotate(90deg);
                        max-height: 178mm; max-width: 273mm; }
@@ -560,7 +560,7 @@
                feuille depasse la page et le navigateur en ajoute une, vide.
                Les folios ne tombent alors plus en face des feuilles. Un
                millimetre de jeu l'evite, et l'oeil ne le voit pas. */
-            width: 209mm; height: 296mm; overflow: hidden;
+            width: 209mm; height: 290mm; overflow: hidden;
             padding: 12mm 11mm 11mm 20mm; background: #fff; }
         body.prepa-impression #pd-pages .pd-folio {
             display: block; position: absolute; right: 12mm; bottom: 6mm;
@@ -4967,7 +4967,12 @@
 
         // Surface utile d'un A4 portrait a 12 mm de marge, reliure deduite.
         const A4_UTILE_L = (186 - RELIURE) * 96 / 25.4;
-        const A4_UTILE_H = 273 * 96 / 25.4;
+        // Hauteur utile d'une feuille. 267 et non 273 : une feuille aussi
+        // haute que la page se fragmente des que la zone imprimable est un
+        // peu plus petite que prevu — arrondi au pixel, marge du pilote — et
+        // sa fin part sur la page suivante avec le folio. Sept millimetres de
+        // jeu valent mieux qu'un document decale.
+        const A4_UTILE_H = 267 * 96 / 25.4;
         const A4_L = 210 * 96 / 25.4;
         const A4_H = 297 * 96 / 25.4;
 
@@ -5103,7 +5108,7 @@
                 // La couverture occupe sa feuille entiere, sans marge ni folio
                 if(sec.id === 'pdp-couverture') {
                     sec.style.width = (A4_L - 4) + 'px';
-                    sec.style.height = (A4_H - 4) + 'px';
+                    sec.style.height = (290 * 96 / 25.4) + 'px';
                     fit.style.width = '100%';
                     return;
                 }
