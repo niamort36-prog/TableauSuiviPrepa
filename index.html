@@ -402,6 +402,13 @@
         .pd-tab-enveloppe { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
         .pd-aide { font-size: .72rem; color: #64748b; }
         .pd-unite { font-size: .76rem; color: #64748b; white-space: nowrap; flex: 0 0 auto; }
+        /* La ligne d'adequation : c'est elle qu'on coche une fois d'accord. */
+        .pd-adeq { margin: 8px 0; padding: 7px 10px; border: 1px solid var(--rte-marine);
+                   border-radius: 6px; background: #f1f6fd; }
+        .pd-adeq .pd-coche { font-weight: 700; }
+        /* Place pour signer a la main, de part et d'autre. */
+        .pd-tab-sig .pd-sig-main td { height: 22mm; vertical-align: top; }
+        .pd-tab-sig .pd-sig-main .pd-zone { min-height: 19mm; resize: vertical; }
         .pd-tab td .pd-l { margin-bottom: 0; gap: 6px; flex-wrap: nowrap; }
 
         /* ------------------------------------------------------------------
@@ -2783,10 +2790,10 @@
                               onchange="setPV('${c}', this.value)">${esc(saisi || source || '')}</textarea>`;
         }
 
-        function chpLie(c, source, ph) {
+        function chpLie(c, source, ph, type) {
             const saisi = String(pv(c)).trim();
-            return `<input class="pd-in" value="${esc(saisi || source || '')}" placeholder="${esc(ph || '')}"
-                           onchange="setPV('${c}', this.value)">`;
+            return `<input class="pd-in" type="${type || 'text'}" value="${esc(saisi || source || '')}"
+                           placeholder="${esc(ph || '')}" onchange="setPV('${c}', this.value)">`;
         }
 
         // Zone reprise de la fiche : on y retrouve ce qui a deja ete saisi
@@ -3904,51 +3911,69 @@
         }},
 
         { id:'adequation', titre:"Constat d'adéquation et de conservation", rang:2, defaut:false, corps: () => {
-            // Le classeur distingue ce a quoi le loueur s'engage et ce qu'il
-            // faut verifier une fois sur place : les deux listes restent separees.
-            const convient = ["Avoir le rapport de contrôle réglementaire à jour",
-                "Avoir le certificat de conformité et la notice d'utilisation constructeur",
-                "S'assurer visuellement que l'engin est dans un bon état de conservation"];
-            const surPlace = ["L'engin va reposer sur un sol stable et de résistance suffisante",
-                "Aucun élément mobile ne peut venir le heurter",
-                "Aucun obstacle ne pourra gêner ses mouvements",
-                "Prendre en compte l'environnement électrique pour son positionnement"];
+            // Feuille du classeur : on l'imprime, on la remplit sur place avec
+            // l'entreprise de location, et les deux parties la signent. L'ordre
+            // des rubriques et les cases a cocher sont ceux du classeur.
+            const c = pdChantier();
+            const loc = lst('mh-loc')[0] || {};
+            const iso = id => { const e = document.getElementById(id); return e ? e.value : ''; };
+
+            // Le loueur s'engage sur les trois premiers points ; les quatre
+            // suivants se verifient une fois l'engin arrive sur le chantier.
+            const convient = ["Avoir le rapport de contr\u00f4le r\u00e9glementaire \u00e0 jour",
+                "Avoir le certificat de conformit\u00e9 et la notice d'utilisation constructeur",
+                "S'assurer visuellement que l'engin est dans un bon \u00e9tat de conservation"];
+            const surPlace = ["L'engin va reposer sur un sol stable et de r\u00e9sistance suffisante",
+                "Aucun \u00e9l\u00e9ment mobile ne peut venir le heurter",
+                "Aucun obstacle ne pourra g\u00eaner ses mouvements",
+                "Prendre en compte l'environnement \u00e9lectrique pour son positionnement"];
             return `
-            ${grille('pd-g2', champ("Date d'utilisation prévue", chp('ad-date', '', 'date')) + champ('Adresse du chantier', chp('ad-adresse')))}
-            ${champ('Nature des travaux', zone('ad-nature', 2))}
-            ${grille('pd-g2', champ('Élévateur de personnel', chp('ad-elev'))
-                            + champ('Grue', chp('ad-grue')))}
-            ${grille('pd-g2', champ("Type d'engin", chp('ad-type')) + champ('Immatriculation', chp('ad-immat')))}
+            ${champ("Date d'utilisation pr\u00e9vue", chpLie('ad-date', iso('inp-start'), '', 'date'))}
+            ${champ('Adresse du chantier', zone('ad-adresse', 2))}
+            ${champ('Nature des travaux', chpLieZone('ad-nature', c.desc))}
+            ${grille('pd-g2', champ('\u00c9l\u00e9vateur de personnel', coche('ad-elev', 'Concern\u00e9'))
+                            + champ('Grue', coche('ad-grue', 'Concern\u00e9e')))}
+            ${champ("Type d'engin", chpLie('ad-type', loc.engin || ''))}
+            ${champ('Immatriculation', chpLie('ad-immat', loc.ref || ''))}
             ${champ('Liste des accessoires', zone('ad-acc', 2))}
             <table class="pd-tab">
-                <thead><tr><th style="width:30%">Charge à lever</th><th>Grue</th><th>Nacelle</th></tr></thead>
+                <thead><tr><th style="width:30%">Charge \u00e0 lever</th><th>GRUE</th><th>NACELLE</th></tr></thead>
                 <tbody>
                     <tr><td>Poids</td>
                         <td><div class="pd-l">${chp('ad-pg')}<span class="pd-unite">tonnes</span></div></td>
                         <td><div class="pd-l">${chp('ad-pn')}<span class="pd-unite">daN</span></div></td></tr>
                     <tr><td>Hauteur</td>
-                        <td><div class="pd-l">${chp('ad-hg')}<span class="pd-unite">mètres</span></div></td>
-                        <td><div class="pd-l">${chp('ad-hn')}<span class="pd-unite">mètres</span></div></td></tr>
-                    <tr><td>Portée</td>
-                        <td><div class="pd-l">${chp('ad-og')}<span class="pd-unite">mètres</span></div></td>
-                        <td><div class="pd-l">${chp('ad-on')}<span class="pd-unite">mètres</span></div></td></tr>
+                        <td><div class="pd-l">${chp('ad-hg')}<span class="pd-unite">m\u00e8tres</span></div></td>
+                        <td><div class="pd-l">${chp('ad-hn')}<span class="pd-unite">m\u00e8tres</span></div></td></tr>
+                    <tr><td>Port\u00e9e</td>
+                        <td><div class="pd-l">${chp('ad-og')}<span class="pd-unite">m\u00e8tres</span></div></td>
+                        <td><div class="pd-l">${chp('ad-on')}<span class="pd-unite">m\u00e8tres</span></div></td></tr>
                 </tbody>
             </table>
             ${champ('Autres (terrain, encombrement)', zone('ad-autres', 2))}
-            <div class="pd-note">Au regard des travaux à réaliser et des risques encourus énoncés
-                par le chargé de travaux, <b>le loueur convient</b> :</div>
+            <div class="pd-note">Au regard des travaux \u00e0 r\u00e9aliser et des risques encourus \u00e9nonc\u00e9s
+                par le charg\u00e9 de travaux, <b>le loueur convient</b> :</div>
             ${convient.map((t, i) => coche('ad-c' + i, t)).join('')}
             ${sous("Sur le chantier s'assurer que")}
             ${surPlace.map((t, i) => coche('ad-c' + (i + 3), t)).join('')}
-            <div class="pd-note">Si les conditions ci-dessus sont vérifiées, <b>il y a adéquation</b>.</div>
-            ${grille('pd-g2', champ('Fait à', chp('ad-lieu')) + champ('Le', chp('ad-le', '', 'date')))}
-            <table class="pd-tab">
-                <thead><tr><th></th><th>Pour le chargé de travaux</th><th>Pour le loueur</th></tr></thead>
+            <div class="pd-adeq">${coche('ad-ok',
+                'Si les conditions ci-dessus sont v\u00e9rifi\u00e9es, <b>il y a ad\u00e9quation</b>')}</div>
+            ${grille('pd-g2', champ('Fait \u00e0', chp('ad-lieu')) + champ('Le', chp('ad-le', '', 'date')))}
+            <table class="pd-tab pd-tab-sig">
+                <thead><tr><th style="width:26%"></th><th>Pour le charg\u00e9 de travaux</th><th>Pour le loueur</th></tr></thead>
                 <tbody>
-                    <tr><td>Nom de l'entreprise</td><td>${chp('ad-ent-cdt')}</td><td>${chp('ad-ent-lou')}</td></tr>
-                    <tr><td>Nom du signataire</td><td>${chp('ad-sig-cdt')}</td><td>${chp('ad-sig-lou')}</td></tr>
-                    <tr><td>Habilitation</td><td>${chp('ad-hab-cdt')}</td><td>${chp('ad-hab-lou')}</td></tr>
-                    <tr><td>Signature</td><td>${chp('ad-visa-cdt')}</td><td>${chp('ad-visa-lou')}</td></tr>
+                    <tr><td>Nom de l'entreprise</td>
+                        <td>${chpLie('ad-ent-cdt', 'RTE')}</td>
+                        <td>${chpLie('ad-ent-lou', loc.loueur || '')}</td></tr>
+                    <tr><td>Nom du signataire</td>
+                        <td>${chpLie('ad-sig-cdt', c.cdt || '')}</td>
+                        <td>${chp('ad-sig-lou')}</td></tr>
+                    <tr><td>Habilitation</td>
+                        <td>${chp('ad-hab-cdt')}</td>
+                        <td>${chp('ad-hab-lou')}</td></tr>
+                    <tr class="pd-sig-main"><td>Signature</td>
+                        <td>${zone('ad-visa-cdt', 2)}</td>
+                        <td>${zone('ad-visa-lou', 2)}</td></tr>
                 </tbody>
             </table>`;
         }},
