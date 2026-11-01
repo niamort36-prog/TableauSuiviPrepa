@@ -420,6 +420,12 @@
         .pd-sch-svg .sch-o { cursor: grab; }
         .pd-sch-liens { margin-top: 8px; }
         .pd-sch-lien { gap: 10px; margin-bottom: 4px; }
+        .pd-sch-pal { display: inline-flex; align-items: center; gap: 3px; }
+        .pd-sch-teinte { width: 17px; height: 17px; border-radius: 4px; cursor: pointer;
+                         border: 1px solid rgba(0,0,0,.25); padding: 0; }
+        .pd-sch-teinte.choisie { outline: 2px solid var(--rte-noir); outline-offset: 1px; }
+        .pd-sch-pal input[type=color] { width: 26px; height: 20px; padding: 0; border: 1px solid var(--border);
+                                        border-radius: 4px; background: none; cursor: pointer; }
         .pd-saut { height: 0; }
 
         /* --- Pave 18 : la gestion des mises a la terre --- */
@@ -4517,6 +4523,13 @@
         // ==================================================================
         const SCH_L = 1000, SCH_H = 1080;      // repere du dessin
         const SCH_TYPES = { pyl: 'Pylône', poste: 'Poste', terre: 'Mise à la terre' };
+        const SCH_BLEU  = '#054191';           // le bleu RTE, par defaut
+        const SCH_ARC   = 0.14;                // la fleche de la portee, fixe
+        const SCH_TRAIT = 9;                   // epaisseur de la ligne
+        // Teintes proposees : les couleurs de la charte, plus le noir.
+        const SCH_COULEURS = ['#054191', '#00a6d9', '#4bb9aa', '#fab928',
+                              '#d77864', '#aa96c3', '#191919'];
+        const schCoul = o => (o && o.col) || SCH_BLEU;
 
         function schLire() {
             try {
@@ -4562,7 +4575,11 @@
             });
         }
         function schDelier(i) { schMaj(d => { d.l.splice(i, 1); }); }
-        function schArc(i, v) { schMaj(d => { if(d.l[i]) d.l[i].c = +v; }); }
+        // La courbure reste celle d'origine : c'est l'epaisseur du trait
+        // qui se regle, la portee etant deja a la bonne fleche.
+        function schTrait(i, v)  { schMaj(d => { if(d.l[i]) d.l[i].e = +v; }); }
+        function schCoulL(i, v)  { schMaj(d => { if(d.l[i]) d.l[i].col = v; }); }
+        function schCoulO(v)     { schMaj(d => { const o = d.n.find(x => x.id === d.sel); if(o) o.col = v; }); }
         function schVider() {
             if(!confirm('Effacer tout le schéma de l\u2019ouvrage ?')) return;
             schMaj(d => { d.n = []; d.l = []; d.sel = null; });
@@ -4570,18 +4587,18 @@
 
         // --- Les dessins, en traits epais pour rester lisibles reduits ----
         function schDessin(o) {
-            const r = o.r;
+            const r = o.r, col = schCoul(o);
             if(o.t === 'poste') {
                 // Transformateur : les deux enroulements du symbole normalise.
                 const c = r * 0.30;
-                return `<g stroke="#054191" stroke-width="${r * 0.085}" fill="#fff">
+                return `<g stroke="${col}" stroke-width="${r * 0.085}" fill="#fff">
                     <circle cx="${-c}" cy="0" r="${r * 0.46}"/>
                     <circle cx="${c}" cy="0" r="${r * 0.46}"/>
                 </g>`;
             }
             if(o.t === 'terre') {
                 // Mise a la terre : la descente et les trois barres.
-                return `<g stroke="#054191" stroke-width="${r * 0.1}" stroke-linecap="round" fill="none">
+                return `<g stroke="${col}" stroke-width="${r * 0.1}" stroke-linecap="round" fill="none">
                     <path d="M0 ${-r * 0.75} V ${r * 0.1}"/>
                     <path d="M${-r * 0.62} ${r * 0.14} H ${r * 0.62}"/>
                     <path d="M${-r * 0.40} ${r * 0.44} H ${r * 0.40}"/>
@@ -4589,7 +4606,7 @@
                 </g>`;
             }
             // Pylone : la silhouette, deux consoles et les jambes ecartees.
-            return `<g stroke="#054191" stroke-width="${r * 0.095}" stroke-linecap="round"
+            return `<g stroke="${col}" stroke-width="${r * 0.095}" stroke-linecap="round"
                        stroke-linejoin="round" fill="none">
                 <path d="M0 ${-r} V ${r * 0.1}"/>
                 <path d="M${-r * 0.66} ${-r * 0.66} H ${r * 0.66}"/>
@@ -4609,11 +4626,12 @@
                 const a = accroche(a0), b = accroche(b0);
                 const dx = b.x - a.x, dy = b.y - a.y;
                 const long = Math.hypot(dx, dy) || 1;
-                const f = (li.c === undefined ? 0.14 : li.c) * long;
+                const f = (li.c === undefined ? SCH_ARC : li.c) * long;
                 const mx = (a.x + b.x) / 2 - dy / long * f;
                 const my = (a.y + b.y) / 2 + dx / long * f;
-                return `<path d="M${a.x} ${a.y} Q ${mx} ${my} ${b.x} ${b.y}"
-                              fill="none" stroke="#054191" stroke-width="9" stroke-linecap="round"/>`;
+                return `<path d="M${a.x} ${a.y} Q ${mx} ${my} ${b.x} ${b.y}" fill="none"
+                              stroke="${schCoul(li)}" stroke-width="${li.e === undefined ? SCH_TRAIT : li.e}"
+                              stroke-linecap="round"/>`;
             }).join('');
             const objets = d.n.map(o => `
                 <g transform="translate(${o.x},${o.y})"
@@ -4623,7 +4641,7 @@
                     ${schDessin(o)}
                     ${o.lab ? `<text y="${o.r * 1.62}" text-anchor="middle"
                         font-size="${Math.max(26, o.r * 0.62)}" font-weight="800"
-                        fill="#054191">${esc(o.lab)}</text>` : ''}
+                        fill="${schCoul(o)}">${esc(o.lab)}</text>` : ''}
                 </g>`).join('');
             return `<svg class="pd-sch-svg" viewBox="0 0 ${SCH_L} ${SCH_H}"
                          preserveAspectRatio="xMidYMid meet"
@@ -4683,6 +4701,21 @@
             e.preventDefault();
         }
 
+        // Les teintes de la charte, plus un choix libre : une pastille par
+        // couleur, pour ne pas sortir une roue chromatique a chaque clic.
+        // `modele` est l'appel a faire, ou %c tient la place de la couleur.
+        function schPalette(valeur, modele) {
+            const v = String(valeur).toLowerCase();
+            const appel = c => modele.replace('%c', c);
+            return `<span class="pd-sch-pal">
+                ${SCH_COULEURS.map(c => `<button class="pd-sch-teinte${c === v ? ' choisie' : ''}"
+                    style="background:${c}" title="${c}"
+                    onclick="${appel("'" + c + "'")}"></button>`).join('')}
+                <input type="color" value="${esc(v)}" title="Autre couleur"
+                       onchange="${appel('this.value')}">
+            </span>`;
+        }
+
         function paveSchema() {
             const d = schLire();
             const sel = d.n.find(x => x.id === d.sel);
@@ -4692,9 +4725,10 @@
                 if(!a || !b) return '';
                 return `<div class="pd-l pd-sch-lien">
                     <span>${esc(nom(a))} \u2014 ${esc(nom(b))}</span>
-                    <input type="range" min="-0.4" max="0.4" step="0.02"
-                           value="${li.c === undefined ? 0.14 : li.c}" title="Courbure de la ligne"
-                           onchange="schArc(${i}, this.value)">
+                    <input type="range" min="3" max="26" step="1"
+                           value="${li.e === undefined ? SCH_TRAIT : li.e}" title="Épaisseur de la ligne"
+                           onchange="schTrait(${i}, this.value)">
+                    ${schPalette(schCoul(li), 'schCoulL(' + i + ', %c)')}
                     <button class="pd-sup" onclick="schDelier(${i})">&times;</button>
                 </div>`;
             }).join('');
@@ -4714,6 +4748,7 @@
                        onchange="schChamp('lab', this.value)" style="width:110px"></label>
                 <label>Taille <input type="range" min="26" max="130" step="2" value="${sel.r}"
                        onchange="schTaille(this.value)"></label>
+                <label>Couleur ${schPalette(schCoul(sel), 'schCoulO(%c)')}</label>
                 <label>Relier à
                     <select class="pd-in" onchange="schRelier(this.value); this.value=''">
                         <option value=""></option>
