@@ -403,6 +403,11 @@
         .pd-aide { font-size: .72rem; color: #64748b; }
         .pd-unite { font-size: .76rem; color: #64748b; white-space: nowrap; flex: 0 0 auto; }
         /* La ligne d'adequation : c'est elle qu'on coche une fois d'accord. */
+        /* Famille d'outillage repliee : le titre reste, pour la rouvrir. */
+        .pd-grp-tete { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+        .pd-grp-tete input { width: 15px; height: 15px; flex: 0 0 15px; cursor: pointer; }
+        .pd-grp.masque .pd-grp-tete { opacity: .45; }
+        .pd-grp-barre { justify-content: flex-start; gap: 10px; margin: 10px 0 2px; }
         .pd-adeq { margin: 8px 0; padding: 7px 10px; border: 1px solid var(--rte-marine);
                    border-radius: 6px; background: #f1f6fd; }
         .pd-adeq .pd-coche { font-weight: 700; }
@@ -420,7 +425,9 @@
         body.prepa-impression #pd-pages .pd-sup,
         body.prepa-impression #pd-pages .pd-tab-actions,
         body.prepa-impression #pd-pages .pd-aide,
-        body.prepa-impression #pd-pages .pd-choix { display: none !important; }
+        body.prepa-impression #pd-pages .pd-choix,
+        body.prepa-impression #pd-pages .pd-grp.masque,
+        body.prepa-impression #pd-pages .pd-grp-tete input { display: none !important; }
         body.prepa-impression #pd-pages .pd-in::placeholder,
         body.prepa-impression #pd-pages .pd-zone::placeholder { color: transparent !important; }
         body.prepa-impression #pd-pages .pd-fige { display: block !important; white-space: pre-wrap;
@@ -3633,6 +3640,21 @@
         // =====================================================================
         // Description des pages
         // =====================================================================
+        // Les onze familles d'outillage du classeur, dans son ordre.
+        const OUTILLAGE = [
+                ['1 — Tension', ['Perche VAT', 'Perche de mise à la terre', 'Mise à la terre', 'Terre shunt', 'Terre à rouleau', 'MALT LEC verte']],
+                ['2 — Accès et hauteur', ['Ligne de vie', 'Corde de service', 'Poulie de service', 'Échelle emboîtable', 'Échelle à crochet', 'Canne simple', 'Canne à roulette simple', 'Canne à roulette double', 'Chemin de roulement', 'Quadricycle écart 400']],
+                ['3 — Reprise d\'effort', ['Pull-Lift 750 daN', 'Pull-Lift 1000 daN', 'Pull-Lift 1500 daN', 'Pull-Lift 3000 daN', 'Pull-Lift 4500 daN', 'Pull-Lift 6000 daN', 'Tirfort 1500 daN', 'Tirfort 3000 daN', 'Élingues de tirfor', 'Caisse de reprise d\'effort', 'Reprise de faisceaux']],
+                ['4 — Poulies', ['Poulie de tir à crochet 8 T', 'Poulie de tir à crochet 5 T', 'Poulie de tir à manille 8 T', 'Poulie de tir à manille 5 T', 'Poulie de tir à crochet', 'Poulie de déroulage', 'Poulie 800 alu', 'Chaussette de tir', 'Palan à corde']],
+                ['5 — Élingues et manilles', ['Élingue textile mauve', 'Élingue textile verte', 'Élingue textile jaune', 'Élingue textile rouge', 'Élingue textile marron', 'Élingue dynaone 8000 daN', 'Élingue dynaone 5000 daN', 'Manille 1 T', 'Manille 2 T', 'Manille 5 T', 'Stas', 'Dynamomètre']],
+                ['6 — Élingues acier', ['Élingue acier 1 T', 'Élingue acier 2 T', 'Élingue acier 3 T', 'Élingue acier 4 T', 'Élingue acier 5 T', 'Élingue acier 6 T']],
+                ['7 — Manchonnage', ['UPK mâchoire', 'UPK fourreau', 'Brosse / carde / graisse', 'Presse acier', 'Matrices', 'Moteur essence', 'Flexible', 'Presse titane', 'Manchon : graisse Nétoxal', 'Raccord plage : graisse Contactal', 'Moteur diesel']],
+                ['8 — Coupe et découpe', ['Coupe-câble Ridgid', 'Tronçonneuse à disque', 'Tronçonneuse à bois', 'Scie et lames', 'Essence et mélange', 'Lunettes', 'Casque anti-bruit', 'Chalumeau']],
+                ['9 — Mesure et communication', ['Émetteurs radio', 'Chargeurs', 'Contrôleur de terre', 'Jumelles', 'Théodolite', 'Pied', 'Thermomètre']],
+                ['10 — Divers', ['Débroussailleuse STIHL', 'Coupe-câble hydraulique', 'Clés à choc', 'Clé dynamométrique', 'Balisage support', 'Marteau piqueur', 'Panneaux de travaux']],
+                ['11 — Petit matériel', ['Collier Petit Jean', 'Pelles / pioches', 'Masses', 'Serre-joint', 'Broches', 'Rallonge électrique']]
+        ];
+
         const PREPA_PAGES = [
 
         { id:'couverture', titre:'Couverture', defaut:true, horsCompte:true, corps: () => {
@@ -4060,33 +4082,39 @@
 
         { id:'outillage', titre:'Liste de matériel chantier lignes', defaut:false, corps: () => {
             const c = pdChantier();
-            const groupes = [
-                ['1 — Tension', ['Perche VAT', 'Perche de mise à la terre', 'Mise à la terre', 'Terre shunt', 'Terre à rouleau', 'MALT LEC verte']],
-                ['2 — Accès et hauteur', ['Ligne de vie', 'Corde de service', 'Poulie de service', 'Échelle emboîtable', 'Échelle à crochet', 'Canne simple', 'Canne à roulette simple', 'Canne à roulette double', 'Chemin de roulement', 'Quadricycle écart 400']],
-                ['3 — Reprise d\'effort', ['Pull-Lift 750 daN', 'Pull-Lift 1000 daN', 'Pull-Lift 1500 daN', 'Pull-Lift 3000 daN', 'Pull-Lift 4500 daN', 'Pull-Lift 6000 daN', 'Tirfort 1500 daN', 'Tirfort 3000 daN', 'Élingues de tirfor', 'Caisse de reprise d\'effort', 'Reprise de faisceaux']],
-                ['4 — Poulies', ['Poulie de tir à crochet 8 T', 'Poulie de tir à crochet 5 T', 'Poulie de tir à manille 8 T', 'Poulie de tir à manille 5 T', 'Poulie de tir à crochet', 'Poulie de déroulage', 'Poulie 800 alu', 'Chaussette de tir', 'Palan à corde']],
-                ['5 — Élingues et manilles', ['Élingue textile mauve', 'Élingue textile verte', 'Élingue textile jaune', 'Élingue textile rouge', 'Élingue textile marron', 'Élingue dynaone 8000 daN', 'Élingue dynaone 5000 daN', 'Manille 1 T', 'Manille 2 T', 'Manille 5 T', 'Stas', 'Dynamomètre']],
-                ['6 — Élingues acier', ['Élingue acier 1 T', 'Élingue acier 2 T', 'Élingue acier 3 T', 'Élingue acier 4 T', 'Élingue acier 5 T', 'Élingue acier 6 T']],
-                ['7 — Manchonnage', ['UPK mâchoire', 'UPK fourreau', 'Brosse / carde / graisse', 'Presse acier', 'Matrices', 'Moteur essence', 'Flexible', 'Presse titane', 'Manchon : graisse Nétoxal', 'Raccord plage : graisse Contactal', 'Moteur diesel']],
-                ['8 — Coupe et découpe', ['Coupe-câble Ridgid', 'Tronçonneuse à disque', 'Tronçonneuse à bois', 'Scie et lames', 'Essence et mélange', 'Lunettes', 'Casque anti-bruit', 'Chalumeau']],
-                ['9 — Mesure et communication', ['Émetteurs radio', 'Chargeurs', 'Contrôleur de terre', 'Jumelles', 'Théodolite', 'Pied', 'Thermomètre']],
-                ['10 — Divers', ['Débroussailleuse STIHL', 'Coupe-câble hydraulique', 'Clés à choc', 'Clé dynamométrique', 'Balisage support', 'Marteau piqueur', 'Panneaux de travaux']],
-                ['11 — Petit matériel', ['Collier Petit Jean', 'Pelles / pioches', 'Masses', 'Serre-joint', 'Broches', 'Rallonge électrique']]
-            ];
+            const groupes = OUTILLAGE;
             let h = `${grille('pd-g3', champ('Ouvrage', auto(c.ligne)) + champ('Du', auto(c.debut)) + champ('Au', auto(c.fin)))}`;
 
             // Panier Invent'RTE : la liste vient de l'inventaire, pas d'ici.
             h += blocPanier('ou');
 
+            // Onze familles d'outillage : un chantier n'en emporte que
+            // quelques-unes. Celles qu'on decoche restent la, repliees, et ne
+            // sortent pas a l'impression.
+            const vus = groupes.filter((g, gi) => !pv('ou-m' + gi)).length;
+            h += `<div class="pd-l pd-aide pd-grp-barre">
+                    <span>${vus} famille(s) sur ${groupes.length} \u00e0 l'impression.</span>
+                    <button class="btn-pd" onclick="famillesOutillage(true)">Tout afficher</button>
+                    <button class="btn-pd" onclick="famillesOutillage(false)">Tout masquer</button>
+                 </div>`;
             groupes.forEach((g, gi) => {
-                h += sous(g[0]);
-                h += `<table class="pd-tab"><thead><tr><th>Désignation</th><th style="width:110px">Caractéristique</th><th style="width:90px">Nombre</th><th style="width:70px">Contrôle</th></tr></thead><tbody>`;
-                g[1].forEach((n, ni) => {
-                    const k = 'ou-' + gi + '-' + ni;
-                    h += `<tr><td>${n}</td><td>${chp(k + '-c')}</td><td>${chp(k + '-n')}</td>
-                          <td style="text-align:center"><input type="checkbox" ${pv(k + '-k') ? 'checked' : ''} onchange="setPC('${k}-k', this.checked)"></td></tr>`;
-                });
-                h += '</tbody></table>';
+                const vu = !pv('ou-m' + gi);
+                h += `<div class="pd-grp${vu ? '' : ' masque'}">
+                      <label class="pd-sous pd-grp-tete">
+                        <input type="checkbox" ${vu ? 'checked' : ''}
+                               onchange="setPC('ou-m${gi}', !this.checked); renderPrepa()"
+                               title="Sortir cette famille \u00e0 l'impression">
+                        <span>${g[0]}</span></label>`;
+                if(vu) {
+                    h += `<table class="pd-tab"><thead><tr><th>D\u00e9signation</th><th style="width:110px">Caract\u00e9ristique</th><th style="width:90px">Nombre</th><th style="width:70px">Contr\u00f4le</th></tr></thead><tbody>`;
+                    g[1].forEach((n, ni) => {
+                        const k = 'ou-' + gi + '-' + ni;
+                        h += `<tr><td>${n}</td><td>${chp(k + '-c')}</td><td>${chp(k + '-n')}</td>
+                              <td style="text-align:center"><input type="checkbox" ${pv(k + '-k') ? 'checked' : ''} onchange="setPC('${k}-k', this.checked)"></td></tr>`;
+                    });
+                    h += '</tbody></table>';
+                }
+                h += '</div>';
             });
             h += sous('Matériel supplémentaire');
             h += tableau('ou-plus', [{k:'d', t:'Désignation'}, {k:'n', t:'Nombre', l:'90px'}], {d:'', n:''});
@@ -4223,6 +4251,14 @@
         }},
         ];
 
+
+        // Les onze familles d'outillage, d'un coup. Onze cases a cliquer une
+        // par une pour n'en garder qu'une, c'est onze de trop.
+        function famillesOutillage(v) {
+            OUTILLAGE.forEach((g, i) => { prepa.v['ou-m' + i] = !v; });
+            majPrepaEtat();
+            renderPrepa();
+        }
 
         // --- Visibilite des pages ---------------------------------------------
         function pageVisible(id) {
