@@ -493,7 +493,9 @@
         body.prepa-impression #pd-pages .pd-sch-outils,
         body.prepa-impression #pd-pages .pd-sch-reglage,
         body.prepa-impression #pd-pages .pd-sch-liens { display: none !important; }
-        body.prepa-impression #pd-pages .pd-sch-svg { max-height: 225mm; }
+        body.prepa-impression #pd-pages .pd-sch-svg { max-height: 232mm; }
+        /* Le halo ne marque qu'une selection a l'ecran */
+        body.prepa-impression #pd-pages .sch-sel { display: none; }
         /* La NIP porte deja son propre titre : le bandeau de page ferait
            deborder la premiere planche sur une feuille de plus. */
         body.prepa-impression #pdp-nip .pd-page-tete,
@@ -4182,7 +4184,8 @@
         `},
 
         { id:'modeop2', titre:'Mode opératoire (suite)', rang:2, annexe:'Annexe 5', defaut:true, corps: () => `
-            ${tableau('mo2-l', [{k:'t', t:'Tâches à réaliser', l:'26%', m:true, o:'taches'}, {k:'r', t:'Analyse de risques', l:'24%', m:true, o:'risques'}, {k:'a', t:'Actions préventives', l:'24%', m:true, o:'actions'}, {k:'pa', t:'Point d\'arrêt', l:'64px', c:true}, {k:'e', t:'État réalisé', l:'74px', c:true}, {k:'al', t:'Aléa n°', l:'58px', c:true}], {t:'', r:'', a:'', pa:'', e:'', al:''}, null, {etapes:true, arret:'pa'})}
+            ${tableau('mo2-l', [{k:'t', t:'Tâches à réaliser', l:'26%', m:true, o:'taches'}, {k:'r', t:'Analyse de risques', l:'24%', m:true, o:'risques'}, {k:'a', t:'Actions préventives', l:'24%', m:true, o:'actions'}, {k:'pa', t:'Point d\'arrêt', l:'64px', c:true}, {k:'e', t:'État réalisé', l:'74px', c:true}, {k:'al', t:'Aléa n°', l:'58px', c:true}], {t:'', r:'', a:'', pa:'', e:'', al:''}, null,
+                      {etapes:true, arret:'pa', defaut: vides(12, {t:'', r:'', a:'', pa:'', e:'', al:''})})}
         `},
 
         { id:'nacelle', titre:'Mode opératoire nacelle', rang:2, defaut:false, corps: () => {
@@ -4304,8 +4307,9 @@
             return `
             ${grille('pd-g3', champ('Ouvrage', auto(c.ligne)) + champ('Du', auto(c.debut)) + champ('Au', auto(c.fin)))}
             ${tableau('pl-l', [{k:'j', t:'Jour', l:'110px'}, {k:'d', t:'Date', l:'125px'}, {k:'t', t:'Travaux', m:true}],
-                      {j:'', d:'', t:''},
-                      [{j:'Lundi'}, {j:'Mardi'}, {j:'Mercredi'}, {j:'Jeudi'}, {j:'Vendredi'}])}`;
+                      {j:'', d:'', t:''}, null,
+                      {haut: true, defaut: ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi']
+                                              .map(j => ({j: j, d:'', t:''}))})}`;
         }},
 
         { id:'cables', titre:'Câbles', defaut:true, corps: () => {
@@ -4382,7 +4386,7 @@
                 h += sous(ap[0]);
                 h += tableau('me-' + ap[1],
                     [{k:'n', t:'N° appareil', l:'150px'}, {k:'d', t:"Date d'utilisation", l:'140px'}, {k:'o', t:'Opération réalisée'}],
-                    {n:'', d:'', o:''});
+                    {n:'', d:'', o:''}, null, {haut: true, defaut: vides(4, {n:'', d:'', o:''})});
             });
             h += `<div class="pd-note">Penser à mettre à jour la fiche de suivi.</div>`;
             return h;
@@ -4394,7 +4398,8 @@
             ${grille('pd-g2', champ('Type de câble', chp('ma-cable')) + champ('Type de presse / matrices', chp('ma-presse')))}
             ${sous('Relevés')}
             ${tableau('ma-l', [{k:'n', t:'N° manchon', l:'110px'}, {k:'c', t:'Cote avant', l:'110px'},
-                               {k:'a', t:'Cote après', l:'110px'}, {k:'o', t:'Observations'}], {n:'', c:'', a:'', o:''})}
+                               {k:'a', t:'Cote après', l:'110px'}, {k:'o', t:'Observations'}],
+                      {n:'', c:'', a:'', o:''}, null, {haut: true, defaut: vides(10, {n:'', c:'', a:'', o:''})})}
             ${grille('pd-g2', champ('Contrôleur', chp('ma-ctrl')) + champ('Date', chp('ma-date', '', 'date')))}`
         },
 
@@ -4521,7 +4526,8 @@
         //  des mises a la terre, et entre eux la ligne, en arc.
         //  Le quadrillage reste imprime : on peut toujours finir a la main.
         // ==================================================================
-        const SCH_L = 1000, SCH_H = 1080;      // repere du dessin
+        const SCH_L = 1000, SCH_H = 1250;      // repere du dessin
+        const SCH_PAS = 25;                    // pas du quadrillage
         const SCH_TYPES = { pyl: 'Pylône', poste: 'Poste', terre: 'Mise à la terre' };
         const SCH_BLEU  = '#054191';           // le bleu RTE, par defaut
         const SCH_ARC   = 0.14;                // la fleche de la portee, fixe
@@ -4615,6 +4621,18 @@
             </g>`;
         }
 
+        // Le quadrillage, d'un seul trait : pas de motif, donc pas d'id a
+        // perdre quand la page est copiee feuille par feuille.
+        let quadri = '';
+        function quadrillage() {
+            if(quadri) return quadri;
+            const t = [];
+            for(let x = 0; x <= SCH_L; x += SCH_PAS) t.push('M' + x + ' 0 V' + SCH_H);
+            for(let y = 0; y <= SCH_H; y += SCH_PAS) t.push('M0 ' + y + ' H' + SCH_L);
+            quadri = t.join(' ');
+            return quadri;
+        }
+
         function schSvg(d, interactif) {
             const pos = id => d.n.find(x => x.id === id);
             // La ligne : un arc leger, du cote ou la corde penche.
@@ -4626,7 +4644,9 @@
                 const a = accroche(a0), b = accroche(b0);
                 const dx = b.x - a.x, dy = b.y - a.y;
                 const long = Math.hypot(dx, dy) || 1;
-                const f = (li.c === undefined ? SCH_ARC : li.c) * long;
+                // La fleche est toujours celle d'une portee : une courbure
+                // reglee du temps ou le curseur existait est ignoree.
+                const f = SCH_ARC * long;
                 const mx = (a.x + b.x) / 2 - dy / long * f;
                 const my = (a.y + b.y) / 2 + dx / long * f;
                 return `<path d="M${a.x} ${a.y} Q ${mx} ${my} ${b.x} ${b.y}" fill="none"
@@ -4637,7 +4657,8 @@
                 <g transform="translate(${o.x},${o.y})"
                    ${interactif ? `class="sch-o${d.sel === o.id ? ' sel' : ''}" data-id="${o.id}"` : ''}>
                     ${d.sel === o.id && interactif
-                        ? `<circle r="${o.r * 1.35}" fill="#e0f2fe" stroke="#00a6d9" stroke-width="3"/>` : ''}
+                        ? `<circle class="sch-sel" r="${o.r * 1.35}" fill="#e0f2fe"
+                                   stroke="#00a6d9" stroke-width="3"/>` : ''}
                     ${schDessin(o)}
                     ${o.lab ? `<text y="${o.r * 1.62}" text-anchor="middle"
                         font-size="${Math.max(26, o.r * 0.62)}" font-weight="800"
@@ -4646,12 +4667,9 @@
             return `<svg class="pd-sch-svg" viewBox="0 0 ${SCH_L} ${SCH_H}"
                          preserveAspectRatio="xMidYMid meet"
                          ${interactif ? 'onpointerdown="schPointe(event)"' : ''}>
-                <defs>
-                    <pattern id="sch-q" width="25" height="25" patternUnits="userSpaceOnUse">
-                        <path d="M25 0 H0 V25" fill="none" stroke="#b9c0ca" stroke-width="1.8"/>
-                    </pattern>
-                </defs>
-                <rect width="${SCH_L}" height="${SCH_H}" fill="url(#sch-q)" stroke="#191919" stroke-width="4"/>
+                <rect width="${SCH_L}" height="${SCH_H}" fill="#fff"/>
+                <path d="${quadrillage()}" fill="none" stroke="#b9c0ca" stroke-width="1.8"/>
+                <rect width="${SCH_L}" height="${SCH_H}" fill="none" stroke="#191919" stroke-width="4"/>
                 ${lignes}${objets}
             </svg>`;
         }
