@@ -409,6 +409,24 @@
         .pd-aide { font-size: .72rem; color: #64748b; }
         .pd-unite { font-size: .76rem; color: #64748b; white-space: nowrap; flex: 0 0 auto; }
         /* La ligne d'adequation : c'est elle qu'on coche une fois d'accord. */
+        /* --- Pave 17 : le schema de l'ouvrage --- */
+        .pd-sch-outils { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0; }
+        .pd-sch-reglage { display: flex; flex-wrap: wrap; align-items: center; gap: 14px;
+                          background: #f1f6fd; border: 1px solid var(--rte-cyan);
+                          border-radius: 6px; padding: 8px 12px; margin-bottom: 8px; font-size: .84rem; }
+        .pd-sch-reglage label { display: flex; align-items: center; gap: 6px; }
+        .pd-sch-cadre { width: 100%; }
+        .pd-sch-svg { width: 100%; height: auto; display: block; touch-action: none; }
+        .pd-sch-svg .sch-o { cursor: grab; }
+        .pd-sch-liens { margin-top: 8px; }
+        .pd-sch-lien { gap: 10px; margin-bottom: 4px; }
+        .pd-saut { height: 0; }
+
+        /* --- Pave 18 : la gestion des mises a la terre --- */
+        .pd-malt th { font-size: .72rem; line-height: 1.15; text-align: center; vertical-align: middle; }
+        .pd-malt .pd-malt-fin { font-weight: 600; text-transform: none; letter-spacing: 0; }
+        .pd-malt tbody td { height: 11mm; }
+
         /* Famille d'outillage repliee : le titre reste, pour la rouvrir. */
         .pd-grp-tete { display: flex; align-items: center; gap: 8px; cursor: pointer; }
         .pd-grp-tete input { width: 15px; height: 15px; flex: 0 0 15px; cursor: pointer; }
@@ -465,6 +483,11 @@
            feuilles : la suivante commencerait sinon au ras du papier. */
         body.prepa-impression #pd-pages .pd-page:not(.pd-fixe) .pd-tab-enveloppe { padding-top: 8mm; }
         body.prepa-impression #pd-pages .pd-page-images .pd-img-grille .pd-img { max-height: 105mm; }
+        /* Le schema prend la feuille, ses reglages n'existent qu'a l'ecran */
+        body.prepa-impression #pd-pages .pd-sch-outils,
+        body.prepa-impression #pd-pages .pd-sch-reglage,
+        body.prepa-impression #pd-pages .pd-sch-liens { display: none !important; }
+        body.prepa-impression #pd-pages .pd-sch-svg { max-height: 225mm; }
         /* La NIP porte deja son propre titre : le bandeau de page ferait
            deborder la premiere planche sur une feuille de plus. */
         body.prepa-impression #pdp-nip .pd-page-tete,
@@ -954,6 +977,9 @@
                 page-break-inside: avoid; break-inside: avoid; }
 
             /* Une page de NIP par feuille */
+            /* Le pave 17 tient une feuille, le 18 commence sur la suivante */
+            .pd-saut { page-break-after: always; break-after: page; }
+            .pd-malt { page-break-inside: auto; }
             .pd-nip-feuille { page-break-after: always; break-after: page; }
             .pd-nip-feuille:last-child { page-break-after: auto; break-after: auto; }
 
@@ -4224,9 +4250,8 @@
                       {n:'', an:'', ac:''}, null, {haut: true, defaut: vides(4, {n:'', an:'', ac:''})})}`;
         }},
 
-        { id:'pave', titre:'Pavé 17 et 18', defaut:true, images:true, corps: () => `
-            <img class="pd-img" src="${IMG}pave-17-et-18-01.png" alt="Pavé 17">
-            <img class="pd-img" src="${IMG}pave-17-et-18-02.png" alt="Pavé 18">`
+        { id:'pave', titre:'Pavé 17 et 18', defaut:true, images:true, corps: () =>
+            paveSchema() + paveMalt()
         },
 
         { id:'schemaop', titre:'Schémas du document opératoire', defaut:true, images:true, corps: () => {
@@ -4450,6 +4475,265 @@
             OUTILLAGE.forEach((g, i) => { prepa.v['ou-m' + i] = !v; });
             majPrepaEtat();
             renderPrepa();
+        }
+
+        // ==================================================================
+        //  PAVE 17 — SCHEMA DE L'OUVRAGE
+        //  Le classeur laisse un quadrillage a remplir au crayon. Sur un
+        //  ecran large on le dessine : des pylones numerotes, des postes,
+        //  des mises a la terre, et entre eux la ligne, en arc.
+        //  Le quadrillage reste imprime : on peut toujours finir a la main.
+        // ==================================================================
+        const SCH_L = 1000, SCH_H = 1080;      // repere du dessin
+        const SCH_TYPES = { pyl: 'Pylône', poste: 'Poste', terre: 'Mise à la terre' };
+
+        function schLire() {
+            try {
+                const o = JSON.parse(pv('pv-sch') || '{}');
+                return { n: Array.isArray(o.n) ? o.n : [], l: Array.isArray(o.l) ? o.l : [],
+                         sel: o.sel || null };
+            } catch(e) { return { n: [], l: [], sel: null }; }
+        }
+        function schEcrire(d) {
+            prepa.v['pv-sch'] = JSON.stringify({ n: d.n, l: d.l, sel: d.sel });
+            majPrepaEtat();
+        }
+        function schMaj(f) { const d = schLire(); f(d); schEcrire(d); renderPrepa(); }
+
+        function schAjouter(t) {
+            schMaj(d => {
+                const id = 'o' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+                // Pose les objets en file, sans les empiler sur le precedent.
+                const i = d.n.length;
+                d.n.push({ id: id, t: t, x: 140 + (i % 4) * 230, y: 150 + Math.floor(i / 4) * 200,
+                           r: t === 'pyl' ? 58 : 52, lab: t === 'pyl' ? '' : '' });
+                d.sel = id;
+            });
+        }
+        function schSelect(id) { schMaj(d => { d.sel = (d.sel === id ? null : id); }); }
+        function schChamp(cle, v) { schMaj(d => { const o = d.n.find(x => x.id === d.sel); if(o) o[cle] = v; }); }
+        function schTaille(v) { schMaj(d => { const o = d.n.find(x => x.id === d.sel); if(o) o.r = +v; }); }
+        function schSupprimer() {
+            schMaj(d => {
+                d.l = d.l.filter(x => x.a !== d.sel && x.b !== d.sel);
+                d.n = d.n.filter(x => x.id !== d.sel);
+                d.sel = null;
+            });
+        }
+        // Relier : on choisit la destination dans une liste, pas au clic.
+        // Deux clics sur un dessin se disputeraient avec le deplacement.
+        function schRelier(vers) {
+            if(!vers) return;
+            schMaj(d => {
+                if(!d.sel || d.sel === vers) return;
+                if(d.l.some(x => (x.a === d.sel && x.b === vers) || (x.a === vers && x.b === d.sel))) return;
+                d.l.push({ a: d.sel, b: vers, c: 0.14 });
+            });
+        }
+        function schDelier(i) { schMaj(d => { d.l.splice(i, 1); }); }
+        function schArc(i, v) { schMaj(d => { if(d.l[i]) d.l[i].c = +v; }); }
+        function schVider() {
+            if(!confirm('Effacer tout le schéma de l\u2019ouvrage ?')) return;
+            schMaj(d => { d.n = []; d.l = []; d.sel = null; });
+        }
+
+        // --- Les dessins, en traits epais pour rester lisibles reduits ----
+        function schDessin(o) {
+            const r = o.r;
+            if(o.t === 'poste') {
+                // Transformateur : les deux enroulements du symbole normalise.
+                const c = r * 0.30;
+                return `<g stroke="#054191" stroke-width="${r * 0.085}" fill="#fff">
+                    <circle cx="${-c}" cy="0" r="${r * 0.46}"/>
+                    <circle cx="${c}" cy="0" r="${r * 0.46}"/>
+                </g>`;
+            }
+            if(o.t === 'terre') {
+                // Mise a la terre : la descente et les trois barres.
+                return `<g stroke="#054191" stroke-width="${r * 0.1}" stroke-linecap="round" fill="none">
+                    <path d="M0 ${-r * 0.75} V ${r * 0.1}"/>
+                    <path d="M${-r * 0.62} ${r * 0.14} H ${r * 0.62}"/>
+                    <path d="M${-r * 0.40} ${r * 0.44} H ${r * 0.40}"/>
+                    <path d="M${-r * 0.18} ${r * 0.74} H ${r * 0.18}"/>
+                </g>`;
+            }
+            // Pylone : la silhouette, deux consoles et les jambes ecartees.
+            return `<g stroke="#054191" stroke-width="${r * 0.095}" stroke-linecap="round"
+                       stroke-linejoin="round" fill="none">
+                <path d="M0 ${-r} V ${r * 0.1}"/>
+                <path d="M${-r * 0.66} ${-r * 0.66} H ${r * 0.66}"/>
+                <path d="M${-r * 0.86} ${-r * 0.24} H ${r * 0.86}"/>
+                <path d="M${-r * 0.62} ${r} L 0 ${r * 0.05} L ${r * 0.62} ${r}"/>
+            </g>`;
+        }
+
+        function schSvg(d, interactif) {
+            const pos = id => d.n.find(x => x.id === id);
+            // La ligne : un arc leger, du cote ou la corde penche.
+            // Une ligne part de la console, pas du milieu du dessin.
+            const accroche = o => ({ x: o.x, y: o.y - (o.t === 'pyl' ? o.r * 0.45 : 0) });
+            const lignes = d.l.map((li, i) => {
+                const a0 = pos(li.a), b0 = pos(li.b);
+                if(!a0 || !b0) return '';
+                const a = accroche(a0), b = accroche(b0);
+                const dx = b.x - a.x, dy = b.y - a.y;
+                const long = Math.hypot(dx, dy) || 1;
+                const f = (li.c === undefined ? 0.14 : li.c) * long;
+                const mx = (a.x + b.x) / 2 - dy / long * f;
+                const my = (a.y + b.y) / 2 + dx / long * f;
+                return `<path d="M${a.x} ${a.y} Q ${mx} ${my} ${b.x} ${b.y}"
+                              fill="none" stroke="#054191" stroke-width="9" stroke-linecap="round"/>`;
+            }).join('');
+            const objets = d.n.map(o => `
+                <g transform="translate(${o.x},${o.y})"
+                   ${interactif ? `class="sch-o${d.sel === o.id ? ' sel' : ''}" data-id="${o.id}"` : ''}>
+                    ${d.sel === o.id && interactif
+                        ? `<circle r="${o.r * 1.35}" fill="#e0f2fe" stroke="#00a6d9" stroke-width="3"/>` : ''}
+                    ${schDessin(o)}
+                    ${o.lab ? `<text y="${o.r * 1.62}" text-anchor="middle"
+                        font-size="${Math.max(26, o.r * 0.62)}" font-weight="800"
+                        fill="#054191">${esc(o.lab)}</text>` : ''}
+                </g>`).join('');
+            return `<svg class="pd-sch-svg" viewBox="0 0 ${SCH_L} ${SCH_H}"
+                         preserveAspectRatio="xMidYMid meet"
+                         ${interactif ? 'onpointerdown="schPointe(event)"' : ''}>
+                <defs>
+                    <pattern id="sch-q" width="25" height="25" patternUnits="userSpaceOnUse">
+                        <path d="M25 0 H0 V25" fill="none" stroke="#b9c0ca" stroke-width="1.8"/>
+                    </pattern>
+                </defs>
+                <rect width="${SCH_L}" height="${SCH_H}" fill="url(#sch-q)" stroke="#191919" stroke-width="4"/>
+                ${lignes}${objets}
+            </svg>`;
+        }
+
+        // Deplacement : on saisit l'objet et on le glisse. Les coordonnees
+        // passent du pixel au repere du dessin par la matrice du SVG.
+        let schGlisse = null;
+        function schPointe(e) {
+            const g = e.target.closest('.sch-o');
+            const svg = e.currentTarget;
+            if(!g) return;
+            const d = schLire();
+            const o = d.n.find(x => x.id === g.dataset.id);
+            if(!o) return;
+            const pt = p => {
+                const r = svg.getBoundingClientRect();
+                return { x: (p.clientX - r.left) / r.width * SCH_L,
+                         y: (p.clientY - r.top) / r.height * SCH_H };
+            };
+            const dep = pt(e);
+            schGlisse = { id: o.id, dx: o.x - dep.x, dy: o.y - dep.y, bouge: false };
+            svg.setPointerCapture(e.pointerId);
+            const bouger = ev => {
+                const q = pt(ev);
+                schGlisse.bouge = true;
+                g.setAttribute('transform', 'translate(' + Math.round(q.x + schGlisse.dx)
+                                          + ',' + Math.round(q.y + schGlisse.dy) + ')');
+            };
+            const lacher = ev => {
+                svg.removeEventListener('pointermove', bouger);
+                svg.removeEventListener('pointerup', lacher);
+                const q = pt(ev);
+                if(schGlisse.bouge) {
+                    schMaj(dd => {
+                        const t = dd.n.find(x => x.id === schGlisse.id);
+                        if(!t) return;
+                        t.x = Math.max(40, Math.min(SCH_L - 40, Math.round(q.x + schGlisse.dx)));
+                        t.y = Math.max(40, Math.min(SCH_H - 40, Math.round(q.y + schGlisse.dy)));
+                    });
+                } else {
+                    schSelect(schGlisse.id);
+                }
+                schGlisse = null;
+            };
+            svg.addEventListener('pointermove', bouger);
+            svg.addEventListener('pointerup', lacher);
+            e.preventDefault();
+        }
+
+        function paveSchema() {
+            const d = schLire();
+            const sel = d.n.find(x => x.id === d.sel);
+            const nom = o => (SCH_TYPES[o.t] || '') + (o.lab ? ' ' + o.lab : '');
+            const liens = d.l.map((li, i) => {
+                const a = d.n.find(x => x.id === li.a), b = d.n.find(x => x.id === li.b);
+                if(!a || !b) return '';
+                return `<div class="pd-l pd-sch-lien">
+                    <span>${esc(nom(a))} \u2014 ${esc(nom(b))}</span>
+                    <input type="range" min="-0.4" max="0.4" step="0.02"
+                           value="${li.c === undefined ? 0.14 : li.c}" title="Courbure de la ligne"
+                           onchange="schArc(${i}, this.value)">
+                    <button class="pd-sup" onclick="schDelier(${i})">&times;</button>
+                </div>`;
+            }).join('');
+            return `
+            <div class="pd-sous">17 \u2014 Sch\u00e9ma de l'ouvrage
+                <span class="pd-exig">ce schéma peut être réalisé sur un document annexé</span></div>
+            <div class="pd-sch-outils">
+                <button class="btn-pd" onclick="schAjouter('pyl')">+ Pylône</button>
+                <button class="btn-pd" onclick="schAjouter('poste')">+ Poste</button>
+                <button class="btn-pd" onclick="schAjouter('terre')">+ Mise à la terre</button>
+                ${d.n.length ? `<button class="btn-pd" onclick="schVider()">\u{1f5d1} Tout effacer</button>` : ''}
+                <span class="pd-aide">Glissez un objet pour le déplacer, cliquez-le pour le régler.</span>
+            </div>
+            ${sel ? `<div class="pd-sch-reglage">
+                <b>${esc(SCH_TYPES[sel.t] || '')}</b>
+                <label>Numéro <input class="pd-in" value="${esc(sel.lab || '')}"
+                       onchange="schChamp('lab', this.value)" style="width:110px"></label>
+                <label>Taille <input type="range" min="26" max="130" step="2" value="${sel.r}"
+                       onchange="schTaille(this.value)"></label>
+                <label>Relier à
+                    <select class="pd-in" onchange="schRelier(this.value); this.value=''">
+                        <option value=""></option>
+                        ${d.n.filter(o => o.id !== sel.id)
+                             .map(o => `<option value="${o.id}">${esc(nom(o))}</option>`).join('')}
+                    </select></label>
+                <button class="pd-sup" onclick="schSupprimer()">&times; Supprimer</button>
+            </div>` : ''}
+            <div class="pd-sch-cadre">${schSvg(d, true)}</div>
+            ${liens ? `<div class="pd-sch-liens pd-aide"><b>Lignes tracées</b>${liens}</div>` : ''}
+            <div class="pd-saut"></div>`;
+        }
+
+        // ==================================================================
+        //  PAVE 18 — GESTION DES MISES A LA TERRE
+        //  Le classeur l'imprime en image ; ici c'est un vrai tableau, donc
+        //  net a l'impression, et remplissable a l'ecran comme au stylo.
+        // ==================================================================
+        function paveMalt() {
+            const n = 10;
+            const c = (cle, i) => `<td>${chp('pm-' + cle + i)}</td>`;
+            return `
+            <div class="pd-sous">18 \u2014 Gestion des mises \u00e0 la terre</div>
+            <table class="pd-tab pd-malt">
+                <thead>
+                    <tr>
+                        <th rowspan="4" style="width:15%">N° de MALT CC</th>
+                        <th colspan="3">2<sup>ème</sup> étape de consignation</th>
+                        <th colspan="3">Déconsignation correspondante</th>
+                    </tr>
+                    <tr>
+                        <th colspan="2">MALT posées</th>
+                        <th rowspan="3" style="width:13%">Signature<br>du CDT</th>
+                        <th rowspan="3" style="width:13%">Signature<br>du CDT</th>
+                        <th colspan="2">MALT enlevées</th>
+                    </tr>
+                    <tr>
+                        <th colspan="2" class="pd-malt-fin">MALT reconnues valables (pose fanion)</th>
+                        <th colspan="2" class="pd-malt-fin">Interruption, fin de travaux (dépose fanion)</th>
+                    </tr>
+                    <tr>
+                        <th class="pd-malt-fin">Opération faite par</th>
+                        <th class="pd-malt-fin" style="width:12%">Date et heure</th>
+                        <th class="pd-malt-fin" style="width:12%">Date et heure</th>
+                        <th class="pd-malt-fin">Opération faite par</th>
+                    </tr>
+                </thead>
+                <tbody>${Array.from({ length: n }, (x, i) => `<tr>
+                    ${c('n', i)}${c('op', i)}${c('dh', i)}${c('s1', i)}${c('s2', i)}${c('dh2', i)}${c('op2', i)}
+                </tr>`).join('')}</tbody>
+            </table>`;
         }
 
         // --- Visibilite des pages ---------------------------------------------
