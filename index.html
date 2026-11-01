@@ -1112,7 +1112,7 @@
         <div class="dashboard-container">
             <div class="header-bar" style="display:flex; justify-content:space-between; align-items:center; gap:12px">
                 <h3 style="margin:0; font-size:1.1rem">📋 LIGNES DE <span id="opt-equipe-lbl">—</span> (<span id="opt-count">0</span>)</h3>
-                <button id="opt-bascule" class="btn-replier" onclick="basculerLignes()">▸ Afficher</button>
+                <button id="opt-bascule" class="btn-replier" onclick="basculerBloc('lignes')">▸ Afficher</button>
             </div>
             <div id="opt-corps">
                 <div style="padding:15px 20px; border-bottom:1px solid var(--border)">
@@ -1125,27 +1125,35 @@
         <div class="dashboard-container">
             <div class="header-bar" style="display:flex; justify-content:space-between; align-items:center; gap:12px">
                 <h3 style="margin:0; font-size:1.1rem">👷 OPÉRATEURS DE <span id="op-equipe-lbl">—</span> (<span id="op-count">0</span>)</h3>
-                <button class="btn-replier" onclick="addOperateur()">+ Agent</button>
+                <div style="display:flex; gap:8px">
+                    <button class="btn-replier" onclick="addOperateur()">+ Agent</button>
+                    <button id="op-bascule" class="btn-replier" onclick="basculerBloc('operateurs')">▾ Réduire</button>
+                </div>
             </div>
-            <div style="padding:12px 20px; border-bottom:1px solid var(--border); color:#64748b; font-size:0.88rem">
-                Les agents et leurs habilitations sont propres à l'équipe, et enregistrés dans la base,
-                jamais dans le code de l'application.
+            <div id="op-corps">
+                <div style="padding:12px 20px; border-bottom:1px solid var(--border); color:#64748b; font-size:0.88rem">
+                    Les agents et leurs habilitations sont propres à l'équipe, et enregistrés dans la base,
+                    jamais dans le code de l'application.
+                </div>
+                <div id="op-list" onfocusout="setTimeout(() => { const c = document.getElementById('op-list');
+                     if(opRenduEnAttente && !c.contains(document.activeElement)) renderOperateurs(); }, 0)"></div>
             </div>
-            <div id="op-list" onfocusout="setTimeout(() => { const c = document.getElementById('op-list');
-                 if(opRenduEnAttente && !c.contains(document.activeElement)) renderOperateurs(); }, 0)"></div>
         </div>
 
         <div class="dashboard-container">
             <div class="header-bar" style="display:flex; justify-content:space-between; align-items:center; gap:12px">
                 <h3 style="margin:0; font-size:1.1rem">&#9742; FICHE DE SECOURS DE <span id="sec-equipe-lbl">&mdash;</span> (<span id="sec-count">0</span>)</h3>
+                <button id="sec-bascule" class="btn-replier" onclick="basculerBloc('secours')">▾ Réduire</button>
             </div>
-            <div style="padding:12px 20px; border-bottom:1px solid var(--border); color:#64748b; font-size:0.88rem">
-                L'encadrement et les groupements sont propres à l'équipe, et enregistrés dans la base,
-                jamais dans le code de l'application. Toute fiche de secours part de ce carnet ;
-                elle reste ensuite modifiable chantier par chantier.
+            <div id="sec-corps">
+                <div style="padding:12px 20px; border-bottom:1px solid var(--border); color:#64748b; font-size:0.88rem">
+                    L'encadrement et les groupements sont propres à l'équipe, et enregistrés dans la base,
+                    jamais dans le code de l'application. Toute fiche de secours part de ce carnet ;
+                    elle reste ensuite modifiable chantier par chantier.
+                </div>
+                <div id="sec-list" onfocusout="setTimeout(() => { const c = document.getElementById('sec-list');
+                     if(secRenduEnAttente && !c.contains(document.activeElement)) renderSecours(); }, 0)"></div>
             </div>
-            <div id="sec-list" onfocusout="setTimeout(() => { const c = document.getElementById('sec-list');
-                 if(secRenduEnAttente && !c.contains(document.activeElement)) renderSecours(); }, 0)"></div>
         </div>
     </div>
 
@@ -2251,23 +2259,40 @@
             db.ref('equipes/' + e).remove().catch(x => alert("Erreur : " + x.message));
         }
 
-        // Quatre-vingt-dix-huit lignes encombrent l'ecran, surtout sur
-        // telephone : la liste est repliee par defaut, et le choix est retenu.
-        let lignesOuvertes = false;
-        try { lignesOuvertes = localStorage.getItem('suivi-lignes-ouvertes') === '1'; } catch(e) {}
+        // Les trois blocs des options se replient : quatre-vingt-dix-huit
+        // lignes, vingt agents et douze contacts, c'est trop pour un ecran de
+        // telephone. Chacun retient son etat d'une visite a l'autre.
+        // Les lignes sont repliees d'emblee, les deux autres ouvertes.
+        const BLOCS_OPT = {
+            lignes:     { corps: 'opt-corps', bouton: 'opt-bascule', cle: 'suivi-lignes-ouvertes',
+                          ouvert: false, rendu: () => renderLignes() },
+            operateurs: { corps: 'op-corps',  bouton: 'op-bascule',  cle: 'suivi-operateurs-ouverts',
+                          ouvert: true,  rendu: () => renderOperateurs() },
+            secours:    { corps: 'sec-corps', bouton: 'sec-bascule', cle: 'suivi-secours-ouvert',
+                          ouvert: true,  rendu: () => renderSecours() }
+        };
+        Object.values(BLOCS_OPT).forEach(b => {
+            try {
+                const v = localStorage.getItem(b.cle);
+                if(v !== null) b.ouvert = (v === '1');
+            } catch(e) {}
+        });
+        function blocOuvert(k) { return BLOCS_OPT[k].ouvert; }
 
-        function basculerLignes() {
-            lignesOuvertes = !lignesOuvertes;
-            try { localStorage.setItem('suivi-lignes-ouvertes', lignesOuvertes ? '1' : '0'); } catch(e) {}
-            majReplieLignes();
-            if(lignesOuvertes) renderLignes();
+        function basculerBloc(k) {
+            const b = BLOCS_OPT[k];
+            b.ouvert = !b.ouvert;
+            try { localStorage.setItem(b.cle, b.ouvert ? '1' : '0'); } catch(e) {}
+            majBloc(k);
+            if(b.ouvert) b.rendu();
         }
 
-        function majReplieLignes() {
-            const corps = document.getElementById('opt-corps');
-            const b = document.getElementById('opt-bascule');
-            if(corps) corps.style.display = lignesOuvertes ? '' : 'none';
-            if(b) b.textContent = lignesOuvertes ? '▾ Réduire' : '▸ Afficher';
+        function majBloc(k) {
+            const b = BLOCS_OPT[k];
+            const corps = document.getElementById(b.corps);
+            const bt = document.getElementById(b.bouton);
+            if(corps) corps.style.display = b.ouvert ? '' : 'none';
+            if(bt) bt.textContent = b.ouvert ? '\u25be R\u00e9duire' : '\u25b8 Afficher';
         }
 
         function renderLignes() {
@@ -2276,8 +2301,8 @@
             document.getElementById('opt-count').textContent = dbLignes.length;
             const lbl = document.getElementById('opt-equipe-lbl');
             if(lbl) lbl.textContent = equipeActive;
-            majReplieLignes();
-            if(!lignesOuvertes) return;        // rien a dessiner tant que c'est replie
+            majBloc('lignes');
+            if(!blocOuvert('lignes')) return;  // rien a dessiner tant que c'est replie
 
             const q = document.getElementById('opt-filter').value.trim().toLowerCase();
             const lst = dbLignes
@@ -2340,6 +2365,7 @@
         function opDe(id) { return dbOperateurs.find(o => o.id === id); }
 
         function addOperateur() {
+            if(!blocOuvert('operateurs')) basculerBloc('operateurs');
             db.ref('operateurs/' + equipeActive).push()
               .set({ nom: '', prenom: '', fonction: '', hab: [] })
               .catch(e => alert("Ajout impossible : " + e.message));
@@ -2400,6 +2426,7 @@
         }
 
         function addSecours(quoi) {
+            if(!blocOuvert('secours')) basculerBloc('secours');
             dbSecours[quoi] = (dbSecours[quoi] || []).concat([quoi === 'enc' ? { n:'', f:'', t:'', p:'' } : { n:'', t:'' }]);
             ecrireSecours();
             renderSecours();
@@ -2438,6 +2465,8 @@
             if(lbl) lbl.textContent = equipeActive;
             const n = (dbSecours.enc || []).length + (dbSecours.grp || []).length;
             document.getElementById('sec-count').textContent = n;
+            majBloc('secours');
+            if(!blocOuvert('secours')) return;
 
             const enc = dbSecours.enc || [], grp = dbSecours.grp || [];
             c.innerHTML = `
@@ -2481,6 +2510,8 @@
             const lbl = document.getElementById('op-equipe-lbl');
             if(lbl) lbl.textContent = equipeActive;
             document.getElementById('op-count').textContent = dbOperateurs.length;
+            majBloc('operateurs');
+            if(!blocOuvert('operateurs')) return;
 
             if(!dbOperateurs.length) {
                 c.innerHTML = '<div style="padding:25px;text-align:center;color:#999">Aucun agent enregistré pour cette équipe</div>';
