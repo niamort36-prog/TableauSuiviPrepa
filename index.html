@@ -3198,14 +3198,16 @@
             return suite ? tete.trim() + ' — ' + suite : tete.trim();
         }
 
-        async function importerPanier() {
-            const ref = lirePanier(pv('ou-panier-lien'));
+        // Chaque page qui accueille un panier a son prefixe : les deux
+        // listes vivent cote a cote sans se marcher dessus.
+        async function importerPanier(pre) {
+            const ref = lirePanier(pv(pre + '-panier-lien'));
             if(!ref) {
                 alert("Collez le lien de partage d'un panier Invent'RTE.\n\n"
                     + "Il ressemble à :\nhttps://\u2026/Inventaire-RTE/?equipe=EL%20Feytiat&panier=1792677398082");
                 return;
             }
-            const etat = document.getElementById('ou-panier-etat');
+            const etat = document.getElementById(pre + '-panier-etat');
             if(etat) etat.textContent = ' Connexion à Invent\u2019RTE\u2026';
             try {
                 const bd = (await baseInventaire()).database();
@@ -3253,9 +3255,9 @@
                 if(!bruts.length) { if(etat) etat.textContent = '';
                                      alert('Ce panier ne contient aucun article.'); return; }
 
-                prepa.l['ou-inv'] = lignes;
-                prepa.v['ou-panier-nom'] = b.name || '';
-                prepa.v['ou-panier-maj'] = new Date().toLocaleDateString('fr-FR');
+                prepa.l[pre + '-inv'] = lignes;
+                prepa.v[pre + '-panier-nom'] = b.name || '';
+                prepa.v[pre + '-panier-maj'] = new Date().toLocaleDateString('fr-FR');
                 renderPrepa();
                 alert(bruts.length + ' article(s) repris du panier « ' + (b.name || ref.panier) + ' ».');
             } catch(e) {
@@ -3263,6 +3265,25 @@
                 alert("Lecture du panier impossible : " + e.message
                     + "\n\nVérifiez le lien, et que vous avez accès à Invent\u2019RTE.");
             }
+        }
+
+        // Barre d'import et liste reprise de l'inventaire, pour une page.
+        function blocPanier(pre) {
+            const nom = String(pv(pre + '-panier-nom')).trim();
+            let h = sous('Panier Invent\u2019RTE' + (nom ? ' \u2014 ' + esc(nom) : ''));
+            h += `<div class="pd-l pd-aide">
+                    ${chp(pre + '-panier-lien', 'Collez ici le lien de partage du panier')}
+                    <button class="btn-pd pre" onclick="importerPanier('${pre}')">\u21bb Importer le panier</button>
+                    <span id="${pre}-panier-etat"></span>
+                 </div>`;
+            if(lst(pre + '-inv').length) {
+                h += `<div class="pd-aide">Repris de l\u2019inventaire le ${esc(pv(pre + '-panier-maj'))}.
+                      Les lignes restent modifiables ici.</div>`;
+                h += tableau(pre + '-inv', [{k:'d', t:'D\u00e9signation'}, {k:'f', t:'Famille', l:'22%'},
+                                            {k:'z', t:'Zone', l:'20%'}, {k:'n', t:'Nb', l:'60px', c:true}],
+                             {d:'', f:'', z:'', n:''}, null, {etapes:true});
+            }
+            return h;
         }
 
         // --- Note d'information prealable ------------------------------------
@@ -4055,20 +4076,7 @@
             let h = `${grille('pd-g3', champ('Ouvrage', auto(c.ligne)) + champ('Du', auto(c.debut)) + champ('Au', auto(c.fin)))}`;
 
             // Panier Invent'RTE : la liste vient de l'inventaire, pas d'ici.
-            const nomPanier = String(pv('ou-panier-nom')).trim();
-            h += sous('Panier Invent\u2019RTE' + (nomPanier ? ' — ' + esc(nomPanier) : ''));
-            h += `<div class="pd-l pd-aide">
-                    ${chp('ou-panier-lien', 'Collez ici le lien de partage du panier')}
-                    <button class="btn-pd pre" onclick="importerPanier()">\u21bb Importer le panier</button>
-                    <span id="ou-panier-etat"></span>
-                 </div>`;
-            if(lst('ou-inv').length) {
-                h += `<div class="pd-aide">Repris de l\u2019inventaire le ${esc(pv('ou-panier-maj'))}.
-                      Les lignes restent modifiables ici.</div>`;
-                h += tableau('ou-inv', [{k:'d', t:'Désignation'}, {k:'f', t:'Famille', l:'22%'},
-                                        {k:'z', t:'Zone', l:'20%'}, {k:'n', t:'Nb', l:'60px', c:true}],
-                             {d:'', f:'', z:'', n:''}, null, {etapes:true});
-            }
+            h += blocPanier('ou');
 
             groupes.forEach((g, gi) => {
                 h += sous(g[0]);
@@ -4143,6 +4151,7 @@
                                {k:'ti', t:"Type d'isolement", l:'140px'}, {k:'pc', t:'Pièces de chaînes'},
                                {k:'f', t:'Fixation à la charpente'}], {s:'', tc:'', ti:'', pc:'', f:''})}
             ${grille('pd-g2', champ('Ancrage simple', chp('mt-anc-s')) + champ('Ancrage double', chp('mt-anc-d')))}
+            ${blocPanier('mt')}
             ${sous('Contrôle croisé — PF 5')}
             ${grille('pd-g2', champ('Réalisé par', chp('mt-pf5-nom')) + champ('Date', chp('mt-pf5-date', '', 'date')))}`;
         }},
@@ -4367,7 +4376,9 @@
         // occupe exactement la feuille. Meme dichotomie que la fiche A3.
         // En deca de ce facteur le texte devient illisible : mieux vaut
         // laisser la page couler sur deux feuilles que de la rendre inutile.
-        const ECHELLE_MINI = 0.62;
+        // 0,70 d'un corps de 13,8 px fait environ 7,2 points : c'est le plus
+        // petit qui se lise encore au pied d'un pylone, par mauvais temps.
+        const ECHELLE_MINI = 0.70;
 
         function ajusterFeuilles() {
             document.querySelectorAll('#pd-pages .pd-page').forEach(sec => {
