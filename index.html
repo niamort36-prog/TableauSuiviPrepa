@@ -348,6 +348,11 @@
         .pd-som-ligne a { flex: 1; color: var(--primary); font-weight: 600; cursor: pointer; text-decoration: none; min-width: 0; }
         .pd-som-ligne.masquee a { color: #cbd5e1; text-decoration: line-through; }
         .pd-som-ligne .pd-som-pc { font-size: .68rem; font-weight: 800; color: #94a3b8; }
+        .pd-som-rv { display: flex; align-items: flex-start; gap: 7px; padding: 8px 4px 2px;
+                     border-top: 1px solid var(--border); margin-top: 6px; font-size: .74rem;
+                     font-weight: 700; color: #475569; cursor: pointer; }
+        .pd-som-rv input { width: 15px; height: 15px; flex: 0 0 15px; margin-top: 1px; cursor: pointer; }
+        .pd-som-rv small { display: block; font-weight: 400; color: #94a3b8; }
         .pd-som-actions { display: flex; gap: 6px; padding: 8px 4px 2px; border-top: 1px solid var(--border); margin-top: 6px; }
         .pd-som-actions button { flex: 1; font-size: .7rem; padding: 5px; border: 1px solid var(--border);
                                  background: #f8fafc; border-radius: 6px; cursor: pointer; font-weight: 700; color: #475569; }
@@ -588,8 +593,11 @@
             width: 209mm; height: 290mm; overflow: hidden;
             padding: 12mm 11mm 11mm 20mm; background: #fff; }
         body.prepa-impression #pd-pages .pd-folio {
-            display: block; position: absolute; right: 12mm; bottom: 6mm;
+            display: block; position: absolute; right: 11mm; bottom: 6mm;
             font-size: .72rem; font-weight: 700; color: #64748b; }
+        /* Verso : la reliure passe a droite, et le folio avec elle. */
+        body.prepa-impression #pd-pages .pd-verso { padding: 12mm 20mm 11mm 11mm !important; }
+        body.prepa-impression #pd-pages .pd-verso > .pd-folio { right: 20mm; }
         /* Une page decoupee n'a plus de marges propres : chacune de ses
            feuilles porte les siennes. Idem pour le saut de page. */
         body.prepa-impression #pd-pages .pd-page.pd-decoupe { padding: 0; }
@@ -5274,7 +5282,12 @@
                         <span class="pd-som-pc" id="pdpc-${pg.id}"></span>
                     </div>`;
                 }).join('') +
-                `<div class="pd-som-actions">
+                `<label class="pd-som-rv">
+                    <input type="checkbox" ${rectoVerso ? 'checked' : ''}
+                           onchange="basculerRectoVerso(this.checked)">
+                    <span>Recto verso <small>marge de reliure altern\u00e9e</small></span>
+                </label>
+                <div class="pd-som-actions">
                     <button onclick="toutesPages(true)">Tout afficher</button>
                     <button onclick="toutesPages(false)">Tout masquer</button>
                     <button onclick="pagesParDefaut()">Défaut</button>
@@ -5549,7 +5562,10 @@
                 }
                 // Les planches d'une piece jointe portent deja leur feuille
                 if(sec.id === 'pdp-nip' || sec.id === 'pdp-unifilaire') {
-                    fit.style.width = A4_UTILE_L + 'px';
+                    // Chaque planche est une feuille entiere : elle porte ses
+                    // marges elle-meme. La contraindre a la largeur utile la
+                    // decalait de 32 mm vers la gauche, folio compris.
+                    fit.style.width = A4_L + 'px';
                     sec.style.width = A4_L + 'px';
                     sec.style.height = '';
                     sec.querySelectorAll('.pd-nip-feuille').forEach(p => p.appendChild(folioNeuf()));
@@ -5619,6 +5635,18 @@
             return 1;
         }
 
+        // Une feuille imprimee au verso se retourne : sa reliure passe a
+        // droite. Sans quoi la perforation mord dans le texte une feuille sur
+        // deux — c'est ce qu'on voit des qu'on relie le document.
+        let rectoVerso = true;
+        try { const v = localStorage.getItem('suivi-recto-verso');
+              if(v !== null) rectoVerso = (v === '1'); } catch(e) {}
+        function basculerRectoVerso(v) {
+            rectoVerso = !!v;
+            try { localStorage.setItem('suivi-recto-verso', rectoVerso ? '1' : '0'); } catch(e) {}
+            rafraichirPagination();
+        }
+
         // Numero de la feuille ou commence chaque page, et folio de chacune.
         // A appeler une fois la mise en feuilles faite : c'est elle qui fixe
         // la pagination.
@@ -5631,7 +5659,12 @@
                 const folios = sec.querySelectorAll('.pd-folio');
                 const nb = compterFeuilles(sec);
                 // La couverture ne porte pas de folio : elle est la feuille 1.
-                folios.forEach((e, i) => { e.textContent = (n + i) + ' / @'; });
+                folios.forEach((e, i) => {
+                    e.textContent = (n + i) + ' / @';
+                    // Feuille paire = verso : on bascule la reliure a droite.
+                    const f = e.parentElement;
+                    if(f) f.classList.toggle('pd-verso', rectoVerso && (n + i) % 2 === 0);
+                });
                 n += nb;
             });
             const total = n - 1;
