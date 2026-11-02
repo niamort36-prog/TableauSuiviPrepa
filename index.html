@@ -3198,6 +3198,37 @@
             </select>`;
         }
         function auto(v)        { return `<span class="pd-auto">${esc(v) || '—'}</span>`; }
+        // Meme case, mais nommee : on peut la remettre a jour toute seule.
+        function autoId(id, v)  { return `<span class="pd-auto" id="${id}">${esc(v) || '—'}</span>`; }
+
+        // Liste deroulante qui previent quand elle change : la page se met a
+        // jour sans etre redessinee, et la saisie en cours n'est pas perdue.
+        function selFait(c, opts, apres) {
+            return `<select class="pd-in" onchange="setPV('${c}', this.value); ${apres}">
+                <option value=""></option>
+                ${opts.map(o => `<option value="${esc(o)}" ${pv(c) === o ? 'selected' : ''}>${esc(o)}</option>`).join('')}
+            </select>`;
+        }
+
+        // Les cases calculees de la page Cables. On les recalcule une a une :
+        // redessiner toute la preparation a chaque chiffre faisait remonter la
+        // page en haut et perdre le champ — un parametre fait quatre chiffres.
+        function majCables() {
+            const c = CABLES.find(x => x.n === pv('ca-type'));
+            const par = num(pv('ca-param'));
+            const cd = COTE_D[pv('ca-tension')];
+            const coteC = (c && par) ? (c.d / 2000 * Math.sqrt(par * 9.81)) : null;
+            const pose = (id, v) => {
+                const e = document.getElementById(id);
+                if(e) e.textContent = (v === '' || v === undefined || v === null) ? '\u2014' : String(v);
+            };
+            pose('ca-d', c ? c.d + ' mm' : '');
+            pose('ca-w', c ? c.w : '');
+            pose('ca-u', c ? c.u : '');
+            pose('ca-f', c ? c.f : '');
+            pose('ca-c', coteC === null ? '' : coteC.toFixed(3) + ' m');
+            pose('ca-cd', cd === undefined ? '' : cd + ' cm');
+        }
         function champ(lab, h)  { return `<div class="pd-champ"><label>${lab}</label>${h}</div>`; }
         function grille(cls, h) { return `<div class="pd-grille ${cls}">${h}</div>`; }
         function sous(t)        { return `<div class="pd-sous">${t}</div>`; }
@@ -3708,13 +3739,18 @@
             appId: "1:105067826948:web:545a35991a5d9a1ef1ca51"
         };
 
-        function chargerScript(url) {
+        function chargerScript(url, delai) {
             return new Promise((res, rej) => {
                 if([...document.scripts].some(s => s.src === url)) { res(); return; }
                 const b = document.createElement('script');
+                // Un reseau qui filtre les CDN ne repond parfois ni succes ni
+                // erreur : sans minuterie, l'import restait sur « Lecture du
+                // document… » pour toujours.
+                const t = setTimeout(() => rej(new Error('délai dépassé : ' + url)),
+                                     delai || 20000);
                 b.src = url;
-                b.onload = () => res();
-                b.onerror = () => rej(new Error('script indisponible : ' + url));
+                b.onload = () => { clearTimeout(t); res(); };
+                b.onerror = () => { clearTimeout(t); rej(new Error('script indisponible : ' + url)); };
                 document.head.appendChild(b);
             });
         }
@@ -3819,6 +3855,16 @@
                 prepa.l[pre + '-inv'] = lignes;
                 prepa.v[pre + '-panier-nom'] = b.name || '';
                 prepa.v[pre + '-panier-maj'] = new Date().toLocaleDateString('fr-FR');
+                // Comme pour une piece jointe : la liste part en base tout de
+                // suite, elle ne doit pas dependre d'un enregistrement.
+                if(curId) {
+                    const maj = {};
+                    maj['chantiers/' + curId + '/prepa/l/' + pre + '-inv'] = lignes;
+                    maj['chantiers/' + curId + '/prepa/v/' + pre + '-panier-nom'] = prepa.v[pre + '-panier-nom'];
+                    maj['chantiers/' + curId + '/prepa/v/' + pre + '-panier-maj'] = prepa.v[pre + '-panier-maj'];
+                    maj['chantiers/' + curId + '/prepa/v/' + pre + '-panier-lien'] = pv(pre + '-panier-lien');
+                    await db.ref().update(maj).catch(() => {});
+                }
                 renderPrepa();
                 alert(bruts.length + ' article(s) repris du panier « ' + (b.name || ref.panier) + ' ».');
             } catch(e) {
@@ -4045,7 +4091,14 @@
                 await db.ref(cle + '/' + curId)
                         .set({ nom: f.name, taille: f.size, date: Date.now(), data: data });
                 pieces[cle].fichier = { nom: f.name, taille: f.size };
-                try { await rendreNip(data, cle); } catch(e) { pieces[cle].images = []; }
+                try { await rendreNip(data, cle); }
+                catch(e) {
+                    pieces[cle].images = [];
+                    if(etat) etat.textContent = '';
+                    alert("Le document est enregistré, mais ses pages n'ont pas pu être"
+                        + " rendues :\n" + e.message
+                        + "\n\nIl se t\u00e9l\u00e9charge toujours depuis la page Annexes.");
+                }
 
                 const reg = RELEVES[cle];
                 let releve = null;
@@ -4055,10 +4108,20 @@
 
                 if(releve) {
                     const vals = reg.poser(releve);
+                    // Le document part en base des l'import ; le releve doit
+                    // suivre, sinon il disparait si l'on quitte la page sans
+                    // enregistrer, alors que le PDF, lui, est bien la.
+                    const maj = {};
                     Object.keys(vals).forEach(k => {
-                        if(String(vals[k] === undefined ? '' : vals[k]).trim() !== '')
+                        if(String(vals[k] === undefined ? '' : vals[k]).trim() !== '') {
                             prepa.v[k] = String(vals[k]).trim();
+                            maj['chantiers/' + curId + '/prepa/v/' + k] = prepa.v[k];
+                        }
                     });
+                    if(Object.keys(maj).length)
+                        await db.ref().update(maj).catch(e =>
+                            alert("Le relev\u00e9 n'a pas pu \u00eatre enregistr\u00e9 : " + e.message
+                                + "\n\nIl reste \u00e0 l'\u00e9cran : enregistrez le chantier."));
                     const vides = Object.keys(reg.attendus)
                         .filter(k => !String(releve[k] === undefined ? '' : releve[k]).trim().length)
                         .map(k => reg.attendus[k]);
@@ -4676,18 +4739,20 @@
             <div class="pd-note">Pour tout calcul sur les câbles, utiliser le logiciel <b>CELESTE</b>. Joindre à la
             préparation : les données du canton, la température finale et le paramètre de base, les résultats des calculs
             (surcharges ponctuelles, efforts horizontaux et verticaux, longueurs naturelles, haubanages…).</div>
-            ${champ('Type de câble', sel('ca-type', CABLES.map(x => x.n)))}
+            ${champ('Type de câble', selFait('ca-type', CABLES.map(x => x.n), 'majCables()'))}
             ${grille('pd-g4',
-                champ('Diamètre du câble', auto(c ? c.d + ' mm' : ''))
-              + champ('ω', auto(c ? c.w : ''))
-              + champ('UPK', auto(c ? c.u : ''))
-              + champ('Fourreau UPK', auto(c ? c.f : '')))}
+                champ('Diamètre du câble', autoId('ca-d', c ? c.d + ' mm' : ''))
+              + champ('ω', autoId('ca-w', c ? c.w : ''))
+              + champ('UPK', autoId('ca-u', c ? c.u : ''))
+              + champ('Fourreau UPK', autoId('ca-f', c ? c.f : '')))}
             ${sous('Calcul de la cote C')}
             ${grille('pd-g3',
-                champ('Niveau de tension', sel('ca-tension', Object.keys(COTE_D)))
-              + champ('Paramètre du conducteur à 15 °C', `<input class="pd-in" type="number" value="${esc(pv('ca-param'))}" oninput="setPV('ca-param', this.value); renderPrepa()">`)
-              + champ('Cote C', auto(coteC === null ? '' : coteC.toFixed(3) + ' m')))}
-            ${champ('Cote D', auto(cd === undefined ? '' : cd + ' cm'))}
+                champ('Niveau de tension', selFait('ca-tension', Object.keys(COTE_D), 'majCables()'))
+              + champ('Paramètre du conducteur à 15 °C',
+                      `<input class="pd-in" type="number" inputmode="numeric" value="${esc(pv('ca-param'))}"
+                              oninput="setPV('ca-param', this.value); majCables()">`)
+              + champ('Cote C', autoId('ca-c', coteC === null ? '' : coteC.toFixed(3) + ' m')))}
+            ${champ('Cote D', autoId('ca-cd', cd === undefined ? '' : cd + ' cm'))}
             <div class="pd-note">Cote C = Ø / 2000 × √(paramètre × 9,81)</div>
             <img class="pd-img" src="${IMG}cables-01.jpg" alt="Schéma câbles">
             ${champ('Observations', zone('ca-obs', 3))}`;
