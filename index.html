@@ -5609,24 +5609,27 @@
         }
         function toutesLesPages() { return PREPA_PAGES.concat(pagesAnnexes()); }
 
-        async function ajouterAnnexe(input) {
+        // `cible` : la categorie a completer. Sans elle, on prend le nom
+        // saisi au-dessus, et on cree ou on complete selon qu'il existe deja.
+        async function ajouterAnnexe(input, cible) {
             const fichiers = [...(input.files || [])];
             input.value = '';
             if(!fichiers.length) return;
             if(!curId) { alert("Enregistrez d'abord le chantier : une annexe doit lui \u00eatre rattach\u00e9e."); return; }
-            const nom = String(pv('an-annexe-nom')).trim();
-            if(!nom) { alert("Donnez d'abord un nom \u00e0 l'annexe."); return; }
+            const vise = cible ? ANNEXES.find(a => a.id === cible) : null;
+            const nom = vise ? vise.nom : String(pv('an-annexe-nom')).trim();
+            if(!nom) { alert("Donnez d'abord un nom \u00e0 la cat\u00e9gorie."); return; }
             for(const f of fichiers) {
                 if(!/^(application\/pdf|image\/(jpeg|png|webp))$/.test(f.type)) {
                     alert("\u00ab " + f.name + " \u00bb n'est ni un PDF ni une image."); return;
                 }
                 if(f.size > RECU_MAX) { alert("\u00ab " + f.name + " \u00bb d\u00e9passe 3 Mo."); return; }
             }
-            const etat = document.getElementById('an-annexe-etat');
+            const etat = document.getElementById(cible ? 'an-etat-' + cible : 'an-annexe-etat');
             if(etat) etat.textContent = ' Import\u2026';
             try {
-                // Meme nom qu'une annexe existante : les fichiers s'y ajoutent.
-                const deja = ANNEXES.find(a => a.nom.toLowerCase() === nom.toLowerCase());
+                // Meme nom qu'une categorie existante : les fichiers s'y ajoutent.
+                const deja = vise || ANNEXES.find(a => a.nom.toLowerCase() === nom.toLowerCase());
                 const id = deja ? deja.id : db.ref('annexes/' + curId).push().key;
                 const liste = deja ? deja.fichiers.slice() : [];
                 for(const f of fichiers) {
@@ -5634,7 +5637,7 @@
                 }
                 const ordre = deja ? deja.ordre : (ANNEXES.length ? Math.max(...ANNEXES.map(a => a.ordre)) + 1 : 1);
                 await db.ref('annexes/' + curId + '/' + id).set({ nom: nom, ordre: ordre, fichiers: liste });
-                prepa.v['an-annexe-nom'] = '';
+                if(!cible) prepa.v['an-annexe-nom'] = '';
                 await chargerAnnexes();
             } catch(e) {
                 alert("\u00c9chec de l'import : " + e.message);
@@ -5673,22 +5676,32 @@
         // Le bloc de gestion, en bas de la page Annexes.
         function blocAnnexes() {
             let h = sous('Documents annex\u00e9s');
-            h += `<div class="pd-note">Ajoutez vos propres documents \u2014 images ou PDF. Chacun porte
-                  un nom, devient une page de la pr\u00e9paration et figure au sommaire sous ce nom.
-                  Plusieurs fichiers peuvent aller sous le m\u00eame nom.</div>`;
+            h += `<div class="pd-note">Classez vos documents par <b>cat\u00e9gorie</b> \u2014 calculs,
+                  types de cha\u00eenes, plan de pr\u00e9vention\u2026 Chaque cat\u00e9gorie devient une page de la
+                  pr\u00e9paration et figure au sommaire sous son nom. Elle accueille autant de fichiers
+                  qu'il faut, images ou PDF, ajout\u00e9s en une ou plusieurs fois avec son bouton
+                  <b>+ Fichiers</b>.</div>`;
+            h += `<datalist id="dl-annexes">${ANNEXES
+                    .map(a => `<option value="${esc(a.nom)}"></option>`).join('')}</datalist>`;
             h += `<div class="pd-l pd-aide">
-                    ${chp('an-annexe-nom', "Nom de l'annexe, ex : Plan de prévention")}
-                    <label class="btn-pd pre">\u{1f4ce} Ajouter des fichiers
+                    <input class="pd-in" list="dl-annexes" value="${esc(pv('an-annexe-nom'))}"
+                           placeholder="Nouvelle catégorie, ex : Calculs"
+                           onchange="setPV('an-annexe-nom', this.value)">
+                    <label class="btn-pd pre">\u{1f4ce} Cr\u00e9er avec des fichiers
                         <input type="file" accept="application/pdf,image/*" multiple hidden
                                onchange="ajouterAnnexe(this)"></label>
                     <span id="an-annexe-etat"></span>
                  </div>`;
-            if(!ANNEXES.length) return h + '<div class="pd-aide">Aucune annexe pour ce chantier.</div>';
+            if(!ANNEXES.length) return h + '<div class="pd-aide">Aucune cat\u00e9gorie pour ce chantier.</div>';
             h += ANNEXES.map(a => `<div class="an-bloc">
                 <div class="pd-l">
-                    <input class="pd-in" value="${esc(a.nom)}" style="max-width:320px"
+                    <input class="pd-in" value="${esc(a.nom)}" style="max-width:300px"
                            onchange="renommerAnnexe('${a.id}', this.value)">
-                    <span class="pd-aide">${a.planches.length} page(s)</span>
+                    <span class="pd-aide">${a.fichiers.length} fichier(s), ${a.planches.length} page(s)</span>
+                    <label class="btn-pd pre">+ Fichiers
+                        <input type="file" accept="application/pdf,image/*" multiple hidden
+                               onchange="ajouterAnnexe(this, '${a.id}')"></label>
+                    <span id="an-etat-${a.id}"></span>
                     <button class="pd-sup" onclick="retirerAnnexe('${a.id}')">&times; Retirer</button>
                 </div>
                 ${a.fichiers.map((f, i) => `<div class="pd-l an-fichier">
