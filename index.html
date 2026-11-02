@@ -4358,8 +4358,42 @@
         // --- Photo de couverture ---------------------------------------------
         // Meme principe que les recus : base64 dans la base, rattache au
         // chantier, jamais dans le depot.
-        const PHOTO_MAX = 2 * 1024 * 1024;
+        // Une photo de telephone pese cinq a dix megaoctets, et la couverture
+        // n'en a pas besoin : on la reduit a l'import plutot que de la
+        // refuser. Vingt megaoctets a l'entree, moins d'un a l'arrivee.
+        const PHOTO_MAX = 20 * 1024 * 1024;
+        const PHOTO_COTE = 1800;           // plus grand cote, en pixels
         let photoCouv = null;              // dataURL chargee a la demande
+
+        // Rend { type, data } prets a ranger. createImageBitmap redresse les
+        // photos prises de travers, que leur orientation EXIF signale.
+        async function reduireImage(f, cote, qualite) {
+            let im = null;
+            try { im = await createImageBitmap(f, { imageOrientation: 'from-image' }); }
+            catch(e) {
+                im = await new Promise((res, rej) => {
+                    const lec = new FileReader();
+                    lec.onload = () => { const i = new Image();
+                                         i.onload = () => res(i);
+                                         i.onerror = () => rej(new Error('image illisible'));
+                                         i.src = lec.result; };
+                    lec.onerror = () => rej(new Error('image illisible'));
+                    lec.readAsDataURL(f);
+                });
+            }
+            const k = Math.min(1, cote / Math.max(im.width, im.height));
+            const c = document.createElement('canvas');
+            c.width = Math.round(im.width * k);
+            c.height = Math.round(im.height * k);
+            const x = c.getContext('2d');
+            x.fillStyle = '#fff';           // un PNG transparent sortirait noir
+            x.fillRect(0, 0, c.width, c.height);
+            x.drawImage(im, 0, 0, c.width, c.height);
+            if(im.close) im.close();
+            return { type: 'image/jpeg',
+                     data: c.toDataURL('image/jpeg', qualite || 0.85).split(',')[1],
+                     largeur: c.width, hauteur: c.height };
+        }
 
         async function chargerPhotoCouv() {
             if(!curId) { photoCouv = null; return; }
@@ -4383,16 +4417,17 @@
             const f = input.files && input.files[0];
             input.value = '';
             if(!f) return;
-            if(!/^image\/(jpeg|png|webp)$/.test(f.type)) { alert("Choisissez une image JPEG, PNG ou WebP."); return; }
-            if(f.size > PHOTO_MAX) { alert("Image trop lourde : 2 Mo maximum."); return; }
+            if(!/^image\//.test(f.type)) { alert("Choisissez une image."); return; }
+            if(f.size > PHOTO_MAX) { alert("Image trop lourde : 20 Mo maximum."); return; }
             if(!curId) { alert("Enregistrez d'abord le chantier : la photo doit lui \u00eatre rattach\u00e9e."); return; }
             const etat = document.getElementById('cv-photo-etat');
-            if(etat) etat.textContent = ' Import\u2026';
+            if(etat) etat.textContent = ' R\u00e9duction\u2026';
             try {
-                const data = await lireBase64(f);
+                const r = await reduireImage(f, PHOTO_COTE);
+                if(etat) etat.textContent = ' Import\u2026';
                 await db.ref('couvertures/' + curId)
-                        .set({ nom: f.name, type: f.type, date: Date.now(), data: data });
-                photoCouv = 'data:' + f.type + ';base64,' + data;
+                        .set({ nom: f.name, type: r.type, date: Date.now(), data: r.data });
+                photoCouv = 'data:' + r.type + ';base64,' + r.data;
                 renderPrepa();
             } catch(e) {
                 if(etat) etat.textContent = '';
@@ -4508,7 +4543,7 @@
             </div>
             <div class="pd-l pd-aide">
                 <label class="btn-pd">🖼 Photo de couverture
-                    <input type="file" accept="image/jpeg,image/png,image/webp" hidden onchange="importerPhotoCouv(this)">
+                    <input type="file" accept="image/*" hidden onchange="importerPhotoCouv(this)">
                 </label>
                 ${photoCouv ? '<button class="btn-pd" onclick="retirerPhotoCouv()">Retirer la photo</button>' : ''}
                 <span id="cv-photo-etat"></span>
