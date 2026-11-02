@@ -426,6 +426,12 @@
         /* width 1% + nowrap : le tableau donne a cette colonne exactement la
            largeur de ses boutons, ni plus ni moins. */
         .pd-tab .pd-actions { width: 1%; white-space: nowrap; }
+        /* Un numero ou une case n'a pas besoin d'une pleine colonne : on la
+           fait tenir a son titre, qui peut passer a la ligne. */
+        .pd-tab th.pd-court { width: 1%; white-space: normal; min-width: 42px; max-width: 64px;
+                              hyphens: auto; line-height: 1.15; }
+        .pd-tab td.pd-court { width: 1%; }
+        .pd-tab td.pd-court .pd-in { text-align: center; padding-left: 2px; padding-right: 2px; }
 
         .pd-tab-enveloppe { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
         .pd-aide { font-size: .72rem; color: #64748b; }
@@ -3590,14 +3596,15 @@
             const rows = lst(cle, o.defaut);
             const lab = t => esc(String(t).replace(/<[^>]*>/g, ''));
             const nb = colonnes.length + 1;
+            const cel = (c, i) => c.b ? clc(cle, i, c.k) : (c.m ? clm : cl)(cle, i, c.k, c.ph || '', c.o);
             return `${colonnes.filter(c => c.o && !c.m).map(c => listeHtml(cle, c.k, c.o)).join('')}
             <div class="pd-tab-enveloppe"><table class="pd-tab pd-cartes${o.haut ? ' pd-tab-haut' : ''}">
-                <thead><tr>${colonnes.map(c => `<th${c.l ? ' style="width:' + c.l + '"' : ''}>${c.t}</th>`).join('')}<th class="pd-actions"></th></tr></thead>
+                <thead><tr>${colonnes.map(c => `<th${c.c ? ' class="pd-court"' : ''}${c.l && !c.c ? ' style="width:' + c.l + '"' : ''}>${c.t}</th>`).join('')}<th class="pd-actions"></th></tr></thead>
                 <tbody>${rows.length ? rows.map((r, i) => r.sect !== undefined ? `<tr class="pd-sect" data-cle="${cle}" data-i="${i}">
                     <td colspan="${nb - 1}" data-lab="Étape">${cl(cle, i, 'sect', "Titre de l'étape")}</td>
                     <td class="pd-actions" data-lab="">${actionsLigne(cle, i, modele)}</td>
                 </tr>` : `<tr data-cle="${cle}" data-i="${i}"${o.arret ? ' data-arret="' + o.arret + '"' : ''}${o.arret && String(r[o.arret] || '').trim() ? ' class="pd-arret"' : ''}>
-                    ${colonnes.map(c => `<td data-lab="${lab(c.t)}"${c.c ? ' class="pd-court"' : ''}>${(c.m ? clm : cl)(cle, i, c.k, c.ph || '', c.o)}</td>`).join('')}
+                    ${colonnes.map(c => `<td data-lab="${lab(c.t)}"${c.c ? ' class="pd-court"' : ''}${c.b ? ' style="text-align:center"' : ''}>${cel(c, i)}</td>`).join('')}
                     <td class="pd-actions" data-lab="">${actionsLigne(cle, i, modele)}</td>
                 </tr>`).join('')
                 : `<tr><td colspan="${colonnes.length + 1}" class="pd-vide" style="color:#94a3b8;text-align:center;padding:10px">Aucune ligne</td></tr>`}
@@ -4815,9 +4822,12 @@
         }},
 
         { id:'modeop', titre:'Mode opératoire', annexe:'Annexe 5', defaut:true, paysage:true, corps: () => `
-            <div class="pd-note">Se référer au DUER pour l'analyse des risques génériques.</div>
+            <div class="pd-note">Se référer au DUER pour l'analyse des risques génériques.
+            En face d'un point d'arrêt, cochez <b>Contrôle croisé</b> si le contrôle est confié à
+            une autre personne que le CDT ; laissé décoché, il s'agit d'un <b>autocontrôle</b>.
+            ${exig('Exigence 3')}</div>
             ${grille('pd-g3', champ('PPE', chp('mo-etren', 'N° PPE')) + champ('Fiche PPE signée par le CDT', coche('mo-etren-sig', 'Signée')) + champ('Impact environnemental', sel('mo-env', ['OUI','NON'])))}
-            ${tableau('mo-l', [{k:'t', t:'Tâches à réaliser', l:'26%', m:true, o:'taches'}, {k:'r', t:'Analyse de risques', l:'24%', m:true, o:'risques'}, {k:'a', t:'Actions préventives', l:'24%', m:true, o:'actions'}, {k:'pa', t:'Point d\'arrêt', l:'64px', c:true}, {k:'e', t:'État réalisé', l:'74px', c:true}, {k:'al', t:'Aléa n°', l:'58px', c:true}], {t:'', r:'', a:'', pa:'', e:'', al:''}, [
+            ${tableau('mo-l', [{k:'t', t:'Tâches à réaliser', l:'26%', m:true, o:'taches'}, {k:'r', t:'Analyse de risques', l:'24%', m:true, o:'risques'}, {k:'a', t:'Actions préventives', l:'24%', m:true, o:'actions'}, {k:'pa', t:'Point d\'arrêt', c:true}, {k:'cc', t:'Contrôle croisé', c:true, b:true}, {k:'e', t:'État réalisé', c:true}, {k:'al', t:'Aléa n°', c:true}], {t:'', r:'', a:'', cc:false, e:'', al:''}, [
                 {t:'Vérification état initial (terrain, préparation de travail)', r:'', a:'', pa:'1', e:'', al:''},
                 {t:'Pré Job Briefing (PF 1)', r:'', a:'', pa:'', e:'', al:''},
                 {t:'Communication sécurisée (PF 3)', r:'', a:'', pa:'', e:'', al:''},
@@ -4834,8 +4844,8 @@
         `},
 
         { id:'modeop2', titre:'Mode opératoire (suite)', rang:2, annexe:'Annexe 5', defaut:true, paysage:true, corps: () => `
-            ${tableau('mo2-l', [{k:'t', t:'Tâches à réaliser', l:'26%', m:true, o:'taches'}, {k:'r', t:'Analyse de risques', l:'24%', m:true, o:'risques'}, {k:'a', t:'Actions préventives', l:'24%', m:true, o:'actions'}, {k:'pa', t:'Point d\'arrêt', l:'64px', c:true}, {k:'e', t:'État réalisé', l:'74px', c:true}, {k:'al', t:'Aléa n°', l:'58px', c:true}], {t:'', r:'', a:'', pa:'', e:'', al:''}, null,
-                      {etapes:true, arret:'pa', defaut: vides(12, {t:'', r:'', a:'', pa:'', e:'', al:''})})}
+            ${tableau('mo2-l', [{k:'t', t:'Tâches à réaliser', l:'26%', m:true, o:'taches'}, {k:'r', t:'Analyse de risques', l:'24%', m:true, o:'risques'}, {k:'a', t:'Actions préventives', l:'24%', m:true, o:'actions'}, {k:'pa', t:'Point d\'arrêt', c:true}, {k:'cc', t:'Contrôle croisé', c:true, b:true}, {k:'e', t:'État réalisé', c:true}, {k:'al', t:'Aléa n°', c:true}], {t:'', r:'', a:'', cc:false, e:'', al:''}, null,
+                      {etapes:true, arret:'pa', defaut: vides(12, {t:'', r:'', a:'', cc:false, e:'', al:''})})}
         `},
 
         { id:'nacelle', titre:'Mode opératoire nacelle', rang:2, defaut:false, corps: () => {
