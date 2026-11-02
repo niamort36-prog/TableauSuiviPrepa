@@ -601,6 +601,9 @@
             font-size: .72rem; font-weight: 700; color: #64748b; }
         /* Verso : la reliure passe a droite, et le folio avec elle. */
         body.prepa-impression #pd-pages .pd-verso { padding: 12mm 20mm 11mm 11mm !important; }
+        /* Feuille couchee : 297 x 210. Le tableau du mode operatoire a six
+           colonnes, il respire autrement mieux en travers. */
+        body.prepa-impression #pd-pages .pd-paysage .pd-feuille-doc { width: 296mm; height: 203mm; }
         body.prepa-impression #pd-pages .pd-verso > .pd-folio { right: 20mm; }
         /* Une page decoupee n'a plus de marges propres : chacune de ses
            feuilles porte les siennes. Idem pour le saut de page. */
@@ -1047,6 +1050,8 @@
                Sans marge, il n'a plus ou les ecrire. Les marges du document
                sont donc portees par les pages elles-memes, ci-dessous. */
             @page { size: A4 portrait; margin: 0; }
+            @page paysage { size: A4 landscape; margin: 0; }
+            .pd-paysage .pd-feuille-doc { page: paysage; }
             /* La marge basse posee en ligne pour le pied collant ajouterait
                une feuille blanche : il faut la forcer a zero. */
             html, body { width: auto; height: auto; margin: 0 !important; padding: 0 !important;
@@ -4604,7 +4609,7 @@
             </table>`;
         }},
 
-        { id:'modeop', titre:'Mode opératoire', annexe:'Annexe 5', defaut:true, corps: () => `
+        { id:'modeop', titre:'Mode opératoire', annexe:'Annexe 5', defaut:true, paysage:true, corps: () => `
             <div class="pd-note">Se référer au DUER pour l'analyse des risques génériques.</div>
             ${grille('pd-g3', champ('PPE ETREN', chp('mo-etren', 'N° ETREN')) + champ('Fiche ETREN signée par le CDT', coche('mo-etren-sig', 'Signée')) + champ('Impact environnemental', sel('mo-env', ['OUI','NON'])))}
             ${tableau('mo-l', [{k:'t', t:'Tâches à réaliser', l:'26%', m:true, o:'taches'}, {k:'r', t:'Analyse de risques', l:'24%', m:true, o:'risques'}, {k:'a', t:'Actions préventives', l:'24%', m:true, o:'actions'}, {k:'pa', t:'Point d\'arrêt', l:'64px', c:true}, {k:'e', t:'État réalisé', l:'74px', c:true}, {k:'al', t:'Aléa n°', l:'58px', c:true}], {t:'', r:'', a:'', pa:'', e:'', al:''}, [
@@ -4623,7 +4628,7 @@
             ], {etapes:true, arret:'pa'})}
         `},
 
-        { id:'modeop2', titre:'Mode opératoire (suite)', rang:2, annexe:'Annexe 5', defaut:true, corps: () => `
+        { id:'modeop2', titre:'Mode opératoire (suite)', rang:2, annexe:'Annexe 5', defaut:true, paysage:true, corps: () => `
             ${tableau('mo2-l', [{k:'t', t:'Tâches à réaliser', l:'26%', m:true, o:'taches'}, {k:'r', t:'Analyse de risques', l:'24%', m:true, o:'risques'}, {k:'a', t:'Actions préventives', l:'24%', m:true, o:'actions'}, {k:'pa', t:'Point d\'arrêt', l:'64px', c:true}, {k:'e', t:'État réalisé', l:'74px', c:true}, {k:'al', t:'Aléa n°', l:'58px', c:true}], {t:'', r:'', a:'', pa:'', e:'', al:''}, null,
                       {etapes:true, arret:'pa', defaut: vides(12, {t:'', r:'', a:'', pa:'', e:'', al:''})})}
         `},
@@ -5491,7 +5496,7 @@
             // Pages visibles, les unes sous les autres
             document.getElementById('pd-pages').innerHTML =
                 PREPA_PAGES.filter(pg => (!pg.dispo || pg.dispo()) && pageVisible(pg.id)).map(pg => `
-                    <section class="pd-page${pg.images ? ' pd-page-images' : ''}" id="pdp-${pg.id}"><div class="pd-fit">
+                    <section class="pd-page${pg.images ? ' pd-page-images' : ''}${pg.paysage ? ' pd-paysage' : ''}" id="pdp-${pg.id}"><div class="pd-fit">
                         <div class="pd-page-tete">
                             <span class="pd-page-titre">${esc(pg.titre)}</span>
                             ${pg.annexe ? `<span class="pd-annexe">${esc(pg.annexe)}</span>` : ''}
@@ -5613,6 +5618,18 @@
         // Hauteur utile d'une feuille. Quelques pixels de garde : une mesure
         // au pixel pres finit toujours par deborder d'une ligne.
         const FEUILLE_H = A4_UTILE_H - 8;
+
+        // Une feuille couchee : 297 x 210 au lieu de 210 x 297, memes marges.
+        // Surface utile : 297 - 20 - 11 de large, 203 - 12 - 11 de haut.
+        const PAYS_L       = 297 * 96 / 25.4;
+        const PAYS_UTILE_L = (297 - 20 - 11) * 96 / 25.4;
+        const PAYS_FEUILLE_H = (203 - 12 - 11) * 96 / 25.4 - 8;
+        // Les mesures qui valent pour cette page, selon son orientation.
+        function mesures(sec) {
+            return sec.classList.contains('pd-paysage')
+                ? { L: PAYS_L, utile: PAYS_UTILE_L, h: PAYS_FEUILLE_H }
+                : { L: A4_L,   utile: A4_UTILE_L,   h: FEUILLE_H };
+        }
 
         // Une page de planches ne se reduit pas beaucoup : les schemas
         // doivent rester lisibles, quitte a prendre une feuille de plus.
@@ -5767,6 +5784,7 @@
                     return;
                 }
 
+                const mes = mesures(sec);
                 const mini = echelleMini(sec);
                 // La reduction change le corps du texte : la classe doit etre
                 // posee avant de mesurer, sinon on mesure autre chose.
@@ -5780,12 +5798,12 @@
                 // faudrait au mieux, puis on descend tant que la decoupe
                 // demande une feuille de trop.
                 const essayer = N => {
-                    fit.style.width = A4_UTILE_L + 'px';
-                    let k = Math.min(1, (N * FEUILLE_H) / Math.max(1, haut_()));
+                    fit.style.width = mes.utile + 'px';
+                    let k = Math.min(1, (N * mes.h) / Math.max(1, haut_()));
                     for(let essai = 0; essai < 16 && k >= mini - 1e-6; essai++) {
-                        const W = A4_UTILE_L / k;
+                        const W = mes.utile / k;
                         fit.style.width = W + 'px';
-                        const lim = FEUILLE_H / k;
+                        const lim = mes.h / k;
                         const atomes = [];
                         [...fit.children].forEach(b => atomes.push(...atomesDe(b, lim)));
                         const feuilles = repartir(atomes, lim);
@@ -5801,10 +5819,10 @@
                 let e = null;
                 for(let N = 1; N <= 14 && !e; N++) e = essayer(N);
                 if(!e) {              // garde-fou : on rend la page telle quelle
-                    fit.style.width = A4_UTILE_L + 'px';
+                    fit.style.width = mes.utile + 'px';
                     fit.style.transform = 'none';
                     sec.classList.remove('pd-fixe');
-                    sec.style.width = A4_L + 'px';
+                    sec.style.width = mes.L + 'px';
                     sec.style.height = '';
                     sec.appendChild(folioNeuf());
                     return;
@@ -5813,7 +5831,7 @@
                 // On decoupe soi-meme : le navigateur couperait ou il veut,
                 // et priverait les feuilles suivantes de leurs marges.
                 fit.style.transform = 'none';
-                sec.style.width = A4_L + 'px';
+                sec.style.width = mes.L + 'px';
                 sec.style.height = '';
                 batirFeuilles(sec, e.feuilles, e.W, e.k);
             });
