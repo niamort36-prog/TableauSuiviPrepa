@@ -4702,13 +4702,14 @@
             <div class="pd-note">D'après le fichier de détermination des sections de <b>GEMCC</b>.
             En cas de doute, il est possible de forcer une valeur d'Icc après consultation du PEASI.
             Si le fichier ne donne pas de résultat, le calcul est fait par GEMCC.</div>
+            ${listeLitHtml()}
             ${grille('pd-g2',
-                champ('Code de la LIT', chpLie('mc-lit', codeLiaison(), 'ex : CLERAL71PLAUD'))
+                champ('Code de la LIT', champLit('mc-lit', codeLiaison(), 'ex : CLERAL71PLAUD'))
               + champ("Forçage manuel de l'Icc (kA)", chp('mc-icc-force', 'après consultation du PEASI')))}
             <div class="pd-rg-l">${coche('mc-voisin',
                 'Ligne HTB en double terne, croisée sur la portée, ou croisée avec risque de rupture du conducteur')}</div>
             ${grille('pd-g2',
-                champ('Code de la LIT voisine', chp('mc-lit-voisin', 'si la case ci-dessus est cochée'))
+                champ('Code de la LIT voisine', champLit('mc-lit-voisin', '', 'si la case ci-dessus est cochée'))
               + champ('Icc monophasé de la voisine', autoId('mc-icc-voisin', pv('mc-icc-voisin'))))}
             <div class="pd-l">
                 <button class="btn-pd pre" onclick="calculerMalt()">\u21bb Calculer la section</button>
@@ -5288,6 +5289,46 @@
         //  Par liaison : [Icc tri, Icc mono, cu mono, alu mono, cu, alu, EncDef]
         // ==================================================================
         const MALT_CACHE = {};
+
+        // La liste des codes de LIT se remplit en deux temps : d'abord les
+        // lignes de l'equipe, instantanees, puis les 7 700 du fichier GEMCC
+        // des qu'on ouvre la case — une seule lecture, gardee pour la suite.
+        function litEquipe() {
+            const vus = new Set();
+            dbLignes.forEach(l => { const c = CODES_LIAISON[l.id]; if(c) vus.add(c); });
+            Object.values(CODES_LIAISON).forEach(c => vus.add(c));
+            return [...vus].sort();
+        }
+
+        function listeLitHtml() {
+            return `<datalist id="dl-lit">${litEquipe()
+                .map(c => `<option value="${esc(c)}"></option>`).join('')}</datalist>`;
+        }
+
+        let listeLitChargee = false;
+        async function chargerListeLit() {
+            if(listeLitChargee) return;
+            listeLitChargee = true;
+            const dl = document.getElementById('dl-lit');
+            if(!dl) { listeLitChargee = false; return; }
+            try {
+                // ?shallow=true ne rend que les cles : 7 700 codes, pas les
+                // valeurs. Le SDK ne l'expose pas, d'ou l'appel direct.
+                const r = await fetch(firebaseConfig.databaseURL + '/maltcc.json?shallow=true');
+                const d = await r.json();
+                const codes = Object.keys(d || {}).map(k => k.replace(/~/g, '.')).sort();
+                if(codes.length) dl.innerHTML = codes.map(c => `<option value="${esc(c)}"></option>`).join('');
+            } catch(e) { listeLitChargee = false; }
+        }
+
+        // Champ de code de LIT : repris du chantier, modifiable, et ouvert
+        // sur la liste complete.
+        function champLit(c, source, ph) {
+            const saisi = String(pv(c)).trim();
+            return `<input class="pd-in" list="dl-lit" value="${esc(saisi || source || '')}"
+                           placeholder="${esc(ph || '')}" onfocus="chargerListeLit()"
+                           onchange="setPV('${c}', this.value.toUpperCase())">`;
+        }
         // Firebase interdit le point dans une cle : il y est ecrit en tilde.
         function cleMalt(code) { return String(code || '').trim().toUpperCase().replace(/\./g, '~'); }
 
