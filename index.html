@@ -844,6 +844,12 @@
         body.partage { padding-bottom: 20px; }
         .share-banner { background: #2e7f74; color: white; padding: 14px 20px; text-align: center; font-weight: 700; border-radius: 10px; margin-bottom: 15px; }
         .share-banner small { display: block; opacity: 0.8; font-weight: 400; margin-top: 4px; }
+        .souffle { position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%) translateY(14px);
+                   background: #2e7f74; color: #fff; font-weight: 700; font-size: .92rem;
+                   padding: 11px 20px; border-radius: 999px; box-shadow: 0 8px 24px rgba(0,0,0,.22);
+                   opacity: 0; pointer-events: none; transition: opacity .18s, transform .18s; z-index: 9500; }
+        .souffle.vu { opacity: 1; transform: translateX(-50%) translateY(0); }
+        @media print { .souffle { display: none !important; } }
 
         /* --- Preparation partagee : on lit et on imprime, rien d'autre --- */
         body.partage-prepa .navbar { display: none !important; }
@@ -854,7 +860,6 @@
         body.partage-prepa #pd-pages .btn-pd,
         body.partage-prepa #pd-pages .pd-sup,
         body.partage-prepa #pd-pages .pd-tab-actions,
-        body.partage-prepa #pd-pages .pd-sig-outils,
         body.partage-prepa #pd-pages .pd-choix,
         body.partage-prepa #pd-pages .pd-sch-outils,
         body.partage-prepa #pd-pages .pd-sch-reglage,
@@ -864,6 +869,15 @@
         body.partage-prepa #pd-pages input,
         body.partage-prepa #pd-pages select,
         body.partage-prepa #pd-pages textarea { pointer-events: none; }
+        /* Deux exceptions : signer, et porter une remarque. */
+        body.partage-prepa #pd-pages .pd-sig-outils { display: flex !important; }
+        body.partage-prepa #pd-pages .pd-sig-outils .btn-pd,
+        body.partage-prepa #pd-pages .pd-sig-outils .pd-sup { display: inline-flex !important; }
+        body.partage-prepa #pd-pages [data-partageable] {
+            pointer-events: auto; background: #fffdf3; border-color: var(--rte-jaune); }
+        body.partage-prepa #pd-pages [data-partageable] + .pd-aide::after {
+            content: ' \u2014 vous pouvez \u00e9crire ici, c\u2019est enregistr\u00e9 aussit\u00f4t.';
+            color: #92700f; font-weight: 700; }
         body.partage-prepa .pd-bandeau { background: #2e7f74; color: #fff; padding: 10px 16px;
                         font-weight: 700; text-align: center; font-size: .9rem; }
         body.partage-prepa .pd-bandeau small { display: block; opacity: .85; font-weight: 400; margin-top: 3px; }
@@ -1667,6 +1681,20 @@
                 if(p) {
                     notes = normNotes(p.notes);
                     if(document.getElementById('screen-logi').classList.contains('active')) renderNotes();
+
+                    // Meme precaution pour les cases qu'un collegue peut
+                    // remplir depuis le lien de partage : sans cela, le
+                    // prochain enregistrement effacerait sa remarque.
+                    const base = (p.prepa && p.prepa.v) || {};
+                    CHAMPS_PARTAGES.forEach(c => {
+                        const v = base[c] === undefined ? '' : base[c];
+                        const ici = prepa.v[c] === undefined ? '' : prepa.v[c];
+                        if(String(ici) === String(v)) return;
+                        const el = document.querySelector('#pd-pages [data-cle="' + c + '"]');
+                        if(el && document.activeElement === el) return;   // on n'ecrase pas une frappe
+                        prepa.v[c] = v;
+                        if(el) el.value = v;
+                    });
                 }
             }
         });
@@ -1968,6 +1996,23 @@
             ['nav-home','nav-arch','nav-opt'].forEach(n => document.getElementById(n).classList.toggle('active', n === onglet));
         }
         function goHome() { switchScreen('screen-home'); renderHome(); }
+
+        // Un mot qui passe, plutot qu'une fenetre a fermer : on enregistre
+        // souvent, et une alerte bloquante coupe le geste a chaque fois.
+        let soufflet = null;
+        function souffler(texte) {
+            let z = document.getElementById('souffle');
+            if(!z) {
+                z = document.createElement('div');
+                z.id = 'souffle';
+                z.className = 'souffle';
+                document.body.appendChild(z);
+            }
+            z.textContent = '\u2713 ' + texte;
+            z.classList.add('vu');
+            clearTimeout(soufflet);
+            soufflet = setTimeout(() => z.classList.remove('vu'), 2600);
+        }
         function goArchive() { switchScreen('screen-archive'); renderGrid('grid-archives', true); }
         function goOptions() { switchScreen('screen-options'); fillTensionSelect(); renderEquipes(); renderLignes(); renderOperateurs(); renderSecours(); }
         function goPrepa() { switchScreen('screen-prepa'); refreshUI(); }
@@ -2053,11 +2098,12 @@
                 // ENVOI VERS FIREBASE
                 db.ref('chantiers/' + pid).set(p)
                 .then(() => {
-                    if(arch) goArchive(); 
-                    else {
-                        alert("✅ Chantier sauvegardé sur le Cloud !");
-                        goHome();
-                    }
+                    if(arch) { goArchive(); return; }
+                    // On reste ou l'on est : revenir a l'accueil au milieu
+                    // d'une preparation faisait perdre le fil, et obligeait a
+                    // rouvrir le chantier pour une ligne de plus.
+                    curId = pid;
+                    souffler('Chantier enregistré');
                 })
                 .catch((e) => {
                     alert("Erreur Firebase : " + e.message);
@@ -3086,7 +3132,23 @@
 
         // --- Champs -----------------------------------------------------------
         function pv(c)  { const x = prepa.v[c]; return (x === undefined || x === null) ? '' : x; }
-        function setPV(c, val) { prepa.v[c] = val; majPrepaEtat(); }
+
+        // Ce qu'un collegue venu par le lien peut remplir. On ecrit alors la
+        // seule case concernee, et non toute la preparation : il ne doit pas
+        // pouvoir ecraser le travail du preparateur.
+        const CHAMPS_PARTAGES = ['tv-remarques'];
+        function champPartageable(c) { return PARTAGE_PREPA && CHAMPS_PARTAGES.includes(c); }
+
+        function setPV(c, val) {
+            prepa.v[c] = val;
+            majPrepaEtat();
+            if(champPartageable(c)) {
+                db.ref('chantiers/' + PREPA_ID + '/prepa/v/' + c)
+                  .set(String(val).trim() === '' ? null : val)
+                  .then(() => souffler('Remarque enregistr\u00e9e'))
+                  .catch(e => alert("Enregistrement impossible : " + e.message));
+            }
+        }
         function setPC(c, b)   { prepa.v[c] = !!b; majPrepaEtat(); }
 
         function chp(c, ph, type) {
@@ -3111,7 +3173,8 @@
         // sur le chantier, modifiable ici, et restaure si on vide la case.
         function zoneLiee(c, n, source, origine) {
             const saisi = String(pv(c));
-            return `<textarea class="pd-zone" rows="${n || 3}"
+            return `<textarea class="pd-zone" rows="${n || 3}" data-cle="${c}"
+                              ${champPartageable(c) ? 'data-partageable' : ''}
                               onchange="setPV('${c}', this.value)">${esc(saisi || source || '')}</textarea>
                     <span class="pd-aide">${source
                         ? (saisi && saisi !== source
@@ -3416,7 +3479,9 @@
         function toile() { return document.getElementById('sig-toile'); }
 
         function ouvrirSignature(cle) {
-            if(LECTURE) return;
+            // Signer est justement ce qu'on attend d'un collegue a qui l'on
+            // envoie la preparation : la lecture seule s'arrete la.
+            if(PARTAGE) return;
             if(!curId) { alert("Enregistrez d'abord le chantier : la signature doit lui \u00eatre rattach\u00e9e."); return; }
             sigCle = cle;
             const t = document.getElementById('sig-qui');
@@ -3538,7 +3603,7 @@
         }
 
         async function retirerSignature(cle) {
-            if(LECTURE || !curId) return;
+            if(PARTAGE || !curId) return;
             if(!confirm('Retirer cette signature ?')) return;
             await db.ref('signatures/' + curId + '/' + cle).remove().catch(() => {});
             delete SIGNES[cle];
@@ -7031,8 +7096,9 @@
             const corps = document.querySelector('#screen-prepadoc');
             const b = document.createElement('div');
             b.className = 'pd-bandeau';
-            b.innerHTML = 'Pr\u00e9paration de travail partag\u00e9e \u2014 lecture seule'
-                        + '<small>Choisissez les pages, puis Imprimer pour l\u2019\u00e9diter en PDF.</small>';
+            b.innerHTML = 'Pr\u00e9paration de travail partag\u00e9e'
+                        + '<small>Vous pouvez signer et porter une remarque ; le reste est en lecture. '
+                        + 'Choisissez les pages, puis Imprimer pour l\u2019\u00e9diter en PDF.</small>';
             corps.insertBefore(b, corps.firstChild);
         })();
 
