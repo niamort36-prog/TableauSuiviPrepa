@@ -4707,7 +4707,9 @@
               + champ("Forçage manuel de l'Icc (kA)", chp('mc-icc-force', 'après consultation du PEASI')))}
             <div class="pd-rg-l">${coche('mc-voisin',
                 'Ligne HTB en double terne, croisée sur la portée, ou croisée avec risque de rupture du conducteur')}</div>
-            ${champ('Code de la LIT voisine', chp('mc-lit-voisin', 'si la case ci-dessus est cochée'))}
+            ${grille('pd-g2',
+                champ('Code de la LIT voisine', chp('mc-lit-voisin', 'si la case ci-dessus est cochée'))
+              + champ('Icc monophasé de la voisine', autoId('mc-icc-voisin', pv('mc-icc-voisin'))))}
             <div class="pd-l">
                 <button class="btn-pd pre" onclick="calculerMalt()">\u21bb Calculer la section</button>
                 <span id="mc-etat" style="font-size:.78rem;font-weight:700;color:#054191"></span>
@@ -4717,6 +4719,11 @@
                             + champ("Temps d'élimination", autoId('mc-temps', pv('mc-temps'))))}
             ${grille('pd-g2', champ('Section de MALT / CC cuivre', autoId('mc-sect-cu', pv('mc-sect-cu')))
                             + champ('Section de MALT / CC alu', autoId('mc-sect-alu', pv('mc-sect-alu'))))}
+            ${sous('Limite poste / ligne')}
+            <div class="pd-note">Ce calcul vaut pour un <b>chantier ligne</b>. Au-delà de la limite,
+            c'est le fichier <i>poste</i> de GEMCC qui s'applique.</div>
+            <img class="pd-img" src="${IMG}malt-limite-poste-ligne.png"
+                 alt="Limite entre chantier poste et chantier ligne" style="max-width:420px">
             <div class="pd-note">Lorsqu'il faut doubler les MALT / CC sur une phase, les deux équipements
             doivent être de même matière et de même section. Un jeu triphasé doit être composé d'équipements
             de même matière et de même section. Pour les liaisons à faisceau multiple, la section calculée
@@ -5323,6 +5330,7 @@
                     if(etat) etat.textContent = '';
                     ['mc-icc-tri','mc-icc-mono','mc-temps','mc-sect-cu','mc-sect-alu'].forEach(k => {
                         prepa.v[k] = ''; pose(k, '');
+                        prepa.v['mc-icc-voisin'] = ''; pose('mc-icc-voisin', '');
                     });
                     alert("La liaison \u00ab " + code + " \u00bb n'est pas au fichier GEMCC.\n\n"
                         + "V\u00e9rifiez le code, ou faites faire le calcul par GEMCC.");
@@ -5342,6 +5350,8 @@
                     }
                     cu  = sectionTxt(Math.max(l[4], v[2]), MALT_CU);
                     alu = sectionTxt(Math.max(l[5], v[3]), MALT_ALU);
+                    prepa.v['mc-icc-voisin'] =
+                        Number(v[1]).toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + ' kA';
                 } else {
                     cu  = sectionTxt(l[4], MALT_CU);
                     alu = sectionTxt(l[5], MALT_ALU);
@@ -5354,7 +5364,8 @@
                 prepa.v['mc-sect-cu']  = cu;
                 prepa.v['mc-sect-alu'] = alu;
                 prepa.v['mc-lit']      = code.toUpperCase();
-                ['mc-icc-tri','mc-icc-mono','mc-temps','mc-sect-cu','mc-sect-alu']
+                if(!pv('mc-voisin') || forc) prepa.v['mc-icc-voisin'] = '';
+                ['mc-icc-tri','mc-icc-mono','mc-temps','mc-sect-cu','mc-sect-alu','mc-icc-voisin']
                     .forEach(k => pose(k, prepa.v[k]));
                 majPrepaEtat();
                 if(etat) etat.textContent = '';
