@@ -5050,6 +5050,33 @@
             ${grille('pd-g2', champ('Réalisé par', chp('mt-pf5-nom')) + champ('Date', chp('mt-pf5-date', '', 'date')))}`;
         }},
 
+        { id:'rex', titre:'Retour d\'expérience', annexe:'Annexe 7', defaut:true, corps: () => {
+            const c = pdChantier();
+            const rub = [['Préparation', 'prep'], ['Consignation', 'cons'], ['Approvisionnement (commande matériel)', 'appro'],
+                         ['Documents', 'docs'], ['Déroulement du chantier', 'derou'], ['Méthode', 'meth'],
+                         ['Moyens humains', 'mh'], ['Moyens matériels', 'mm'], ['Outillages adaptés', 'out'],
+                         ['Relation avec les tiers', 'tiers'], ['Accès chantier', 'acces']];
+            const sec = [['Détection situation dangereuse', 'dsd'], ['Sécurité des tiers', 'st']];
+            return `
+            ${grille('pd-g3', champ('Ligne', auto(c.ligne)) + champ('Du', auto(c.debut)) + champ('Au', auto(c.fin)))}
+            ${sous('Déroulement ' + exig('Exigences 18 et 20'))}
+            <table class="pd-tab"><thead><tr><th style="width:30%"></th><th style="width:90px">Correct</th><th style="width:90px">Incorrect</th><th>Analyse</th></tr></thead>
+            <tbody>${rub.map(r => `<tr>
+                <td>${r[0]}</td>
+                <td style="text-align:center"><input type="radio" name="rex-${r[1]}" ${pv('rex-' + r[1]) === 'c' ? 'checked' : ''} onchange="setPV('rex-${r[1]}','c')"></td>
+                <td style="text-align:center"><input type="radio" name="rex-${r[1]}" ${pv('rex-' + r[1]) === 'i' ? 'checked' : ''} onchange="setPV('rex-${r[1]}','i')"></td>
+                <td>${chp('rex-' + r[1] + '-a')}</td>
+            </tr>`).join('')}</tbody></table>
+            ${sous('Sécurité')}
+            <table class="pd-tab"><thead><tr><th style="width:30%"></th><th style="width:90px">OUI</th><th style="width:90px">NON</th><th>Analyse</th></tr></thead>
+            <tbody>${sec.map(r => `<tr>
+                <td>${r[0]}</td>
+                <td style="text-align:center"><input type="radio" name="rex-${r[1]}" ${pv('rex-' + r[1]) === 'o' ? 'checked' : ''} onchange="setPV('rex-${r[1]}','o')"></td>
+                <td style="text-align:center"><input type="radio" name="rex-${r[1]}" ${pv('rex-' + r[1]) === 'n' ? 'checked' : ''} onchange="setPV('rex-${r[1]}','n')"></td>
+                <td>${chp('rex-' + r[1] + '-a')}</td>
+            </tr>`).join('')}</tbody></table>
+            ${champ('Enseignements à retenir', zone('rex-ens', 4))}`;
+        }},
         { id:'cr', titre:"Compte rendu d'intervention", annexe:'Annexe 8', defaut:true, corps: () => {
             const c = pdChantier();
             const oui = ['oui', 'non', 'sans objet'];
@@ -5088,33 +5115,6 @@
             </table>`;
         }},
 
-        { id:'rex', titre:'Retour d\'expérience', annexe:'Annexe 7', defaut:true, corps: () => {
-            const c = pdChantier();
-            const rub = [['Préparation', 'prep'], ['Consignation', 'cons'], ['Approvisionnement (commande matériel)', 'appro'],
-                         ['Documents', 'docs'], ['Déroulement du chantier', 'derou'], ['Méthode', 'meth'],
-                         ['Moyens humains', 'mh'], ['Moyens matériels', 'mm'], ['Outillages adaptés', 'out'],
-                         ['Relation avec les tiers', 'tiers'], ['Accès chantier', 'acces']];
-            const sec = [['Détection situation dangereuse', 'dsd'], ['Sécurité des tiers', 'st']];
-            return `
-            ${grille('pd-g3', champ('Ligne', auto(c.ligne)) + champ('Du', auto(c.debut)) + champ('Au', auto(c.fin)))}
-            ${sous('Déroulement ' + exig('Exigences 18 et 20'))}
-            <table class="pd-tab"><thead><tr><th style="width:30%"></th><th style="width:90px">Correct</th><th style="width:90px">Incorrect</th><th>Analyse</th></tr></thead>
-            <tbody>${rub.map(r => `<tr>
-                <td>${r[0]}</td>
-                <td style="text-align:center"><input type="radio" name="rex-${r[1]}" ${pv('rex-' + r[1]) === 'c' ? 'checked' : ''} onchange="setPV('rex-${r[1]}','c')"></td>
-                <td style="text-align:center"><input type="radio" name="rex-${r[1]}" ${pv('rex-' + r[1]) === 'i' ? 'checked' : ''} onchange="setPV('rex-${r[1]}','i')"></td>
-                <td>${chp('rex-' + r[1] + '-a')}</td>
-            </tr>`).join('')}</tbody></table>
-            ${sous('Sécurité')}
-            <table class="pd-tab"><thead><tr><th style="width:30%"></th><th style="width:90px">OUI</th><th style="width:90px">NON</th><th>Analyse</th></tr></thead>
-            <tbody>${sec.map(r => `<tr>
-                <td>${r[0]}</td>
-                <td style="text-align:center"><input type="radio" name="rex-${r[1]}" ${pv('rex-' + r[1]) === 'o' ? 'checked' : ''} onchange="setPV('rex-${r[1]}','o')"></td>
-                <td style="text-align:center"><input type="radio" name="rex-${r[1]}" ${pv('rex-' + r[1]) === 'n' ? 'checked' : ''} onchange="setPV('rex-${r[1]}','n')"></td>
-                <td>${chp('rex-' + r[1] + '-a')}</td>
-            </tr>`).join('')}</tbody></table>
-            ${champ('Enseignements à retenir', zone('rex-ens', 4))}`;
-        }},
         ];
 
 
