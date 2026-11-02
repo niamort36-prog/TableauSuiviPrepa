@@ -413,6 +413,10 @@
         .btn-pd:hover { background: #f1f5f9; color: var(--primary); }
         .pd-sup { background: #fae8e3; color: #9c4433; border: 1px solid #f3cfc7; border-radius: 4px;
                   padding: 2px 7px; cursor: pointer; font-weight: 800; }
+        /* Glisser une ligne en dessous : meme forme, couleur de l'eau. */
+        .pd-ins { background: #dff4fb; color: #0c4a6e; border: 1px solid #7dd3fc; border-radius: 4px;
+                  padding: 2px 7px; cursor: pointer; font-weight: 800; margin-right: 3px; }
+        .pd-ins:hover { background: #bae6fd; }
 
         .pd-tab-enveloppe { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
         .pd-aide { font-size: .72rem; color: #64748b; }
@@ -489,6 +493,7 @@
         body.prepa-impression #pd-pages .pd-sup,
         body.prepa-impression #pd-pages .pd-tab-actions,
         body.prepa-impression #pd-pages .pd-aide,
+        body.prepa-impression #pd-pages .pd-ins,
         body.prepa-impression #pd-pages .pd-choix,
         body.prepa-impression #pd-pages .pd-grp.masque,
         body.prepa-impression #pd-pages .pd-grp-tete input { display: none !important; }
@@ -874,6 +879,7 @@
         body.partage-prepa .pd-partage { display: none !important; }
         body.partage-prepa #pd-pages .btn-pd,
         body.partage-prepa #pd-pages .pd-sup,
+        body.partage-prepa #pd-pages .pd-ins,
         body.partage-prepa #pd-pages .pd-tab-actions,
         body.partage-prepa #pd-pages .pd-choix,
         body.partage-prepa #pd-pages .pd-sch-outils,
@@ -3364,6 +3370,8 @@
             majPrepaEtat();
         }
         function addL(c, modele)      { lst(c).push(Object.assign({}, modele)); renderPrepa(); }
+        // Une ligne oubliee se glisse a sa place, sans tout recopier dessous.
+        function insL(c, i, modele)   { lst(c).splice(i + 1, 0, Object.assign({}, modele)); renderPrepa(); }
         function delL(c, i)           { prepa.l[c].splice(i, 1); renderPrepa(); }
 
         // o : nom d'une liste du classeur. On la propose sans l'imposer,
@@ -3474,6 +3482,15 @@
         // opt.defaut : les lignes que le tableau porte des sa premiere
         // ouverture, comme le classeur qui arrive avec ses lignes tracees.
         // opt.haut   : des lignes assez hautes pour etre ecrites a la main.
+        // Les deux boutons d'une ligne : en glisser une en dessous, ou la
+        // supprimer. Aucun des deux ne s'imprime.
+        function actionsLigne(cle, i, modele) {
+            return `<button class="pd-ins" title="Ins\u00e9rer une ligne en dessous"
+                            onclick="insL(&#39;${cle}&#39;, ${i}, ${esc(JSON.stringify(modele))})">+</button>
+                    <button class="pd-sup" title="Supprimer cette ligne"
+                            onclick="delL('${cle}',${i})">\u00d7</button>`;
+        }
+
         function tableau(cle, colonnes, modele, modeleRempli, opt) {
             const o = opt || {};
             const rows = lst(cle, o.defaut);
@@ -3481,13 +3498,13 @@
             const nb = colonnes.length + 1;
             return `${colonnes.filter(c => c.o && !c.m).map(c => listeHtml(cle, c.k, c.o)).join('')}
             <div class="pd-tab-enveloppe"><table class="pd-tab pd-cartes${o.haut ? ' pd-tab-haut' : ''}">
-                <thead><tr>${colonnes.map(c => `<th${c.l ? ' style="width:' + c.l + '"' : ''}>${c.t}</th>`).join('')}<th style="width:34px"></th></tr></thead>
+                <thead><tr>${colonnes.map(c => `<th${c.l ? ' style="width:' + c.l + '"' : ''}>${c.t}</th>`).join('')}<th style="width:56px"></th></tr></thead>
                 <tbody>${rows.length ? rows.map((r, i) => r.sect !== undefined ? `<tr class="pd-sect" data-cle="${cle}" data-i="${i}">
                     <td colspan="${nb - 1}" data-lab="Étape">${cl(cle, i, 'sect', "Titre de l'étape")}</td>
-                    <td data-lab=""><button class="pd-sup" onclick="delL('${cle}',${i})">×</button></td>
+                    <td data-lab="">${actionsLigne(cle, i, modele)}</td>
                 </tr>` : `<tr data-cle="${cle}" data-i="${i}"${o.arret ? ' data-arret="' + o.arret + '"' : ''}${o.arret && String(r[o.arret] || '').trim() ? ' class="pd-arret"' : ''}>
                     ${colonnes.map(c => `<td data-lab="${lab(c.t)}"${c.c ? ' class="pd-court"' : ''}>${(c.m ? clm : cl)(cle, i, c.k, c.ph || '', c.o)}</td>`).join('')}
-                    <td data-lab=""><button class="pd-sup" onclick="delL('${cle}',${i})">×</button></td>
+                    <td data-lab="">${actionsLigne(cle, i, modele)}</td>
                 </tr>`).join('')
                 : `<tr><td colspan="${colonnes.length + 1}" class="pd-vide" style="color:#94a3b8;text-align:center;padding:10px">Aucune ligne</td></tr>`}
                 </tbody>
