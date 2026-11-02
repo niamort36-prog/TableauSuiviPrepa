@@ -420,6 +420,31 @@
         .pd-sch-svg .sch-o { cursor: grab; }
         .pd-sch-liens { margin-top: 8px; }
         .pd-sch-lien { gap: 10px; margin-bottom: 4px; }
+        /* --- Signatures --- */
+        .pd-sig { position: relative; min-height: 46px; display: flex; align-items: center;
+                  justify-content: center; }
+        .pd-sig-img { max-width: 100%; max-height: 46px; display: block; }
+        .pd-tab-sig .pd-sig, .pd-tab-sig .pd-sig-img { max-height: 19mm; }
+        .pd-tab-sig .pd-sig { min-height: 19mm; }
+        .pd-sig-outils { display: flex; gap: 4px; align-items: center; }
+        .pd-sig-outils .btn-pd { padding: 3px 7px; font-size: .72rem; }
+        .pd-sig-img + .pd-sig-outils { position: absolute; right: 2px; bottom: 2px; opacity: .55; }
+        .pd-sig:hover .pd-sig-outils { opacity: 1; }
+        body.prepa-impression #pd-pages .pd-sig-outils { display: none !important; }
+        body.prepa-impression #pd-pages .pd-sig { min-height: 15mm; }
+
+        .sig-modale { display: none; position: fixed; inset: 0; z-index: 9000;
+                      background: rgba(5,65,145,.45); align-items: center; justify-content: center; padding: 14px; }
+        .sig-modale.ouverte { display: flex; }
+        .sig-boite { background: #fff; border-radius: 12px; padding: 16px; width: min(760px, 100%);
+                     box-shadow: 0 18px 50px rgba(0,0,0,.3); }
+        .sig-tete { font-weight: 800; color: var(--primary); margin-bottom: 10px; }
+        #sig-toile { width: 100%; height: auto; aspect-ratio: 1000 / 320; border: 2px dashed var(--border);
+                     border-radius: 8px; background: #fff; touch-action: none; cursor: crosshair; }
+        .sig-aide { font-size: .78rem; color: #64748b; margin: 7px 0 12px; }
+        .sig-pied { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .sig-pied .btn-pd { cursor: pointer; }
+
         .pd-sch-pal { display: inline-flex; align-items: center; gap: 3px; }
         .pd-sch-teinte { width: 17px; height: 17px; border-radius: 4px; cursor: pointer;
                          border: 1px solid rgba(0,0,0,.25); padding: 0; }
@@ -1405,6 +1430,23 @@
         </div>
     </div>
 
+    <!-- Signature : on signe au doigt, au stylet ou a la souris -->
+    <div id="sig-modale" class="sig-modale" onclick="if(event.target===this) fermerSignature()">
+        <div class="sig-boite">
+            <div class="sig-tete">Signature &mdash; <span id="sig-qui"></span></div>
+            <canvas id="sig-toile" width="1000" height="320"></canvas>
+            <div class="sig-aide">Signez dans le cadre, au doigt, au stylet ou &agrave; la souris.</div>
+            <div class="sig-pied">
+                <button class="btn-pd" onclick="effacerToile()">Effacer</button>
+                <label class="btn-pd">Importer une image
+                    <input type="file" accept="image/*" hidden onchange="importerSignature(this)"></label>
+                <span style="flex:1"></span>
+                <button class="btn-pd" onclick="fermerSignature()">Annuler</button>
+                <button class="btn-pd pre" onclick="validerSignature()">Valider</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Feuille A3 générée à l'impression (voir buildPrintSheet) -->
     <div id="print-sheet" aria-hidden="true"></div>
 
@@ -2005,6 +2047,7 @@
                 db.ref('nip/' + id).remove().catch(() => {});
                 db.ref('unifilaire/' + id).remove().catch(() => {});
                 db.ref('couvertures/' + id).remove().catch(() => {});
+                db.ref('signatures/' + id).remove().catch(() => {});
                 db.ref('chantiers/' + id).remove()
                 .catch(e => alert("Erreur suppression: " + e.message));
             }
@@ -2052,13 +2095,16 @@
                 fillLineSelect();
             }
             document.getElementById('inp-line').value = p.lid;
-            document.getElementById('inp-cdt').value = p.cdt;
+            // Firebase ne stocke pas les chaines vides : un champ laisse
+            // vide revient absent, et sans ce garde-fou la case affichait
+            // « undefined » — jusque dans la nature des travaux imprimee.
+            document.getElementById('inp-cdt').value = p.cdt||'';
             document.getElementById('inp-cdt-sup').value = p.cdtSup||'';
-            document.getElementById('inp-start').value = p.start;
-            document.getElementById('inp-end').value = p.end;
+            document.getElementById('inp-start').value = p.start||'';
+            document.getElementById('inp-end').value = p.end||'';
             document.getElementById('inp-cons-start').value = p.consStart||'';
             document.getElementById('inp-cons-end').value = p.consEnd||'';
-            document.getElementById('inp-desc').value = p.desc;
+            document.getElementById('inp-desc').value = p.desc||'';
             
             // CHARGEMENT COMMENTAIRES
             document.getElementById('inp-comments').value = p.comments || '';
@@ -3301,6 +3347,181 @@
             renderPrepa();
         }
 
+        // ==================================================================
+        //  SIGNATURES
+        //  Une signature est une image, rangee a part du chantier comme la
+        //  NIP ou la photo de couverture : elle pese quelques dizaines de
+        //  kilo-octets et n'a rien a faire dans la fiche elle-meme.
+        // ==================================================================
+        const SIG_MAX_L = 700;              // largeur de rangement, en pixels
+        let SIGNES = {};                    // cle -> image, en memoire
+        let sigCle = null;                  // signature en cours d'edition
+
+        async function chargerSignatures() {
+            SIGNES = {};
+            if(!curId) return;
+            try {
+                const v = (await db.ref('signatures/' + curId).once('value')).val() || {};
+                Object.keys(v).forEach(k => { if(v[k] && v[k].data) SIGNES[k] = v[k].data; });
+            } catch(e) {}
+            if(document.getElementById('pd-pages')) renderPrepa();
+        }
+
+        // Le cadre de signature d'une case : l'image si elle existe, et les
+        // deux boutons, qui ne s'impriment pas.
+        function caseSignature(cle) {
+            const img = SIGNES[cle];
+            return `<div class="pd-sig">
+                ${img ? `<img class="pd-sig-img" src="${img}" alt="Signature">` : ''}
+                <span class="pd-sig-outils">
+                    <button class="btn-pd" onclick="ouvrirSignature('${cle}')"
+                            title="Signer ou importer une signature">\u270e ${img ? 'Refaire' : 'Signer'}</button>
+                    ${img ? `<button class="pd-sup" title="Retirer la signature"
+                                     onclick="retirerSignature('${cle}')">&times;</button>` : ''}
+                </span>
+            </div>`;
+        }
+
+        function toile() { return document.getElementById('sig-toile'); }
+
+        function ouvrirSignature(cle) {
+            if(!curId) { alert("Enregistrez d'abord le chantier : la signature doit lui \u00eatre rattach\u00e9e."); return; }
+            sigCle = cle;
+            const t = document.getElementById('sig-qui');
+            if(t) t.textContent = LIB_SIGNATURES[cle] || '';
+            effacerToile();
+            document.getElementById('sig-modale').classList.add('ouverte');
+        }
+        function fermerSignature() {
+            document.getElementById('sig-modale').classList.remove('ouverte');
+            sigCle = null;
+        }
+        function effacerToile() {
+            const c = toile(), x = c.getContext('2d');
+            x.clearRect(0, 0, c.width, c.height);
+            x.lineWidth = 4; x.lineCap = 'round'; x.lineJoin = 'round'; x.strokeStyle = '#111827';
+        }
+
+        // Le trait suit le pointeur, doigt, stylet ou souris indifferemment.
+        (function () {
+            const c = toile();
+            if(!c) return;
+            const x = c.getContext('2d');
+            let trace = false;
+            const pt = e => {
+                const r = c.getBoundingClientRect();
+                return { x: (e.clientX - r.left) / r.width * c.width,
+                         y: (e.clientY - r.top) / r.height * c.height };
+            };
+            c.addEventListener('pointerdown', e => {
+                trace = true; c.setPointerCapture(e.pointerId);
+                const q = pt(e); x.beginPath(); x.moveTo(q.x, q.y); x.lineTo(q.x + 0.1, q.y);
+                x.stroke(); e.preventDefault();
+            });
+            c.addEventListener('pointermove', e => {
+                if(!trace) return;
+                const q = pt(e); x.lineTo(q.x, q.y); x.stroke(); e.preventDefault();
+            });
+            ['pointerup', 'pointercancel', 'pointerleave'].forEach(n =>
+                c.addEventListener(n, () => { trace = false; }));
+        })();
+
+        // On ne garde que l'encre : le cadre vide autour ne sert a rien et
+        // ferait une signature minuscule une fois posee dans sa case.
+        function rognerToile(c) {
+            const x = c.getContext('2d');
+            const d = x.getImageData(0, 0, c.width, c.height).data;
+            let x0 = c.width, y0 = c.height, x1 = -1, y1 = -1;
+            for(let y = 0; y < c.height; y++) {
+                for(let i = y * c.width * 4 + 3, xx = 0; xx < c.width; xx++, i += 4) {
+                    if(d[i] > 12) {
+                        if(xx < x0) x0 = xx;
+                        if(xx > x1) x1 = xx;
+                        if(y < y0) y0 = y;
+                        if(y > y1) y1 = y;
+                    }
+                }
+            }
+            if(x1 < 0) return null;
+            const m = 8;
+            x0 = Math.max(0, x0 - m); y0 = Math.max(0, y0 - m);
+            x1 = Math.min(c.width - 1, x1 + m); y1 = Math.min(c.height - 1, y1 + m);
+            const l = x1 - x0 + 1, h = y1 - y0 + 1;
+            const k = Math.min(1, SIG_MAX_L / l);
+            const o = document.createElement('canvas');
+            o.width = Math.round(l * k); o.height = Math.round(h * k);
+            o.getContext('2d').drawImage(c, x0, y0, l, h, 0, 0, o.width, o.height);
+            return o.toDataURL('image/png');
+        }
+
+        async function poserSignature(data) {
+            if(!sigCle || !curId) return;
+            const cle = sigCle;
+            try {
+                await db.ref('signatures/' + curId + '/' + cle).set({ data: data, date: Date.now() });
+                SIGNES[cle] = data;
+                fermerSignature();
+                renderPrepa();
+            } catch(e) { alert("Enregistrement impossible : " + e.message); }
+        }
+
+        function validerSignature() {
+            const data = rognerToile(toile());
+            if(!data) { alert('Le cadre est vide : signez avant de valider.'); return; }
+            poserSignature(data);
+        }
+
+        // Une signature deja scannee : on la ramene a la bonne largeur et on
+        // blanchit le fond, pour qu'elle ne sorte pas en pave gris.
+        function importerSignature(input) {
+            const f = input.files && input.files[0];
+            input.value = '';
+            if(!f) return;
+            if(!/^image\//.test(f.type)) { alert('Choisissez une image.'); return; }
+            const lec = new FileReader();
+            lec.onload = () => {
+                const im = new Image();
+                im.onload = () => {
+                    const k = Math.min(1, SIG_MAX_L / im.width);
+                    const o = document.createElement('canvas');
+                    o.width = Math.round(im.width * k); o.height = Math.round(im.height * k);
+                    const x = o.getContext('2d');
+                    x.drawImage(im, 0, 0, o.width, o.height);
+                    // Le blanc du papier devient transparent : la signature se
+                    // pose alors sur la case sans pave clair autour.
+                    const d = x.getImageData(0, 0, o.width, o.height);
+                    for(let i = 0; i < d.data.length; i += 4) {
+                        const m = (d.data[i] + d.data[i + 1] + d.data[i + 2]) / 3;
+                        if(m > 235) d.data[i + 3] = 0;
+                        else if(m > 170) d.data[i + 3] = Math.round(d.data[i + 3] * (235 - m) / 65);
+                    }
+                    x.putImageData(d, 0, 0);
+                    poserSignature(o.toDataURL('image/png'));
+                };
+                im.onerror = () => alert("Cette image n'a pas pu \u00eatre lue.");
+                im.src = lec.result;
+            };
+            lec.onerror = () => alert("Cette image n'a pas pu \u00eatre lue.");
+            lec.readAsDataURL(f);
+        }
+
+        async function retirerSignature(cle) {
+            if(!curId) return;
+            if(!confirm('Retirer cette signature ?')) return;
+            await db.ref('signatures/' + curId + '/' + cle).remove().catch(() => {});
+            delete SIGNES[cle];
+            renderPrepa();
+        }
+
+        // Le nom de la case, pour le titre de la fenetre.
+        const LIB_SIGNATURES = {
+            'sig-prep-visa': 'Pr\u00e9parateur', 'sig-cdt-visa': 'CDT',
+            'sig-sup-visa': 'Suppl\u00e9ant CDT', 'sig-chg-visa': 'Changement de CDT',
+            'sig-tech-visa': 'Approbation technique', 'sig-mgmt-visa': 'Validation du management',
+            'sig-cr-cdt-visa': 'Validation CDT', 'sig-cr-mdp-visa': 'Validation MDP',
+            'ad-visa-cdt': 'Pour le charg\u00e9 de travaux', 'ad-visa-lou': 'Pour le loueur'
+        };
+
         // Bloc de signature : nom, date, visa
         // Nom effectivement porte par la signature : la saisie si elle
         // existe, sinon la personne designee sur la fiche du chantier.
@@ -3320,7 +3541,7 @@
                 <td style="font-weight:700">${libelle}${exigence ? ' ' + exig(exigence) : ''}</td>
                 <td>${role ? chpLie(prefixe + '-nom', nom, 'Nom') : chp(prefixe + '-nom', 'Nom')}</td>
                 <td>${chp(prefixe + '-date', '', 'date')}</td>
-                <td>${chp(prefixe + '-visa', 'Visa')}</td>
+                <td>${caseSignature(prefixe + '-visa')}</td>
             </tr>`;
         }
 
@@ -4293,8 +4514,8 @@
                         <td>${chp('ad-hab-cdt')}</td>
                         <td>${chp('ad-hab-lou')}</td></tr>
                     <tr class="pd-sig-main"><td>Signature</td>
-                        <td>${zone('ad-visa-cdt', 2)}</td>
-                        <td>${zone('ad-visa-lou', 2)}</td></tr>
+                        <td>${caseSignature('ad-visa-cdt')}</td>
+                        <td>${caseSignature('ad-visa-lou')}</td></tr>
                 </tbody>
             </table>`;
         }},
@@ -4869,7 +5090,8 @@
             if(el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
-        function goPrepaDoc() { switchScreen('screen-prepadoc'); renderPrepa(); chargerPhotoCouv(); chargerPieces(); }
+        function goPrepaDoc() { switchScreen('screen-prepadoc'); renderPrepa();
+                                chargerPhotoCouv(); chargerPieces(); chargerSignatures(); }
 
         function renderPrepa() {
             const c = pdChantier();
