@@ -368,6 +368,12 @@
                      background: #f2eff7; border: 1px solid #ded5ea; border-radius: 10px; padding: 2px 9px; white-space: nowrap; }
         .pd-exig { font-size: .68rem; font-weight: 800; color: #8a5a00; background: #fff8e8;
                    border: 1px solid #fcd98a; border-radius: 8px; padding: 1px 7px; white-space: nowrap; }
+        .pd-exig-lien { cursor: help; }
+        .pd-exig-lien:hover, .pd-exig-lien.ouverte { background: #fcd98a; }
+        .pd-exig-texte { white-space: pre-line; font-size: .78rem; line-height: 1.45; color: #6b4600;
+                         background: #fff8e8; border: 1px solid #fcd98a; border-left: 4px solid #fab928;
+                         border-radius: 6px; padding: 9px 12px; margin: 6px 0; font-weight: 400; }
+        body.prepa-impression #pd-pages .pd-exig-texte { display: none !important; }
 
         /* Champs */
         /* Cases a la maniere du classeur : angles droits, trait fin, et la
@@ -3294,7 +3300,56 @@
         function champ(lab, h)  { return `<div class="pd-champ"><label>${lab}</label>${h}</div>`; }
         function grille(cls, h) { return `<div class="pd-grille ${cls}">${h}</div>`; }
         function sous(t)        { return `<div class="pd-sous">${t}</div>`; }
-        function exig(t)        { return `<span class="pd-exig">${t}</span>`; }
+        // Les vingt exigences de la Directive preparation de travail, dans
+        // leur redaction de la synthese. Elles s'affichent au survol, et au
+        // toucher sur telephone, la ou l'application s'y refere.
+        const EXIGENCES = {
+            1: "L\u2019\u00e9laboration du dossier de pr\u00e9paration de travail est clairement identifi\u00e9e dans le planning et formalis\u00e9e dans SPARTE.",
+            2: "Chaque op\u00e9ration de maintenance doit faire l\u2019objet d\u2019un dossier de pr\u00e9paration de travail \u00e9tabli pr\u00e9alablement \u00e0 l\u2019op\u00e9ration par une personne poss\u00e9dant les comp\u00e9tences requises. Ce support d\u00e9crit notamment les conditions d\u2019ex\u00e9cution de l\u2019op\u00e9ration en portant une attention particuli\u00e8re sur les mesures pr\u00e9ventives \u00e0 mettre en \u0153uvre en face des risques identifi\u00e9s.",
+            3: "Le document de conduite de chantier doit pr\u00e9voir, en amont, le type de contr\u00f4le qui sera utilis\u00e9 en regard des points d\u2019arr\u00eat programm\u00e9s. S\u2019il s\u2019agit d\u2019un contr\u00f4le crois\u00e9, il est \u00e0 organiser lors du pr\u00e9-job briefing en formalisant les r\u00f4les de chacun.",
+            4: "Lorsqu\u2019un risque majeur est identifi\u00e9, un point d\u2019arr\u00eat doit \u00eatre programm\u00e9 et pr\u00e9ciser les mesures de pr\u00e9vention \u00e0 mettre en \u0153uvre. Ce point d\u2019arr\u00eat programm\u00e9 doit \u00eatre contr\u00f4l\u00e9 et formalis\u00e9 par le CDT en temps r\u00e9el avant de poursuivre l\u2019activit\u00e9 dans le document de conduite de chantier.",
+            5: "Le document de conduite de chantier doit contenir la succession chronologique des \u00e9tapes, les analyses de risques g\u00e9n\u00e9riques li\u00e9s \u00e0 l\u2019op\u00e9ration et ceux sp\u00e9cifiques induits par l\u2019environnement, la d\u00e9finition des moyens mis en \u0153uvre pour s\u2019en pr\u00e9munir, les points d\u2019arr\u00eats programm\u00e9s et les types de contr\u00f4les associ\u00e9s.",
+            6: "Le management organise les modalit\u00e9s de v\u00e9rification technique, de validation et d\u2019archivage des dossiers de pr\u00e9parations de travail. \u00c0 ce titre, il tient \u00e0 jour une liste des salari\u00e9s autoris\u00e9s \u00e0 v\u00e9rifier une pr\u00e9paration de travail, en pr\u00e9cisant le p\u00e9rim\u00e8tre des activit\u00e9s.",
+            7: "La v\u00e9rification du dossier de pr\u00e9paration de travail, y compris le document de conduite de chantier, est clairement identifi\u00e9e dans le planning.",
+            8: "La v\u00e9rification de pr\u00e9paration de travail doit imp\u00e9rativement \u00eatre r\u00e9alis\u00e9e par une personne diff\u00e9rente du r\u00e9dacteur, d\u00e9sign\u00e9e par le manager, reconnue pour ses comp\u00e9tences et choisie pour sa capacit\u00e9 \u00e0 porter un jugement critique sur la validit\u00e9 des hypoth\u00e8ses techniques et des m\u00e9thodes.",
+            9: "Le v\u00e9rificateur contr\u00f4le la pertinence des analyses de risques et des mesures pr\u00e9ventives associ\u00e9es. Il s\u2019assure de la pr\u00e9sence dans le document de conduite du chantier de l\u2019exhaustivit\u00e9 des points d\u2019arr\u00eat programm\u00e9s, avec une vigilance particuli\u00e8re pour ceux visant \u00e0 pr\u00e9venir les risques majeurs, et de la pertinence des contr\u00f4les associ\u00e9s.",
+            10: "Le management de l\u2019\u00e9quipe s\u2019assure de l\u2019ad\u00e9quation des ressources et moyens internes mis \u00e0 disposition du CdT, qu\u2019il garantit par la validation du planning.",
+            11: "Le management de l\u2019\u00e9quipe garantit, par sa validation, la conformit\u00e9 du dossier de pr\u00e9paration de travail aux exigences de la Directive.",
+            12: "Lorsque la pr\u00e9paration n\u2019est pas r\u00e9alis\u00e9e par le charg\u00e9 de travaux r\u00e9alisant le chantier, celui-ci doit l\u2019\u00e9tudier dans sa totalit\u00e9, se l\u2019approprier et la viser.",
+            13: "Le document de conduite de chantier doit faire l\u2019objet d\u2019une v\u00e9rification en arrivant sur les lieux de l\u2019op\u00e9ration pour confirmer que les hypoth\u00e8ses retenues sont conformes \u00e0 la situation r\u00e9elle, y compris celles li\u00e9es \u00e0 l\u2019environnement. Cette v\u00e9rification est le premier point d\u2019arr\u00eat programm\u00e9, et s\u2019applique aussi apr\u00e8s toute interruption (pause, week-end\u2026).",
+            14: "Le charg\u00e9 de travaux consacre le temps n\u00e9cessaire \u00e0 expliciter les op\u00e9rations aux intervenants, en insistant sur les \u00e9tapes comportant des risques majeurs. Ce pr\u00e9-job briefing est renouvel\u00e9 avant toute reprise, \u00e0 l\u2019arriv\u00e9e d\u2019un nouvel ex\u00e9cutant ou \u00e0 la survenue d\u2019un al\u00e9a, et fait l\u2019objet d\u2019un point d\u2019arr\u00eat.",
+            15: "Un relev\u00e9 d\u2019\u00e9tat initial de l\u2019ouvrage doit \u00eatre r\u00e9alis\u00e9 avant tout d\u00e9marrage de t\u00e2che, afin d\u2019\u00eatre en mesure de r\u00e9tablir la configuration initiale \u00e0 la fin de l\u2019op\u00e9ration. Les relev\u00e9s d\u2019\u00e9tat initial et final font chacun l\u2019objet d\u2019un point d\u2019arr\u00eat programm\u00e9.",
+            16: "D\u00e8s lors que les dispositions prises apr\u00e8s un point d\u2019arr\u00eat sur al\u00e9a ont un impact sur les ressources, les d\u00e9lais ou la nature du chantier, le charg\u00e9 de travaux sollicite une validation manag\u00e9riale. Tout point d\u2019arr\u00eat sur al\u00e9a est formalis\u00e9 en temps r\u00e9el, et le charg\u00e9 de travaux en informe tous les intervenants.",
+            17: "Le charg\u00e9 de travaux indique dans le dossier l\u2019\u00e9tat de l\u2019installation remise, qui doit \u00eatre conforme \u00e0 son \u00e9tat initial quand cela est n\u00e9cessaire, et s\u2019assure du respect des seuils et tol\u00e9rances \u00e0 travers les mesures r\u00e9alis\u00e9es.",
+            18: "Le dossier doit int\u00e9grer un compte rendu de chantier renseign\u00e9 et sign\u00e9 par le CDT, pr\u00e9cisant la bonne r\u00e9alisation de l\u2019op\u00e9ration et le niveau de conformit\u00e9 du travail, les \u00e9carts r\u00e9siduels, et les \u00e9l\u00e9ments de retour d\u2019exp\u00e9rience.",
+            19: "Le charg\u00e9 de travaux indique dans le dossier l\u2019\u00e9tat de l\u2019installation remise, qui doit \u00eatre conforme \u00e0 son \u00e9tat initial quand cela est n\u00e9cessaire, et s\u2019assure du respect des seuils et tol\u00e9rances \u00e0 travers les mesures r\u00e9alis\u00e9es.",
+            20: "Le dossier de pr\u00e9paration de travail papier, y compris les notes de calcul associ\u00e9es, est conserv\u00e9 jusqu\u2019\u00e0 l\u2019op\u00e9ration suivante de m\u00eame nature et a minima cinq ans, conform\u00e9ment aux r\u00e8gles d\u2019archivage de RTE."
+        };
+
+        // Une pastille peut citer une exigence ou deux : on les reprend toutes.
+        function exig(t) {
+            const nums = String(t).match(/\d+/g) || [];
+            const txt = nums.filter(n => EXIGENCES[n])
+                            .map(n => 'Exigence ' + n + ' \u2014 ' + EXIGENCES[n]).join('\n\n');
+            if(!txt) return `<span class="pd-exig">${t}</span>`;
+            return `<span class="pd-exig pd-exig-lien" tabindex="0" title="${esc(txt)}"
+                          onclick="montrerExigence(this)">${t}</span>`;
+        }
+
+        // Au toucher, il n'y a pas de survol : on affiche le texte sous la
+        // pastille, et un second toucher le referme.
+        function montrerExigence(el) {
+            const ouverte = el.nextElementSibling
+                         && el.nextElementSibling.classList.contains('pd-exig-texte');
+            document.querySelectorAll('.pd-exig-texte').forEach(e => e.remove());
+            document.querySelectorAll('.pd-exig-lien.ouverte').forEach(e => e.classList.remove('ouverte'));
+            if(ouverte) return;
+            const d = document.createElement('div');
+            d.className = 'pd-exig-texte';
+            d.textContent = el.getAttribute('title');
+            el.insertAdjacentElement('afterend', d);
+            el.classList.add('ouverte');
+        }
 
         // Listes deroulantes du classeur (validations de donnees de la feuille
         // "Donnees"). Les noms d'agents et les identifiants d'OI en sont exclus :
