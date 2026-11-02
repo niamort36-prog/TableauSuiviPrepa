@@ -461,6 +461,8 @@
         .sig-pied { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
         .sig-pied .btn-pd { cursor: pointer; }
 
+        .an-bloc { border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; }
+        .an-fichier { gap: 8px; font-size: .8rem; color: #475569; margin: 3px 0 0 4px; }
         .pd-sch-pal { display: inline-flex; align-items: center; gap: 3px; }
         .pd-sch-teinte { width: 17px; height: 17px; border-radius: 4px; cursor: pointer;
                          border: 1px solid rgba(0,0,0,.25); padding: 0; }
@@ -540,8 +542,7 @@
         body.prepa-impression #pd-pages .sch-sel { display: none; }
         /* La NIP porte deja son propre titre : le bandeau de page ferait
            deborder la premiere planche sur une feuille de plus. */
-        body.prepa-impression #pdp-nip .pd-page-tete,
-        body.prepa-impression #pdp-unifilaire .pd-page-tete,
+        body.prepa-impression #pd-pages .pd-planches .pd-page-tete,
         body.prepa-impression #pdp-sommaire .pd-page-tete { display: none; }
         /* Une page de NIP occupe une feuille entiere, des la mesure */
         body.prepa-impression #pd-pages .pd-nip-feuille { height: 290mm; margin: 0; align-items: center;
@@ -2185,6 +2186,7 @@
                 db.ref('unifilaire/' + id).remove().catch(() => {});
                 db.ref('couvertures/' + id).remove().catch(() => {});
                 db.ref('signatures/' + id).remove().catch(() => {});
+                db.ref('annexes/' + id).remove().catch(() => {});
                 db.ref('chantiers/' + id).remove()
                 .catch(e => alert("Erreur suppression: " + e.message));
             }
@@ -4287,7 +4289,10 @@
             unifilaire: { titre: 'Sch\u00e9ma unifilaire (document)', libelle: 'le sch\u00e9ma unifilaire' }
         };
         const pieces = { nip: { fichier: null, images: [] },
-                         unifilaire: { fichier: null, images: [] } };
+                         unifilaire: { fichier: null, images: [] },
+                         // Case de travail : les annexes y font rendre leurs
+                         // PDF avant d'en recuperer les planches.
+                         _annexe: { fichier: null, images: [] } };
 
 
         // Le navigateur ne sait pas inserer un PDF dans une impression HTML :
@@ -4316,7 +4321,9 @@
             }
         }
         async function chargerPieces() {
-            for(const cle of Object.keys(pieces)) {
+            // PIECES et non pieces : la case de travail des annexes n'a pas
+            // de noeud a elle dans la base.
+            for(const cle of Object.keys(PIECES)) {
                 pieces[cle] = { fichier: null, images: [] };
                 if(!curId) continue;
                 try {
@@ -4510,7 +4517,7 @@
         }},
 
         { id:'sommaire', titre:'Sommaire', defaut:true, horsCompte:true, corps: () => {
-            const lignes = PREPA_PAGES
+            const lignes = toutesLesPages()
                 .filter(pg => pg.id !== 'couverture' && (!pg.dispo || pg.dispo()) && pageVisible(pg.id))
                 .map(pg => {
                     let lib = pg.annexe ? pg.annexe + ' \u2014 ' + pg.titre : pg.titre;
@@ -4621,6 +4628,7 @@
             ${champ('Mise à jour du schéma', chp('uni-maj'))}
             ${champ('Croisements de lignes', zone('uni-crois', 5, 'Portée 3-4 : 90 kV \u2026'))}
             <div class="pd-note">WILLYDOC, mot clef <b>L</b>${unif ? ' \u00b7 ' + unif : ''}</div>
+            ${blocAnnexes()}
             ${sous('Annexes numérotées')}
             ${num.map((t, i) => coche('an-n' + (i + 1), t)).join('')}
             ${sous('Autres pièces jointes')}
@@ -4686,10 +4694,10 @@
 
         // Les pieces jointes, derriere la preparation. Chacune n'apparait au
         // sommaire que si elle a ete importee, et se decoche comme le reste.
-        { id:'nip', titre:PIECES.nip.titre, defaut:true, horsCompte:true,
+        { id:'nip', titre:PIECES.nip.titre, defaut:true, horsCompte:true, planches:true,
           dispo: () => pieces.nip.images.length > 0, corps: () => planchesPiece('nip') },
 
-        { id:'unifilaire', titre:PIECES.unifilaire.titre, defaut:true, horsCompte:true,
+        { id:'unifilaire', titre:PIECES.unifilaire.titre, defaut:true, horsCompte:true, planches:true,
           dispo: () => pieces.unifilaire.images.length > 0,
           corps: () => planchesPiece('unifilaire') },
 
@@ -5553,14 +5561,150 @@
             }
         }
 
+        // ==================================================================
+        //  ANNEXES DU CHANTIER
+        //  Les documents que le preparateur ajoute lui-meme : un nom, et
+        //  autant de fichiers qu'il veut dessous, images ou PDF. Chacune
+        //  devient une page du document, portee au sommaire sous son nom.
+        //  Elles vivent dans annexes/<chantier>, comme la NIP.
+        // ==================================================================
+        let ANNEXES = [];                  // { id, nom, ordre, planches[] }
+
+        async function chargerAnnexes() {
+            ANNEXES = [];
+            if(!curId) return;
+            let v = null;
+            try { v = (await db.ref('annexes/' + curId).once('value')).val(); } catch(e) {}
+            const liste = Object.keys(v || {}).map(k => Object.assign({ id: k }, v[k]));
+            liste.sort((a, b) => (a.ordre || 0) - (b.ordre || 0));
+            for(const a of liste) {
+                const planches = [];
+                for(const f of (a.fichiers || [])) {
+                    if(f.type === 'application/pdf') {
+                        try {
+                            await rendreNip(f.data, '_annexe');
+                            pieces._annexe.images.forEach(im => planches.push(im));
+                        } catch(e) { /* un PDF illisible ne doit pas bloquer les autres */ }
+                    } else {
+                        planches.push({ src: 'data:' + f.type + ';base64,' + f.data, paysage: false });
+                    }
+                }
+                ANNEXES.push({ id: a.id, nom: a.nom || 'Annexe', ordre: a.ordre || 0,
+                               fichiers: a.fichiers || [], planches: planches });
+            }
+            if(document.getElementById('pd-pages')) renderPrepa();
+        }
+
+        // Les pages que ces annexes ajoutent au document, a la suite.
+        function pagesAnnexes() {
+            return ANNEXES.map(a => ({
+                id: 'annexe-' + a.id, titre: a.nom, defaut: true, horsCompte: true, planches: true,
+                dispo: () => a.planches.length > 0,
+                corps: () => a.planches.map((im, i) => `<div class="pd-nip-feuille">
+                    <img class="pd-nip-img${im.paysage ? ' paysage' : ''}" src="${im.src}"
+                         alt="${esc(a.nom)} \u2014 page ${i + 1}"></div>`).join('')
+            }));
+        }
+        function toutesLesPages() { return PREPA_PAGES.concat(pagesAnnexes()); }
+
+        async function ajouterAnnexe(input) {
+            const fichiers = [...(input.files || [])];
+            input.value = '';
+            if(!fichiers.length) return;
+            if(!curId) { alert("Enregistrez d'abord le chantier : une annexe doit lui \u00eatre rattach\u00e9e."); return; }
+            const nom = String(pv('an-annexe-nom')).trim();
+            if(!nom) { alert("Donnez d'abord un nom \u00e0 l'annexe."); return; }
+            for(const f of fichiers) {
+                if(!/^(application\/pdf|image\/(jpeg|png|webp))$/.test(f.type)) {
+                    alert("\u00ab " + f.name + " \u00bb n'est ni un PDF ni une image."); return;
+                }
+                if(f.size > RECU_MAX) { alert("\u00ab " + f.name + " \u00bb d\u00e9passe 3 Mo."); return; }
+            }
+            const etat = document.getElementById('an-annexe-etat');
+            if(etat) etat.textContent = ' Import\u2026';
+            try {
+                // Meme nom qu'une annexe existante : les fichiers s'y ajoutent.
+                const deja = ANNEXES.find(a => a.nom.toLowerCase() === nom.toLowerCase());
+                const id = deja ? deja.id : db.ref('annexes/' + curId).push().key;
+                const liste = deja ? deja.fichiers.slice() : [];
+                for(const f of fichiers) {
+                    liste.push({ nom: f.name, type: f.type, data: await lireBase64(f) });
+                }
+                const ordre = deja ? deja.ordre : (ANNEXES.length ? Math.max(...ANNEXES.map(a => a.ordre)) + 1 : 1);
+                await db.ref('annexes/' + curId + '/' + id).set({ nom: nom, ordre: ordre, fichiers: liste });
+                prepa.v['an-annexe-nom'] = '';
+                await chargerAnnexes();
+            } catch(e) {
+                alert("\u00c9chec de l'import : " + e.message);
+            }
+            if(etat) etat.textContent = '';
+        }
+
+        async function renommerAnnexe(id, nom) {
+            if(!curId || !String(nom).trim()) return;
+            await db.ref('annexes/' + curId + '/' + id + '/nom').set(String(nom).trim()).catch(() => {});
+            const a = ANNEXES.find(x => x.id === id);
+            if(a) a.nom = String(nom).trim();
+            renderPrepa();
+        }
+
+        async function retirerAnnexe(id) {
+            const a = ANNEXES.find(x => x.id === id);
+            if(!curId || !a) return;
+            if(!confirm('Retirer l\u2019annexe \u00ab ' + a.nom + ' \u00bb et ses '
+                      + a.fichiers.length + ' fichier(s) ?')) return;
+            await db.ref('annexes/' + curId + '/' + id).remove().catch(() => {});
+            delete prepa.pages['annexe-' + id];
+            await chargerAnnexes();
+        }
+
+        async function retirerFichierAnnexe(id, i) {
+            const a = ANNEXES.find(x => x.id === id);
+            if(!curId || !a || !a.fichiers[i]) return;
+            if(!confirm('Retirer \u00ab ' + a.fichiers[i].nom + ' \u00bb de cette annexe ?')) return;
+            const liste = a.fichiers.filter((x, k) => k !== i);
+            if(liste.length) await db.ref('annexes/' + curId + '/' + id + '/fichiers').set(liste).catch(() => {});
+            else await db.ref('annexes/' + curId + '/' + id).remove().catch(() => {});
+            await chargerAnnexes();
+        }
+
+        // Le bloc de gestion, en bas de la page Annexes.
+        function blocAnnexes() {
+            let h = sous('Documents annex\u00e9s');
+            h += `<div class="pd-note">Ajoutez vos propres documents \u2014 images ou PDF. Chacun porte
+                  un nom, devient une page de la pr\u00e9paration et figure au sommaire sous ce nom.
+                  Plusieurs fichiers peuvent aller sous le m\u00eame nom.</div>`;
+            h += `<div class="pd-l pd-aide">
+                    ${chp('an-annexe-nom', "Nom de l'annexe, ex : Plan de prévention")}
+                    <label class="btn-pd pre">\u{1f4ce} Ajouter des fichiers
+                        <input type="file" accept="application/pdf,image/*" multiple hidden
+                               onchange="ajouterAnnexe(this)"></label>
+                    <span id="an-annexe-etat"></span>
+                 </div>`;
+            if(!ANNEXES.length) return h + '<div class="pd-aide">Aucune annexe pour ce chantier.</div>';
+            h += ANNEXES.map(a => `<div class="an-bloc">
+                <div class="pd-l">
+                    <input class="pd-in" value="${esc(a.nom)}" style="max-width:320px"
+                           onchange="renommerAnnexe('${a.id}', this.value)">
+                    <span class="pd-aide">${a.planches.length} page(s)</span>
+                    <button class="pd-sup" onclick="retirerAnnexe('${a.id}')">&times; Retirer</button>
+                </div>
+                ${a.fichiers.map((f, i) => `<div class="pd-l an-fichier">
+                    <span>${esc(f.nom)}</span>
+                    <button class="pd-sup" onclick="retirerFichierAnnexe('${a.id}', ${i})">&times;</button>
+                 </div>`).join('')}
+            </div>`).join('');
+            return h;
+        }
+
         // --- Visibilite des pages ---------------------------------------------
         function pageVisible(id) {
             if(prepa.pages[id] !== undefined) return prepa.pages[id];
-            const pg = PREPA_PAGES.find(x => x.id === id);
+            const pg = toutesLesPages().find(x => x.id === id);
             return pg ? pg.defaut : true;
         }
         function basculerPage(id) { prepa.pages[id] = !pageVisible(id); renderPrepa(); }
-        function toutesPages(v)   { PREPA_PAGES.forEach(pg => { prepa.pages[pg.id] = v; }); renderPrepa(); }
+        function toutesPages(v)   { toutesLesPages().forEach(pg => { prepa.pages[pg.id] = v; }); renderPrepa(); }
         function pagesParDefaut() { prepa.pages = {}; renderPrepa(); }
         function basculerSommaire() { document.getElementById('pd-sommaire').classList.toggle('ouvert'); }
         function allerPage(id) {
@@ -5569,7 +5713,8 @@
         }
 
         function goPrepaDoc() { switchScreen('screen-prepadoc'); renderPrepa();
-                                chargerPhotoCouv(); chargerPieces(); chargerSignatures(); }
+                                chargerPhotoCouv(); chargerPieces(); chargerSignatures();
+                                chargerAnnexes(); }
 
         function renderPrepa() {
             const c = pdChantier();
@@ -5579,7 +5724,7 @@
             // Sommaire : une ligne par page, avec sa case d'affichage
             document.getElementById('pd-sommaire').innerHTML =
                 '<div class="pd-som-titre">Pages de la préparation</div>' +
-                PREPA_PAGES.filter(pg => !pg.dispo || pg.dispo()).map(pg => {
+                toutesLesPages().filter(pg => !pg.dispo || pg.dispo()).map(pg => {
                     const v = pageVisible(pg.id);
                     return `<div class="pd-som-ligne ${v ? '' : 'masquee'}">
                         <input type="checkbox" ${v ? 'checked' : ''} onchange="basculerPage('${pg.id}')" title="Afficher cette page">
@@ -5600,8 +5745,8 @@
 
             // Pages visibles, les unes sous les autres
             document.getElementById('pd-pages').innerHTML =
-                PREPA_PAGES.filter(pg => (!pg.dispo || pg.dispo()) && pageVisible(pg.id)).map(pg => `
-                    <section class="pd-page${pg.images ? ' pd-page-images' : ''}${pg.paysage ? ' pd-paysage' : ''}" id="pdp-${pg.id}"><div class="pd-fit">
+                toutesLesPages().filter(pg => (!pg.dispo || pg.dispo()) && pageVisible(pg.id)).map(pg => `
+                    <section class="pd-page${pg.images ? ' pd-page-images' : ''}${pg.paysage ? ' pd-paysage' : ''}${pg.planches ? ' pd-planches' : ''}" id="pdp-${pg.id}"><div class="pd-fit">
                         <div class="pd-page-tete">
                             <span class="pd-page-titre">${esc(pg.titre)}</span>
                             ${pg.annexe ? `<span class="pd-annexe">${esc(pg.annexe)}</span>` : ''}
@@ -5635,7 +5780,7 @@
 
         function majPrepaEtat() {
             let tot = 0, plein = 0;
-            PREPA_PAGES.forEach(pg => {
+            toutesLesPages().forEach(pg => {
                 const el = document.getElementById('pdp-' + pg.id);
                 const pc = document.getElementById('pdpc-' + pg.id);
                 if(!el) { if(pc) pc.textContent = ''; return; }
@@ -5878,7 +6023,7 @@
                     return;
                 }
                 // Les planches d'une piece jointe portent deja leur feuille
-                if(sec.id === 'pdp-nip' || sec.id === 'pdp-unifilaire') {
+                if(sec.classList.contains('pd-planches')) {
                     // Chaque planche est une feuille entiere : elle porte ses
                     // marges elle-meme. La contraindre a la largeur utile la
                     // decalait de 32 mm vers la gauche, folio compris.
@@ -5947,7 +6092,7 @@
         function compterFeuilles(sec) {
             const n = sec.querySelectorAll(':scope > .pd-feuille-doc').length;
             if(n) return n;
-            if(sec.id === 'pdp-nip' || sec.id === 'pdp-unifilaire') {
+            if(sec.classList.contains('pd-planches')) {
                 return Math.max(1, sec.querySelectorAll('.pd-nip-feuille').length);
             }
             return 1;
