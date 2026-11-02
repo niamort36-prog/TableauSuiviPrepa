@@ -372,7 +372,11 @@
         /* Champs */
         /* Cases a la maniere du classeur : angles droits, trait fin, et la
            case active cernee comme la cellule selectionnee d'un tableur. */
-        .pd-in, .pd-zone { border: 1px solid #b4b4b4; border-radius: 2px; padding: 4px 6px; font-size: .88rem;
+        /* Sans border-box, une hauteur posee en pixels s'ajoute au padding
+           et a la bordure : la zone grandissait de douze pixels a chaque
+           ajustement, sans jamais revenir. */
+        .pd-in, .pd-zone { box-sizing: border-box;
+                           border: 1px solid #b4b4b4; border-radius: 2px; padding: 4px 6px; font-size: .88rem;
                            font-family: inherit; background: #fff; width: 100%; min-width: 0; }
         .pd-in:focus, .pd-zone:focus { outline: 2px solid var(--accent); outline-offset: -1px;
                                        background: #f7fcff; }
@@ -3166,7 +3170,7 @@
         // Variante multiligne, pour les valeurs qui debordent d'une ligne.
         function chpLieZone(c, source, ph) {
             const saisi = String(pv(c)).trim();
-            return `<textarea class="pd-zone" rows="2" placeholder="${esc(ph || '')}"
+            return `<textarea class="pd-zone" rows="2" data-cle="${c}" placeholder="${esc(ph || '')}"
                               oninput="ajusterZone(this)"
                               onchange="setPV('${c}', this.value)">${esc(saisi || source || '')}</textarea>`;
         }
@@ -3192,7 +3196,7 @@
         }
 
         function zone(c, n, ph) {
-            return `<textarea class="pd-zone" rows="${n || 3}" placeholder="${esc(ph || '')}"
+            return `<textarea class="pd-zone" rows="${n || 3}" data-cle="${c}" placeholder="${esc(ph || '')}"
                               onchange="setPV('${c}', this.value)">${esc(pv(c))}</textarea>`;
         }
         function coche(c, lab) {
@@ -3380,7 +3384,8 @@
             const v = prepa.l[c][i][k];
             // Une zone multiligne n'accepte pas de datalist : le choix du
             // classeur passe par le chevron, la saisie libre reste entiere.
-            return `<div class="pd-cell"><textarea class="pd-zone" rows="2" placeholder="${esc(ph || '')}"
+            return `<div class="pd-cell"><textarea class="pd-zone" rows="2"
+                              data-cle="${c}-${i}-${k}" placeholder="${esc(ph || '')}"
                               oninput="ajusterZone(this)"
                               onchange="setL('${c}',${i},'${k}',this.value)">${esc(v === undefined ? '' : v)}</textarea>
                 ${o ? `<select class="pd-choix" title="Choix du classeur" onchange="choisir(this,'${c}',${i},'${k}')">
@@ -3422,13 +3427,35 @@
         // Une case de tableau ne doit jamais masquer son texte. On l'etire a
         // son contenu, et on reporte la hauteur obtenue sur l'attribut rows,
         // seul repere utilisable a l'impression ou la page est plus etroite.
+        // Hauteurs reglees a la main, le temps de la session : un rendu ne
+        // doit pas defaire ce que l'utilisateur a etabli.
+        const HAUTEURS_ZONES = {};
+
         function ajusterZone(el) {
+            const cle = el.dataset.cle;
+            if(cle && HAUTEURS_ZONES[cle]) { el.style.height = HAUTEURS_ZONES[cle] + 'px'; return; }
+            // On mesure a vide, puis on pose la hauteur du texte. Toucher
+            // aussi a rows ferait un cliquet : la mesure suivante partirait
+            // de la hauteur precedente et la zone ne redescendrait jamais.
             el.style.height = 'auto';
             const lh = parseFloat(getComputedStyle(el).lineHeight) || 17;
-            const h = Math.max(el.scrollHeight, 2 * lh + 10);
-            el.style.height = h + 'px';
-            el.rows = Math.max(2, Math.ceil((h - 10) / lh) + 1);
+            el.style.height = Math.max(el.scrollHeight, Math.round(2 * lh) + 12) + 'px';
         }
+
+        // La poignee de redimensionnement occupe le coin bas-droit : une
+        // pression dans ce coin est un reglage manuel, et il prime ensuite.
+        document.addEventListener('pointerdown', e => {
+            const z = e.target.closest ? e.target.closest('textarea.pd-zone') : null;
+            if(!z) return;
+            const r = z.getBoundingClientRect();
+            if(e.clientX < r.right - 18 || e.clientY < r.bottom - 18) return;
+            const fin = () => {
+                document.removeEventListener('pointerup', fin);
+                const cle = z.dataset.cle;
+                if(cle) HAUTEURS_ZONES[cle] = z.offsetHeight;
+            };
+            document.addEventListener('pointerup', fin);
+        }, true);
         function ajusterZones() {
             document.querySelectorAll('#pd-pages .pd-tab td textarea, #pd-pages .cv-infos textarea')
                     .forEach(ajusterZone);
