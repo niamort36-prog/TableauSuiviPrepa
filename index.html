@@ -4561,6 +4561,8 @@
                     <span class="pd-rg-lab">Ligne :</span>${chpLie('tv-a1ec-l', c.ligne)}</div>
                 <div class="pd-rg-l">${coche('tv-at', 'AT')}
                     <span class="pd-rg-lab">Ligne :</span>${chp('tv-at-l', 'Néant')}</div>
+                <div class="pd-rg-l">${coche('tv-aa', 'AA')}
+                    <span class="pd-rg-lab">Ligne :</span>${chp('tv-aa-l', 'Néant')}</div>
                 <div class="pd-rg-l">${coche('tv-pdm', 'Pdm')}</div>
                 ${grille('pd-g2', coche('tv-ist', 'IST') + coche('tv-isp', 'ISP'))}
                 <div class="pd-rg-l">${coche('tv-rpe', 'RPE')}</div>
@@ -4598,7 +4600,7 @@
             const c = pdChantier();
             const unif = c.numero && /^\d+$/.test(c.numero) ? (520000 + Number(c.numero)) : '';
             const num = ['1 - Moyens humains + véhicules', '2 - Schéma unifilaire', '3 - EDA (avis infoligne)',
-                         '4 - PPE validé (ETREN)', '5 - Mode opératoire + analyse de risques',
+                         '4 - PPE validé', '5 - Mode opératoire + analyse de risques',
                          '6 - MALT CC + gestion des aléas + points d\'arrêts non programmés',
                          '7 - REX', '8 - Compte rendu d\'intervention'];
             const autres = ['Travaux végétation', 'IST', 'ISP', 'SEVESO', 'Plan au 1/1000',
@@ -4724,7 +4726,7 @@
 
         { id:'modeop', titre:'Mode opératoire', annexe:'Annexe 5', defaut:true, paysage:true, corps: () => `
             <div class="pd-note">Se référer au DUER pour l'analyse des risques génériques.</div>
-            ${grille('pd-g3', champ('PPE ETREN', chp('mo-etren', 'N° ETREN')) + champ('Fiche ETREN signée par le CDT', coche('mo-etren-sig', 'Signée')) + champ('Impact environnemental', sel('mo-env', ['OUI','NON'])))}
+            ${grille('pd-g3', champ('PPE', chp('mo-etren', 'N° PPE')) + champ('Fiche PPE signée par le CDT', coche('mo-etren-sig', 'Signée')) + champ('Impact environnemental', sel('mo-env', ['OUI','NON'])))}
             ${tableau('mo-l', [{k:'t', t:'Tâches à réaliser', l:'26%', m:true, o:'taches'}, {k:'r', t:'Analyse de risques', l:'24%', m:true, o:'risques'}, {k:'a', t:'Actions préventives', l:'24%', m:true, o:'actions'}, {k:'pa', t:'Point d\'arrêt', l:'64px', c:true}, {k:'e', t:'État réalisé', l:'74px', c:true}, {k:'al', t:'Aléa n°', l:'58px', c:true}], {t:'', r:'', a:'', pa:'', e:'', al:''}, [
                 {t:'Vérification état initial (terrain, préparation de travail)', r:'', a:'', pa:'1', e:'', al:''},
                 {t:'Pré Job Briefing (PF 1)', r:'', a:'', pa:'', e:'', al:''},
