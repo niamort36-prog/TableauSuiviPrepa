@@ -4087,6 +4087,38 @@
             return net.map(c => 'Port\u00e9e ' + c.portee + ' : ' + c.lignes.join(' ; ')).join('\n');
         }
 
+        // Beaucoup de schemas unifilaires sont des plans trames : le PDF
+        // n'a aucune couche texte, et il n'y a rien a y lire. Leur nom de
+        // fichier, lui, est normalise et porte l'essentiel.
+        // T-TC-CLERAL71PLAUD-LASCHU-GDP_DES_CASSEAUX-L527007-C.pdf
+        function analyserNomUnifilaire(nom) {
+            const n = String(nom || '').replace(/\.pdf$/i, '').toUpperCase();
+            const r = {};
+            const num = /\bL(\d{6})\b/.exec(n);
+            if(num) r.num = 'L' + num[1];
+            const ind = /-([A-Z0-9])$/.exec(n);
+            if(ind) r.indice = ind[1];
+            // Le code liaison est cherche parmi ceux du referentiel : plus sur
+            // qu'une expression, et il donne la tension et le nom de la ligne.
+            const code = Object.values(CODES_LIAISON).find(c => n.includes(c));
+            if(code) {
+                const id = Object.keys(CODES_LIAISON).find(k => CODES_LIAISON[k] === code);
+                const l = dbLignes.find(x => x.id === id);
+                if(l) { r.tension = l.t || ''; r.liaison = l.n || ''; }
+            }
+            return r;
+        }
+
+        // NI_25-45474_1_24042025.pdf : numero, puis indice.
+        function analyserNomNip(nom) {
+            const n = String(nom || '').replace(/\.pdf$/i, '');
+            const m = /(NI[_-]?\d{2}-\d{3,6})(?:[_-](\d{1,2}))?/i.exec(n);
+            if(!m) return {};
+            const r = { num: m[1].replace(/^NI[_-]?/i, 'NI_') };
+            if(m[2]) r.indice = m[2];
+            return r;
+        }
+
         // Ce que chaque piece sait relever, et ou le ranger.
         const RELEVES = {
             nip: {
@@ -4101,7 +4133,8 @@
                 },
                 attendus: { num: 'num\u00e9ro de NI', retrait: 'num\u00e9ro de retrait',
                             debut: 'd\u00e9but de consignation', fin: 'fin de consignation',
-                            cdr: 'CDR', dr: 'DR' }
+                            cdr: 'CDR', dr: 'DR' },
+                nom: analyserNomNip
             },
             unifilaire: {
                 analyser: analyserUnifilaire,
@@ -4111,7 +4144,8 @@
                                'uni-cables': r.cables.join(' \u00b7 '), 'uni-crois': r.croisements }),
                 attendus: { num: 'num\u00e9ro de sch\u00e9ma', indice: 'indice',
                             longueur: 'longueur', pylones: 'plage de pyl\u00f4nes',
-                            croisements: 'tableau des croisements' }
+                            croisements: 'tableau des croisements' },
+                nom: analyserNomUnifilaire
             }
         };
 
@@ -4141,10 +4175,25 @@
                 }
 
                 const reg = RELEVES[cle];
-                let releve = null;
-                try { releve = reg.analyser(await texteDuPdf(data)); }
-                catch(e) { alert("Le document est enregistr\u00e9, mais son texte n'a pas pu \u00eatre lu :\n"
-                                 + e.message + "\n\nRenseignez les champs \u00e0 la main."); }
+                let releve = null, txt = '', muet = false;
+                try {
+                    txt = await texteDuPdf(data);
+                    releve = reg.analyser(txt);
+                } catch(e) {
+                    alert("Le document est enregistr\u00e9, mais son texte n'a pas pu \u00eatre lu :\n"
+                        + e.message + "\n\nRenseignez les champs \u00e0 la main.");
+                }
+                // Un plan trame n'a aucune couche texte. Son nom, lui, est
+                // normalise : on y prend ce que le document n'a pas donne.
+                if(reg.nom) {
+                    muet = !String(txt).trim();
+                    if(!releve) releve = {};
+                    const duNom = reg.nom(f.name) || {};
+                    Object.keys(duNom).forEach(k => {
+                        if(!String(releve[k] === undefined ? '' : releve[k]).trim() && duNom[k])
+                            releve[k] = duNom[k];
+                    });
+                }
 
                 if(releve) {
                     const vals = reg.poser(releve);
@@ -4165,8 +4214,10 @@
                     const vides = Object.keys(reg.attendus)
                         .filter(k => !String(releve[k] === undefined ? '' : releve[k]).trim().length)
                         .map(k => reg.attendus[k]);
-                    if(vides.length) alert("Document enregistr\u00e9. Ces informations n'ont pas \u00e9t\u00e9 "
-                        + "trouv\u00e9es et restent \u00e0 saisir :\n\u2022 " + vides.join('\n\u2022 '));
+                    if(vides.length) alert("Document enregistr\u00e9"
+                        + (muet ? ", mais c'est un plan sans texte : il n'y a rien \u00e0 y lire.\n"
+                                + "Seul son nom de fichier a pu \u00eatre exploit\u00e9." : ".")
+                        + "\n\nCes informations restent \u00e0 saisir :\n\u2022 " + vides.join('\n\u2022 '));
                 }
                 renderPrepa();
             } catch(e) {
