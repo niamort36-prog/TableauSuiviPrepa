@@ -845,6 +845,30 @@
         .share-banner { background: #2e7f74; color: white; padding: 14px 20px; text-align: center; font-weight: 700; border-radius: 10px; margin-bottom: 15px; }
         .share-banner small { display: block; opacity: 0.8; font-weight: 400; margin-top: 4px; }
 
+        /* --- Preparation partagee : on lit et on imprime, rien d'autre --- */
+        body.partage-prepa .navbar { display: none !important; }
+        body.partage-prepa .pd-retour,
+        body.partage-prepa .btn-other,
+        body.partage-prepa .btn-save,
+        body.partage-prepa .pd-partage { display: none !important; }
+        body.partage-prepa #pd-pages .btn-pd,
+        body.partage-prepa #pd-pages .pd-sup,
+        body.partage-prepa #pd-pages .pd-tab-actions,
+        body.partage-prepa #pd-pages .pd-sig-outils,
+        body.partage-prepa #pd-pages .pd-choix,
+        body.partage-prepa #pd-pages .pd-sch-outils,
+        body.partage-prepa #pd-pages .pd-sch-reglage,
+        body.partage-prepa #pd-pages .pd-sch-liens,
+        body.partage-prepa #pd-pages .pd-grp-barre,
+        body.partage-prepa #pd-pages .pd-grp-tete input { display: none !important; }
+        body.partage-prepa #pd-pages input,
+        body.partage-prepa #pd-pages select,
+        body.partage-prepa #pd-pages textarea { pointer-events: none; }
+        body.partage-prepa .pd-bandeau { background: #2e7f74; color: #fff; padding: 10px 16px;
+                        font-weight: 700; text-align: center; font-size: .9rem; }
+        body.partage-prepa .pd-bandeau small { display: block; opacity: .85; font-weight: 400; margin-top: 3px; }
+        body.prepa-impression .pd-bandeau { display: none !important; }
+
         /* ==================================================================
            MISES EN PAGE — PC, téléphone portrait et téléphone paysage.
            Toutes les règles adaptatives sont cadrées sur "screen" : la
@@ -1364,6 +1388,7 @@
         <div class="footer-sticky">
             <button class="btn-action btn-other" onclick="switchScreen('screen-prepa')">← Retour</button>
             <button class="btn-action btn-prepadoc" onclick="basculerSommaire()">📑 Pages</button>
+            <button class="btn-action btn-logi pd-partage" onclick="copierLienPrepa()">🔗 Partager</button>
             <button class="btn-action btn-print" onclick="imprimerPrepa()">🖨️ Imprimer</button>
             <button class="btn-action btn-save" onclick="save(false)">💾 ENREGISTRER</button>
         </div>
@@ -1478,6 +1503,12 @@
         // Terrain, en lecture seule. Tout le reste de l'application est masqué.
         const PARTAGE_ID = new URLSearchParams(location.search).get('partage');
         const PARTAGE = !!PARTAGE_ID;
+        // index.html?prepa=<id> : la preparation de travail seule, en
+        // lecture. Le collegue la lit et l'imprime, il n'y touche pas.
+        const PREPA_ID = new URLSearchParams(location.search).get('prepa');
+        const PARTAGE_PREPA = !!PREPA_ID;
+        // Vrai des qu'on est sur un lien partage, quel qu'il soit.
+        const LECTURE = PARTAGE || PARTAGE_PREPA;
         let partageProjet = null;
 
          // --- 2. DONNEES STATIQUES ---
@@ -1618,7 +1649,7 @@
 
         // --- 4. ECOUTE TEMPS REEL FIREBASE ---
         // Inutile en mode partage : on ne charge que le chantier concerné.
-        if(!PARTAGE) db.ref('chantiers').on('value', (snapshot) => {
+        if(!LECTURE) db.ref('chantiers').on('value', (snapshot) => {
             const data = snapshot.val();
             // Convertir les objets firebase en tableau
             projects = data ? Object.values(data) : [];
@@ -1642,7 +1673,7 @@
 
         // --- 4b. EQUIPES (temps réel) ---
         let seedEquipeTente = false;
-        if(!PARTAGE) db.ref('equipes').on('value', (snapshot) => {
+        if(!LECTURE) db.ref('equipes').on('value', (snapshot) => {
             const data = snapshot.val();
             if(!data) {
                 if(seedEquipeTente) return;
@@ -1696,7 +1727,7 @@
         let dbOperateurs = [];
         let refOperateurs = null;
         function ecouterOperateurs() {
-            if(PARTAGE) return;
+            if(LECTURE) return;
             if(refOperateurs) refOperateurs.off();
             refOperateurs = db.ref('operateurs/' + equipeActive);
             refOperateurs.on('value', snap => {
@@ -1714,7 +1745,7 @@
         let dbSecours = { enc: [], grp: [] };
         let refSecours = null;
         function ecouterSecours() {
-            if(PARTAGE) return;
+            if(LECTURE) return;
             if(refSecours) refSecours.off();
             refSecours = db.ref('secours/' + equipeActive);
             refSecours.on('value', snap => {
@@ -3385,6 +3416,7 @@
         function toile() { return document.getElementById('sig-toile'); }
 
         function ouvrirSignature(cle) {
+            if(LECTURE) return;
             if(!curId) { alert("Enregistrez d'abord le chantier : la signature doit lui \u00eatre rattach\u00e9e."); return; }
             sigCle = cle;
             const t = document.getElementById('sig-qui');
@@ -3506,7 +3538,7 @@
         }
 
         async function retirerSignature(cle) {
-            if(!curId) return;
+            if(LECTURE || !curId) return;
             if(!confirm('Retirer cette signature ?')) return;
             await db.ref('signatures/' + curId + '/' + cle).remove().catch(() => {});
             delete SIGNES[cle];
@@ -3664,6 +3696,7 @@
         // Chaque page qui accueille un panier a son prefixe : les deux
         // listes vivent cote a cote sans se marcher dessus.
         async function importerPanier(pre) {
+            if(LECTURE) return;
             const ref = lirePanier(pv(pre + '-panier-lien'));
             if(!ref) {
                 alert("Collez le lien de partage d'un panier Invent'RTE.\n\n"
@@ -3932,6 +3965,7 @@
         };
 
         async function importerPiece(cle, input) {
+            if(LECTURE) return;
             const f = input.files && input.files[0];
             input.value = '';
             if(!f) return;
@@ -4034,7 +4068,7 @@
         }
 
         async function retirerPiece(cle) {
-            if(!curId || !pieces[cle].fichier) return;
+            if(LECTURE || !curId || !pieces[cle].fichier) return;
             if(!confirm('Retirer ' + PIECES[cle].libelle + ' ? Les informations relev\u00e9es restent en place.')) return;
             await db.ref(cle + '/' + curId).remove().catch(() => {});
             pieces[cle] = { fichier: null, images: [] };
@@ -4065,6 +4099,7 @@
         }
 
         async function importerPhotoCouv(input) {
+            if(LECTURE) return;
             const f = input.files && input.files[0];
             input.value = '';
             if(!f) return;
@@ -4086,7 +4121,7 @@
         }
 
         async function retirerPhotoCouv() {
-            if(!curId || !photoCouv) return;
+            if(LECTURE || !curId || !photoCouv) return;
             if(!confirm('Retirer la photo de couverture ?')) return;
             await db.ref('couvertures/' + curId).remove().catch(() => {});
             photoCouv = null;
@@ -6755,6 +6790,23 @@
         }
 
         // --- Lien de partage --------------------------------------------------
+        // Le lien de la preparation : la meme page, mais en lecture seule
+        // et ouverte directement sur le document.
+        function copierLienPrepa() {
+            if(!curId) { alert("Enregistrez d'abord le chantier : le lien de partage a besoin de son identifiant."); return; }
+            const url = location.origin + location.pathname + '?prepa=' + curId;
+            const msg = "\u{1f517} Lien de la pr\u00e9paration copi\u00e9 :\n\n" + url
+                      + "\n\nLa personne qui l'ouvre voit la pr\u00e9paration compl\u00e8te et peut l'imprimer,"
+                      + "\nmais ne peut rien y modifier."
+                      + "\n\n\u26a0\ufe0f Le lien affiche ce qui est en base : enregistrez vos dernières modifications.";
+            if(navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(url).then(() => alert(msg))
+                    .catch(() => prompt("Copiez ce lien :", url));
+            } else {
+                prompt("Copiez ce lien :", url);
+            }
+        }
+
         function copierLienPartage() {
             if(!curId) { alert("Enregistrez d'abord le chantier : le lien de partage a besoin de son identifiant."); return; }
             const url = location.origin + location.pathname + '?partage=' + curId;
@@ -6941,7 +6993,48 @@
 
         // Ctrl+P doit produire la même feuille que le bouton, sauf pendant
         // l'impression de la préparation, qui a sa propre mise en page.
-        if(!PARTAGE) window.addEventListener('beforeprint', () => { if(!impressionPrepa) buildPrintSheet(); });
+        if(!LECTURE) window.addEventListener('beforeprint', () => { if(!impressionPrepa) buildPrintSheet(); });
+
+        // --- 15b. AMORCAGE DE LA PREPARATION PARTAGEE -----------------------
+        // On recharge ce qu'il faut a la main : le chantier, le referentiel
+        // de son equipe pour le nom de la ligne, puis le document.
+        if(PARTAGE_PREPA) (async () => {
+            document.body.classList.add('partage-prepa');
+            const a3 = document.getElementById('print-a3');
+            if(a3) a3.disabled = true;
+            const pr = document.getElementById('print-prepa');
+            if(pr) pr.disabled = true;
+
+            const perdu = m => {
+                switchScreen('screen-prepadoc');
+                document.querySelector('#screen-prepadoc .pd-corps').innerHTML =
+                    '<div style="padding:40px;text-align:center;width:100%">'
+                  + '<h2 style="color:#9c4433">Pr\u00e9paration introuvable</h2><p>' + m + '</p></div>';
+            };
+
+            let p = null;
+            try { p = (await db.ref('chantiers/' + PREPA_ID).once('value')).val(); }
+            catch(e) { perdu("La base n'a pas r\u00e9pondu : " + e.message); return; }
+            if(!p) { perdu('Ce lien ne correspond \u00e0 aucun chantier enregistr\u00e9.'); return; }
+
+            equipeActive = p.equipe || EQUIPE_DEFAUT;
+            projects = [p];
+            ecouterLignes();
+            // Le referentiel arrive en differe : on l'attend, sans s'eterniser.
+            await new Promise(res => {
+                const t = setInterval(() => { if(dbLignes.length) { clearInterval(t); res(); } }, 60);
+                setTimeout(() => { clearInterval(t); res(); }, 5000);
+            });
+
+            load(PREPA_ID);
+            goPrepaDoc();
+            const corps = document.querySelector('#screen-prepadoc');
+            const b = document.createElement('div');
+            b.className = 'pd-bandeau';
+            b.innerHTML = 'Pr\u00e9paration de travail partag\u00e9e \u2014 lecture seule'
+                        + '<small>Choisissez les pages, puis Imprimer pour l\u2019\u00e9diter en PDF.</small>';
+            corps.insertBefore(b, corps.firstChild);
+        })();
 
         // --- 15. AMORCAGE DE LA VUE PARTAGEE --------------------------------
         if(PARTAGE) {
