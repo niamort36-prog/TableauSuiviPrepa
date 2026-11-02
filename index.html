@@ -417,6 +417,9 @@
         .pd-ins { background: #dff4fb; color: #0c4a6e; border: 1px solid #7dd3fc; border-radius: 4px;
                   padding: 2px 7px; cursor: pointer; font-weight: 800; margin-right: 3px; }
         .pd-ins:hover { background: #bae6fd; }
+        /* width 1% + nowrap : le tableau donne a cette colonne exactement la
+           largeur de ses boutons, ni plus ni moins. */
+        .pd-tab .pd-actions { width: 1%; white-space: nowrap; }
 
         .pd-tab-enveloppe { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
         .pd-aide { font-size: .72rem; color: #64748b; }
@@ -1311,6 +1314,20 @@
                      if(secRenduEnAttente && !c.contains(document.activeElement)) renderSecours(); }, 0)"></div>
             </div>
         </div>
+        <div class="dashboard-container">
+            <div class="header-bar" style="display:flex; justify-content:space-between; align-items:center; gap:12px">
+                <h3 style="margin:0; font-size:1.1rem">&#9881; VERSION</h3>
+                <button class="btn-replier" onclick="rafraichirApp()">&#8635; Rechercher une mise &agrave; jour</button>
+            </div>
+            <div style="padding:14px 20px; color:#475569; font-size:0.9rem">
+                Vous utilisez la version du <b id="app-version">&mdash;</b>.
+                <div style="color:#94a3b8; font-size:0.84rem; margin-top:4px">
+                    Le navigateur garde l'application en m&eacute;moire pendant dix minutes :
+                    apr&egrave;s une mise &agrave; jour, ce bouton va la chercher sans attendre.
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <div id="screen-form" class="screen">
@@ -2037,7 +2054,27 @@
             soufflet = setTimeout(() => z.classList.remove('vu'), 2600);
         }
         function goArchive() { switchScreen('screen-archive'); renderGrid('grid-archives', true); }
-        function goOptions() { switchScreen('screen-options'); fillTensionSelect(); renderEquipes(); renderLignes(); renderOperateurs(); renderSecours(); }
+        function goOptions() { switchScreen('screen-options'); fillTensionSelect(); renderEquipes();
+                               renderLignes(); renderOperateurs(); renderSecours(); renderVersion(); }
+
+        // La date du fichier servi : elle dit sans ambiguite si l'on tourne
+        // sur la derniere version ou sur une copie gardee en cache.
+        function renderVersion() {
+            const e = document.getElementById('app-version');
+            if(!e) return;
+            const d = new Date(document.lastModified);
+            e.textContent = isNaN(d) ? '\u2014'
+                : d.toLocaleDateString('fr-FR') + ' \u00e0 ' + d.toLocaleTimeString('fr-FR').slice(0, 5);
+        }
+
+        // Recharger ne suffit pas : tant que la copie en cache n'a pas
+        // expire, le navigateur la ressert. On la fait revalider d'abord.
+        async function rafraichirApp() {
+            const b = event && event.target;
+            if(b) { b.disabled = true; b.textContent = '\u2026'; }
+            try { await fetch(location.pathname, { cache: 'reload' }); } catch(e) {}
+            location.reload();
+        }
         function goPrepa() { switchScreen('screen-prepa'); refreshUI(); }
 
         // --- 7. FONCTION DE SAUVEGARDE (Vers Firebase) ---
@@ -3498,13 +3535,13 @@
             const nb = colonnes.length + 1;
             return `${colonnes.filter(c => c.o && !c.m).map(c => listeHtml(cle, c.k, c.o)).join('')}
             <div class="pd-tab-enveloppe"><table class="pd-tab pd-cartes${o.haut ? ' pd-tab-haut' : ''}">
-                <thead><tr>${colonnes.map(c => `<th${c.l ? ' style="width:' + c.l + '"' : ''}>${c.t}</th>`).join('')}<th style="width:56px"></th></tr></thead>
+                <thead><tr>${colonnes.map(c => `<th${c.l ? ' style="width:' + c.l + '"' : ''}>${c.t}</th>`).join('')}<th class="pd-actions"></th></tr></thead>
                 <tbody>${rows.length ? rows.map((r, i) => r.sect !== undefined ? `<tr class="pd-sect" data-cle="${cle}" data-i="${i}">
                     <td colspan="${nb - 1}" data-lab="Étape">${cl(cle, i, 'sect', "Titre de l'étape")}</td>
-                    <td data-lab="">${actionsLigne(cle, i, modele)}</td>
+                    <td class="pd-actions" data-lab="">${actionsLigne(cle, i, modele)}</td>
                 </tr>` : `<tr data-cle="${cle}" data-i="${i}"${o.arret ? ' data-arret="' + o.arret + '"' : ''}${o.arret && String(r[o.arret] || '').trim() ? ' class="pd-arret"' : ''}>
                     ${colonnes.map(c => `<td data-lab="${lab(c.t)}"${c.c ? ' class="pd-court"' : ''}>${(c.m ? clm : cl)(cle, i, c.k, c.ph || '', c.o)}</td>`).join('')}
-                    <td data-lab="">${actionsLigne(cle, i, modele)}</td>
+                    <td class="pd-actions" data-lab="">${actionsLigne(cle, i, modele)}</td>
                 </tr>`).join('')
                 : `<tr><td colspan="${colonnes.length + 1}" class="pd-vide" style="color:#94a3b8;text-align:center;padding:10px">Aucune ligne</td></tr>`}
                 </tbody>
