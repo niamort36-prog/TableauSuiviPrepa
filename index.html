@@ -4609,7 +4609,7 @@
                 </label>
                 ${photoCouv ? '<button class="btn-pd" onclick="retirerPhotoCouv()">Retirer la photo</button>' : ''}
                 <span id="cv-photo-etat"></span>
-                <span>JPEG, PNG ou WebP, 2 Mo au plus. Tout le reste vient de la fiche et de la pr\u00e9paration.</span>
+                <span>Une photo, jusqu'\u00e0 20 Mo : elle est r\u00e9duite \u00e0 l'import. Tout le reste vient de la fiche et de la pr\u00e9paration.</span>
             </div>`;
         }},
 
@@ -4750,8 +4750,8 @@
             <b>HUILE HYDRAULIQUE</b> — HYDRELF XV 32 / EQUIVIS XV32</div>
 
             ${sous('Encadrement')}
-            ${tableau('se-enc', [{k:'n', t:'Nom', l:'26%'}, {k:'f', t:'Fonction'},
-                                 {k:'t', t:'Téléphone', l:'150px', c:true}, {k:'p', t:'Portable', l:'140px', c:true}],
+            ${tableau('se-enc', [{k:'n', t:'Nom', l:'26%'}, {k:'f', t:'Fonction', l:'20%'},
+                                 {k:'t', t:'Téléphone', l:'27%'}, {k:'p', t:'Portable', l:'27%'}],
                       {n:'', f:'', t:'', p:''}, null, {defaut: carnetEnc()})}
 
             ${sous('Groupements')}
