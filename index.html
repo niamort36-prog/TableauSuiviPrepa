@@ -5509,6 +5509,9 @@
         const SYN_ROUGE = '#c0392b';           // la couleur des releves, comme au bureau d'etudes
         // Ce qui porte le cable, et ce qui ne fait que passer dessous.
         const SYN_PORTE = ['pyl', 'frein', 'treuil'];
+        // Un pylone s'arrete sous le bandeau de libelles de sa bande : au
+        // dela il masquerait son propre numero.
+        const SYN_H_PYL = SYN_SOL - 98;
         const SYN_TYPES = {
             pyl:    { nom: 'Pylône',        col: '#191919', h: 130 },
             frein:  { nom: 'Freineuse',     col: '#191919', h: 62, n: 'Freineuse' },
@@ -5581,7 +5584,11 @@
         }
         function synSelect(id) { synMaj(d => { d.sel = (d.sel === id ? null : id); }); }
         function synChamp(cle, v) {
-            synMaj(d => { const o = d.n.find(x => x.id === d.sel); if(o) o[cle] = v; });
+            synMaj(d => {
+                const o = d.n.find(x => x.id === d.sel);
+                if(!o) return;
+                o[cle] = (cle === 'h' && o.t === 'pyl') ? Math.min(+v, SYN_H_PYL) : v;
+            });
         }
         function synSupprimer() { synMaj(d => { d.n = d.n.filter(x => x.id !== d.sel); d.sel = null; }); }
         // Pas a pas, quand le doigt vise mal.
@@ -5762,9 +5769,13 @@
         // pour les pylones, sous le sol pour les machines et les routes,
         // au-dessus du dessin pour tout ce qui est franchi.
         function synLabels(o) {
+            // Un liseré blanc derrière chaque libellé : il se lit même
+            // par-dessus un treillis ou un câble.
             const txt = (y, t, c, s, g) => t
                 ? `<text y="${y}" text-anchor="middle" font-size="${s}"
-                         font-weight="${g ? 800 : 500}" fill="${c}">${esc(t)}</text>` : '';
+                         font-weight="${g ? 800 : 500}" fill="${c}"
+                         stroke="#fff" stroke-width="${s * 0.2}" stroke-linejoin="round"
+                         paint-order="stroke">${esc(t)}</text>` : '';
             if(o.t === 'pyl') {
                 const y = -SYN_SOL;
                 return txt(y + 30, o.n, SYN_ROUGE, 24, true)
@@ -5856,19 +5867,23 @@
             const cab = synCable(d);
             const refs = synRefs(d);
             const pieds = synPieds(d, refs);
-            // `vers` est l'abscisse de l'autre bout : une poulie de pied ne
-            // prend que le cable qui vient de son cote.
-            const accroche = (o, vers) => {
+            // Une poulie de pied ne prend que le brin de la machine, et du
+            // cote ou elle se tient : la portee vers le pylone suivant part
+            // toujours de la tete, par-dessus la machine.
+            const accroche = (o, vers, brin) => {
                 const sol = o.b * SYN_BH + SYN_SOL;
                 const c = pieds[o.id];
-                if(c && (c === 'g' ? vers < o.x : vers > o.x))
+                if(brin && c && (c === 'g' ? vers < o.x : vers > o.x))
                     return { x: o.x + (c === 'g' ? -1 : 1) * synDecalPied(o),
                              y: sol - synHautPied(o) };
                 return { x: o.x, y: sol - o.h * (o.t === 'pyl' ? 0.74 : 0.50) };
             };
             let sols = '', cables = '';
+            // `u` et `v` tous deux pylones : c'est la ligne. Sinon c'est le
+            // brin d'une machine, seul a descendre a la poulie de pied.
             const brin = (u, v, y) => {
-                const a = accroche(u, v.x), z = accroche(v, u.x);
+                const m = u.t !== 'pyl' || v.t !== 'pyl';
+                const a = accroche(u, v.x, m), z = accroche(v, u.x, m);
                 const fl = Math.abs(z.x - a.x) * cab.f;
                 // La fleche ne descend jamais sous le sol de la bande.
                 const cy = Math.min((a.y + z.y) / 2 + fl * 2, y - 8);
@@ -6018,7 +6033,9 @@
                 ${obj.t === 'pyl' ? `<label>Poulie
                     <input class="pd-in" value="${esc(obj.p || '')}" style="width:150px"
                            onchange="synChamp('p', this.value)"></label>` : ''}
-                <label>Taille <input type="range" min="36" max="210" step="2" value="${obj.h}"
+                <label>Taille <input type="range" min="36"
+                       max="${obj.t === 'pyl' ? SYN_H_PYL : 210}" step="2"
+                       value="${Math.min(obj.h, obj.t === 'pyl' ? SYN_H_PYL : 210)}"
                        onchange="synChamp('h', +this.value)"></label>
                 <label>Bande <select class="pd-in" style="width:70px"
                         onchange="synChamp('b', +this.value)">
