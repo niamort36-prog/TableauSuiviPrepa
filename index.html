@@ -338,6 +338,7 @@
         .pd-corps { display: grid; grid-template-columns: 250px 1fr; gap: 16px; align-items: start;
                     background: #e2e8f0; padding: 16px; border-radius: 0 0 12px 12px; }
 
+        .pd-pages-bouton { display: none; }
         .pd-sommaire { position: sticky; top: 82px; background: #fff; border: 1px solid var(--border);
                        border-radius: 10px; padding: 10px; max-height: calc(100vh - 190px); overflow-y: auto; }
         .pd-som-titre { font-size: .7rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em;
@@ -722,6 +723,7 @@
             .pd-corps { grid-template-columns: 1fr; }
             .pd-sommaire { position: static; max-height: none; display: none; }
             .pd-sommaire.ouvert { display: block; }
+            .pd-pages-bouton { display: inline-flex; }
             .pd-g3, .pd-g4 { grid-template-columns: 1fr 1fr; }
             .pd-lab-l { flex: 1 1 100%; }
         }
@@ -1458,7 +1460,9 @@
         </div>
         <div class="footer-sticky">
             <button class="btn-action btn-other" onclick="switchScreen('screen-prepa')">← Retour</button>
-            <button class="btn-action btn-prepadoc" onclick="basculerSommaire()">📑 Pages</button>
+            <button class="btn-action btn-prepadoc pd-pages-bouton"
+                    onclick="basculerSommaire()">📑 Pages</button>
+            <button class="btn-action btn-prepadoc" onclick="pdfPrepa()">📄 Enregistrer en PDF</button>
             <button class="btn-action btn-logi pd-partage" onclick="copierLienPrepa()">🔗 Partager</button>
             <button class="btn-action btn-print" onclick="imprimerPrepa()">🖨️ Imprimer</button>
             <button class="btn-action btn-save" onclick="save(false)">💾 ENREGISTRER</button>
@@ -6884,9 +6888,23 @@
             });
         }
 
-        function imprimerPrepa() {
+        // Enregistrer en PDF, c'est imprimer vers « Enregistrer au format
+        // PDF ». Le navigateur nomme le fichier d'apres le titre de la page :
+        // on lui en donne un qui dit la ligne et la date, au lieu du titre de
+        // l'application, puis on le remet.
+        function pdfPrepa() {
+            const c = pdChantier();
+            const jour = new Date().toISOString().slice(0, 10);
+            const nom = ('Préparation de travail - ' + (c.ligne || '') + ' - ' + jour)
+                        .replace(/[\\/:*?"<>|]/g, ' ').replace(/ +/g, ' ').trim();
+            imprimerPrepa(nom);
+        }
+
+        function imprimerPrepa(nomFichier) {
             const a3 = document.getElementById('print-a3');
             const pr = document.getElementById('print-prepa');
+            const titre = document.title;
+            if(nomFichier) document.title = nomFichier;
             impressionPrepa = true;
             figerCases();
             document.body.classList.add('prepa-impression');
@@ -6899,6 +6917,7 @@
                 libererFeuilles();
                 document.body.classList.remove('prepa-impression');
                 degelerCases();
+                document.title = titre;
                 if(a3) a3.disabled = false;
                 if(pr) pr.disabled = true;
                 window.removeEventListener('afterprint', remise);
