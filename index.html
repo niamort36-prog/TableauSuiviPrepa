@@ -552,7 +552,8 @@
         body.prepa-impression #pd-pages .pd-sch-liens { display: none !important; }
         body.prepa-impression #pd-pages .pd-sch-svg { max-height: 226mm; }
         body.prepa-impression #pd-pages .pd-paysage .pd-sch-svg { max-height: 160mm; }
-        body.prepa-impression #pd-pages .pd-syn-aide { display: none !important; }
+        body.prepa-impression #pd-pages .pd-syn-aide,
+        body.prepa-impression #pd-pages .pd-ecran { display: none !important; }
         /* Le halo ne marque qu'une selection a l'ecran */
         body.prepa-impression #pd-pages .sch-sel { display: none; }
         /* La NIP porte deja son propre titre : le bandeau de page ferait
@@ -4699,10 +4700,22 @@
         { id:'annexes', titre:'Annexes', rang:2, defaut:true, corps: () => {
             const c = pdChantier();
             const unif = c.numero && /^\d+$/.test(c.numero) ? (520000 + Number(c.numero)) : '';
-            const num = ['1 - Moyens humains + véhicules', '2 - Schéma unifilaire', '3 - EDA (avis infoligne)',
-                         '4 - PPE validé', '5 - Mode opératoire + analyse de risques',
-                         '6 - MALT CC + gestion des aléas + points d\'arrêts non programmés',
-                         '7 - REX', '8 - Compte rendu d\'intervention'];
+            // Les six premieres sont celles du dossier ; viennent ensuite les
+            // pieces jointes au chantier, puis le REX et le compte rendu, qui
+            // prennent les numeros suivants. Les cases gardent leur cle : ce
+            // qui a ete coche le reste quand une piece s'ajoute.
+            let nAn = 6;
+            const num = [
+                { c: 'an-n1', t: '1 - Moyens humains + véhicules' },
+                { c: 'an-n2', t: '2 - Schéma unifilaire' },
+                { c: 'an-n3', t: '3 - EDA (avis infoligne)' },
+                { c: 'an-n4', t: '4 - PPE validé' },
+                { c: 'an-n5', t: '5 - Mode opératoire + analyse de risques' },
+                { c: 'an-n6', t: '6 - MALT CC + gestion des aléas + points d\'arrêts non programmés' }
+            ].concat(ANNEXES.filter(a => a.planches && a.planches.length)
+                            .map(a => ({ c: 'an-j' + a.id, t: (++nAn) + ' - ' + a.nom })),
+                     [{ c: 'an-n7', t: (++nAn) + ' - REX' },
+                      { c: 'an-n8', t: (++nAn) + ' - Compte rendu d\'intervention' }]);
             const autres = ['Travaux végétation', 'IST', 'ISP', 'SEVESO', 'Plan au 1/1000',
                             'Coordonnées exploitant', 'Calculs', 'Liste outillage pour travaux',
                             'Matériel ligne', 'Fiches contrôle (manchon, papoto…)', 'Planification des travaux',
@@ -4732,7 +4745,7 @@
             <div class="pd-note">WILLYDOC, mot clef <b>L</b>${unif ? ' \u00b7 ' + unif : ''}</div>
             ${blocAnnexes()}
             ${sous('Annexes numérotées')}
-            ${num.map((t, i) => coche('an-n' + (i + 1), t)).join('')}
+            ${num.map(o => coche(o.c, o.t)).join('')}
             ${sous('Autres pièces jointes')}
             ${autres.map((t, i) => coche('an-a' + i, t)).join('')}
             <div class="pd-l"><span class="pd-lab">Autre :</span>${chp('an-autre')}</div>`;
@@ -5156,7 +5169,7 @@
             ${grille('pd-g2', champ('Réalisé par', chp('mt-pf5-nom')) + champ('Date', chp('mt-pf5-date', '', 'date')))}`;
         }},
 
-        { id:'rex', titre:'Retour d\'expérience', annexe:'Annexe 7', defaut:true, corps: () => {
+        { id:'rex', titre:'Retour d\'expérience', defaut:true, corps: () => {
             const c = pdChantier();
             const rub = [['Préparation', 'prep'], ['Consignation', 'cons'], ['Approvisionnement (commande matériel)', 'appro'],
                          ['Documents', 'docs'], ['Déroulement du chantier', 'derou'], ['Méthode', 'meth'],
@@ -5183,7 +5196,7 @@
             </tr>`).join('')}</tbody></table>
             ${champ('Enseignements à retenir', zone('rex-ens', 4))}`;
         }},
-        { id:'cr', titre:"Compte rendu d'intervention", annexe:'Annexe 8', defaut:true, corps: () => {
+        { id:'cr', titre:"Compte rendu d'intervention", defaut:true, corps: () => {
             const c = pdChantier();
             const oui = ['oui', 'non', 'sans objet'];
             return `
@@ -5993,18 +6006,20 @@
             const cab = synCable(d);
             const btn = (t, lib) => `<button class="btn-pd" onclick="synAjouter('${t}')">+ ${lib}</button>`;
             return `
-            <div class="pd-note">Le canton vu de profil : la freineuse, les supports avec le diamètre
-            de leur poulie, le treuil, et ce que la portée survole — routes, lignes HTA, télécom, BT,
-            maisons. <b>Glissez</b> un élément pour le déplacer d'un bout à l'autre ou d'une bande à
-            l'autre, <b>cliquez-le</b> pour le régler. Le câble se trace tout seul d'un support au
-            suivant ; cochez <b>Poulie de pied</b> sur un pylône pour que le câble de la machine
-            arrive au sol et remonte ensuite à la poulie du haut. Une machine pos&eacute;e entre deux
-            pylônes se raccorde au premier des deux : la ligne lui passe <b>au-dessus</b>. Une ligne
-            franchie se dessine d'une flèche seule, et porte son <b>portique</b> quand la case est
-            cochée.</div>
+            <div class="pd-note pd-ecran">Le canton vu de profil : la freineuse, les supports avec
+            le diamètre de leur poulie, le treuil, et ce que la portée survole — routes, lignes HTA,
+            télécom, BT, maisons. <b>Glissez</b> un élément pour le déplacer d'un bout à l'autre ou
+            d'une bande à l'autre, <b>cliquez-le</b> pour le régler. Le câble se trace tout seul d'un
+            support au suivant ; cochez <b>Poulie de pied</b> sur un pylône pour que le câble de la
+            machine arrive au sol et remonte ensuite à la poulie du haut. Une machine pos&eacute;e entre
+            deux pylônes se raccorde au premier des deux : la ligne lui passe <b>au-dessus</b>. Une
+            ligne franchie se dessine d'une flèche seule, et porte son <b>portique</b> quand la case
+            est cochée. Ce rappel reste à l'écran : à l'impression, c'est votre note qui prend
+            sa place.</div>
             ${grille('pd-g3', champ('Canton', chp('syn-canton', 'ex : 214-227'))
                             + champ('Conducteur ancien', chp('syn-anc', 'ex : Canna 238'))
                             + champ('Conducteur nouveau', chp('syn-nou', 'ex : Aster 228')))}
+            ${champ('Note', zone('syn-note', 2, 'Consignes de déroulage, points de vigilance, accès…'))}
             <div class="pd-sch-outils">
                 <button class="btn-pd pre" onclick="synCanton()">\u26a1 Monter le canton</button>
                 ${btn('pyl', 'Pylône')}${btn('frein', 'Freineuse')}${btn('treuil', 'Treuil')}
@@ -6284,7 +6299,20 @@
                          alt="${esc(a.nom)} \u2014 page ${i + 1}"></div>`).join('')
             }));
         }
-        function toutesLesPages() { return PREPA_PAGES.concat(pagesAnnexes()); }
+        // Les pieces jointes se rangent avant le retour d'experience et le
+        // compte rendu, qui closent le dossier. Les numeros d'annexe suivent
+        // l'ordre des pages : apres la 6 viennent les pieces jointes, puis
+        // le REX et le compte rendu.
+        function toutesLesPages() {
+            const i = PREPA_PAGES.findIndex(p => p.id === 'rex');
+            if(i < 0) return PREPA_PAGES.concat(pagesAnnexes());
+            let n = 6;
+            const numerote = p => Object.assign({}, p, { annexe: 'Annexe ' + (++n) });
+            const jointes = pagesAnnexes().map(p => (!p.dispo || p.dispo()) ? numerote(p) : p);
+            const fin = PREPA_PAGES.slice(i).map(p =>
+                (p.id === 'rex' || p.id === 'cr') ? numerote(p) : p);
+            return PREPA_PAGES.slice(0, i).concat(jointes, fin);
+        }
 
         // `cible` : la categorie a completer. Sans elle, on prend le nom
         // saisi au-dessus, et on cree ou on complete selon qu'il existe deja.
