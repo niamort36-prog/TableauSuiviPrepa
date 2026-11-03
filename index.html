@@ -445,7 +445,8 @@
         .pd-sch-reglage label { display: flex; align-items: center; gap: 6px; }
         .pd-sch-cadre { width: 100%; }
         .pd-sch-svg { width: 100%; height: auto; display: block; touch-action: none; }
-        .pd-sch-svg .sch-o { cursor: grab; }
+        .pd-sch-svg .sch-o, .pd-sch-svg .syn-o { cursor: grab; }
+        .pd-syn-aide { font-size: .78rem; color: var(--muted); }
         .pd-sch-liens { margin-top: 8px; }
         .pd-sch-lien { gap: 10px; margin-bottom: 4px; }
         /* --- Signatures --- */
@@ -550,6 +551,8 @@
         body.prepa-impression #pd-pages .pd-sch-reglage,
         body.prepa-impression #pd-pages .pd-sch-liens { display: none !important; }
         body.prepa-impression #pd-pages .pd-sch-svg { max-height: 226mm; }
+        body.prepa-impression #pd-pages .pd-paysage .pd-sch-svg { max-height: 160mm; }
+        body.prepa-impression #pd-pages .pd-syn-aide { display: none !important; }
         /* Le halo ne marque qu'une selection a l'ecran */
         body.prepa-impression #pd-pages .sch-sel { display: none; }
         /* La NIP porte deja son propre titre : le bandeau de page ferait
@@ -5007,6 +5010,9 @@
             return h;
         }},
 
+        { id:'synoptique', titre:'Synoptique de déroulage', defaut:false, paysage:true,
+          corps: () => synoptique() },
+
         { id:'planif', titre:'Planification des travaux', defaut:false, corps: () => {
             const c = pdChantier();
             return `
@@ -5485,6 +5491,439 @@
             <div class="pd-sch-cadre">${schSvg(d, true)}</div>
             ${liens ? `<div class="pd-sch-liens pd-aide"><b>Lignes tracées</b>${liens}</div>` : ''}
             <div class="pd-saut"></div>`;
+        }
+
+        // ==================================================================
+        //  SYNOPTIQUE DE DEROULAGE
+        //  Le canton vu de profil : la freineuse, les supports avec le
+        //  diametre de leur poulie, le treuil, et ce que la portee
+        //  survole — routes, HTA, telecom, BT, maisons. Le document de
+        //  base se dessine sous Visio ; ici il se monte a la souris, et
+        //  le cable se trace tout seul d'un support au suivant.
+        // ==================================================================
+        const SYN_L = 1400;                    // largeur du repere
+        const SYN_BH = 330;                    // hauteur d'une bande
+        const SYN_SOL = 268;                   // le sol, dans sa bande
+        const SYN_BANDES = 4;                  // bandes au plus
+        const SYN_PAR_BANDE = 8;               // supports par bande, a la creation
+        const SYN_ROUGE = '#c0392b';           // la couleur des releves, comme au bureau d'etudes
+        // Ce qui porte le cable, et ce qui ne fait que passer dessous.
+        const SYN_PORTE = ['pyl', 'frein', 'treuil'];
+        const SYN_TYPES = {
+            pyl:    { nom: 'Pylône',        col: '#191919', h: 130 },
+            frein:  { nom: 'Freineuse',     col: '#191919', h: 62, n: 'Freineuse' },
+            treuil: { nom: 'Treuil',        col: '#191919', h: 62, n: 'Treuil' },
+            route:  { nom: 'Route',         col: '#191919', h: 40, n: 'RD' },
+            hta:    { nom: 'Ligne HTA',     col: '#d04a3a', h: 74, n: 'Portique', s: 'HTA' },
+            tel:    { nom: 'Télécom / PTT', col: '#7a5ea8', h: 74, n: 'Portique', s: 'Télécom' },
+            bt:     { nom: 'Ligne BT',      col: '#2f6fb5', h: 74, n: 'Portique', s: 'BT' },
+            maison: { nom: 'Maison',        col: '#8a6a3a', h: 62, n: '' },
+            leq:    { nom: 'LEQ',           col: '#2e9e4f', h: 54, n: 'LEQ' },
+            cdg:    { nom: 'CDG',           col: '#054191', h: 96, n: 'CDG' },
+            txt:    { nom: 'Texte libre',   col: '#191919', h: 40, n: 'Texte' }
+        };
+        const synPorte = o => SYN_PORTE.indexOf(o.t) >= 0;
+        const synCoul  = o => (o && o.col) || (SYN_TYPES[o.t] || {}).col || '#191919';
+        const synCable = d => Object.assign({ col: SYN_ROUGE, e: 3, f: 0.13 }, d.cab || {});
+
+        function synLire() {
+            try {
+                const o = JSON.parse(pv('pv-syn') || '{}');
+                return { n: Array.isArray(o.n) ? o.n : [],
+                         b: Math.min(SYN_BANDES, Math.max(1, o.b || 2)),
+                         cab: o.cab || {}, sel: o.sel || null };
+            } catch(e) { return { n: [], b: 2, cab: {}, sel: null }; }
+        }
+        function synEcrire(d) {
+            prepa.v['pv-syn'] = JSON.stringify({ n: d.n, b: d.b, cab: d.cab, sel: d.sel });
+            majPrepaEtat();
+        }
+        function synMaj(f) { const d = synLire(); f(d); synEcrire(d); renderPrepa(); }
+
+        function synNouvel(t, b, x) {
+            const m = SYN_TYPES[t] || {};
+            return { id: 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+                     t: t, b: b, x: x, h: m.h || 80,
+                     n: m.n || '', s: m.s || '', p: '', col: m.col || '#191919' };
+        }
+        // Le nouvel objet se pose dans le premier creux de sa bande : un
+        // franchissement arrive entre deux supports, et rien ne vient se
+        // garer sur le dessin d'a cote.
+        function synPlace(d, b, ecart) {
+            const xs = d.n.filter(o => o.b === b).map(o => o.x);
+            if(!xs.length) return 100;
+            for(let x = 95; x <= SYN_L - 95; x += 15)
+                if(xs.every(v => Math.abs(v - x) >= ecart)) return x;
+            return 100 + (xs.length % 12) * 55;      // bande pleine : on etale
+        }
+        function synAjouter(t) {
+            synMaj(d => {
+                const base = d.n.find(o => o.id === d.sel);
+                let b = base ? base.b : Math.max(0, d.b - 1);
+                // Un support prend sa place en bout de bande, un
+                // franchissement se glisse entre deux portees.
+                let x;
+                if(SYN_PORTE.indexOf(t) >= 0) {
+                    const xs = d.n.filter(o => o.b === b && synPorte(o)).map(o => o.x);
+                    x = xs.length ? Math.max.apply(null, xs) + 165 : 100;
+                    if(x > SYN_L - 70) {
+                        if(b + 1 < d.b) { b++; x = 100; } else x = synPlace(d, b, 95);
+                    }
+                } else { x = synPlace(d, b, 80); }
+                const o = synNouvel(t, b, Math.round(x));
+                if(t === 'pyl') { o.s = 'Suspension'; o.p = 'Poulie Ø600 mm'; }
+                d.n.push(o);
+                d.sel = o.id;
+            });
+        }
+        function synSelect(id) { synMaj(d => { d.sel = (d.sel === id ? null : id); }); }
+        function synChamp(cle, v) {
+            synMaj(d => { const o = d.n.find(x => x.id === d.sel); if(o) o[cle] = v; });
+        }
+        function synSupprimer() { synMaj(d => { d.n = d.n.filter(x => x.id !== d.sel); d.sel = null; }); }
+        function synBandes(v) {
+            synMaj(d => {
+                d.b = Math.min(SYN_BANDES, Math.max(1, d.b + v));
+                d.n.forEach(o => { if(o.b >= d.b) o.b = d.b - 1; });
+            });
+        }
+        function synCab(cle, v) {
+            synMaj(d => { d.cab = synCable(d); d.cab[cle] = (cle === 'col' ? v : +v); });
+        }
+        function synVider() {
+            if(!confirm('Effacer tout le synoptique ?')) return;
+            synMaj(d => { d.n = []; d.sel = null; });
+        }
+
+        // Monter le canton d'un coup : le champ « Canton » donne les bornes,
+        // 214-227 pose la freineuse, les quatorze supports et le treuil.
+        // Les deux extremites sont en ancrage sur poulie Ø800.
+        function synCanton() {
+            const m = String(pv('syn-canton') || '').match(/(\d+)\s*[-–—àa\/]\s*(\d+)/);
+            if(!m) { alert("Renseignez d'abord le canton, par exemple 214-227."); return; }
+            const a = +m[1], z = +m[2];
+            const nb = Math.abs(z - a) + 1;
+            if(nb > 24) { alert('Canton trop long : ' + nb + ' supports.'); return; }
+            if(synOccupe() && !confirm('Remplacer le synoptique actuel ?')) return;
+            const pas = z >= a ? 1 : -1;
+            synMaj(d => {
+                d.n = []; d.sel = null;
+                const items = [{ t: 'frein' }];
+                for(let i = 0; i < nb; i++) {
+                    const num = a + i * pas;
+                    const bout = (i === 0 || i === nb - 1);
+                    items.push({ t: 'pyl', n: String(num),
+                                 s: bout ? 'Ancrage sur poulie' : 'Suspension',
+                                 p: bout ? 'Poulie Ø800 mm' : 'Poulie Ø600 mm' });
+                }
+                items.push({ t: 'treuil' });
+                d.b = Math.min(SYN_BANDES, Math.max(1, Math.ceil(items.length / (SYN_PAR_BANDE + 1))));
+                const par = Math.ceil(items.length / d.b);
+                items.forEach((it, i) => {
+                    const b = Math.min(d.b - 1, Math.floor(i / par));
+                    const dans = Math.min(par, items.length - b * par);
+                    const k = i - b * par;
+                    const x = dans > 1 ? 95 + k * (SYN_L - 190) / (dans - 1) : SYN_L / 2;
+                    const o = synNouvel(it.t, b, Math.round(x));
+                    o.n = it.n !== undefined ? it.n : o.n;
+                    o.s = it.s || o.s; o.p = it.p || '';
+                    d.n.push(o);
+                });
+            });
+        }
+        function synOccupe() { return synLire().n.length > 0; }
+
+        // --- Les dessins. Origine au sol, le dessin monte vers le haut. ---
+        function synPylone(h, col) {
+            const bw = h * 0.26, tw = h * 0.055, hb = h * 0.50, t = [];
+            t.push('M' + (-bw) + ' 0 L' + (-tw) + ' ' + (-hb) + ' L' + (-tw) + ' ' + (-h));
+            t.push('M' + bw + ' 0 L' + tw + ' ' + (-hb) + ' L' + tw + ' ' + (-h));
+            t.push('M' + (-tw) + ' ' + (-h) + ' H' + tw);
+            for(let i = 0; i < 4; i++) {                       // treillis des jambes
+                const y1 = -hb * i / 4, y2 = -hb * (i + 1) / 4;
+                const w1 = bw + (tw - bw) * i / 4, w2 = bw + (tw - bw) * (i + 1) / 4;
+                t.push('M' + (-w1) + ' ' + y1 + ' L' + w2 + ' ' + y2);
+                t.push('M' + w1 + ' ' + y1 + ' L' + (-w2) + ' ' + y2);
+                t.push('M' + (-w2) + ' ' + y2 + ' H' + w2);
+            }
+            for(let i = 0; i < 5; i++) {                       // treillis du fut
+                const y1 = -hb - (h - hb) * i / 5, y2 = -hb - (h - hb) * (i + 1) / 5;
+                t.push('M' + (-tw) + ' ' + y1 + ' L' + tw + ' ' + y2);
+                t.push('M' + tw + ' ' + y1 + ' L' + (-tw) + ' ' + y2);
+            }
+            const yc = -h * 0.74, lc = h * 0.22;               // la console
+            t.push('M' + (-lc) + ' ' + yc + ' H' + lc);
+            return '<path d="' + t.join(' ') + '" fill="none" stroke="' + col
+                 + '" stroke-width="' + Math.max(1.3, h * 0.015) + '" stroke-linejoin="round"/>';
+        }
+
+        function synMachine(h, col, treuil) {
+            const w = h * 1.5, r = h * 0.30, y = -h * 0.42;
+            return `<g stroke="${col}" stroke-width="${Math.max(1.4, h * 0.05)}" fill="none"
+                       stroke-linejoin="round">
+                <path d="M${-w / 2} ${-h * 0.22} H${w / 2} V${-h * 0.62} H${-w / 2} Z"/>
+                <circle cx="${treuil ? -w * 0.18 : w * 0.18}" cy="${y}" r="${r}" fill="#fff"/>
+                <path d="M${(treuil ? -w * 0.18 : w * 0.18) - r * 0.55} ${y} h${r * 1.1}
+                         M${treuil ? -w * 0.18 : w * 0.18} ${y - r * 0.55} v${r * 1.1}"/>
+                <circle cx="${-w * 0.30}" cy="${-h * 0.11}" r="${h * 0.11}" fill="#fff"/>
+                <circle cx="${w * 0.30}" cy="${-h * 0.11}" r="${h * 0.11}" fill="#fff"/>
+            </g>`;
+        }
+
+        // Un vehicule sur la chaussee : c'est ainsi que la route se repere
+        // sur le synoptique de base.
+        function synRoute(h, col) {
+            const w = h * 1.7;
+            return `<g stroke="${col}" stroke-width="${Math.max(1.3, h * 0.07)}" fill="#fff"
+                       stroke-linejoin="round">
+                <path d="M${-w / 2} ${-h * 0.18} h${w} v${-h * 0.34} h${-w} Z"/>
+                <path d="M${-w * 0.28} ${-h * 0.52} h${w * 0.56} l${-w * 0.12} ${-h * 0.28}
+                         h${-w * 0.32} Z"/>
+                <circle cx="${-w * 0.28}" cy="${-h * 0.14}" r="${h * 0.14}" fill="${col}"/>
+                <circle cx="${w * 0.28}" cy="${-h * 0.14}" r="${h * 0.14}" fill="${col}"/>
+            </g>`;
+        }
+
+        // Portique de protection, et la fleche de ce qui est franchi.
+        function synPortique(h, col) {
+            const w = h * 0.62;
+            return `<g fill="none" stroke-linecap="round">
+                <path d="M${-w} 0 V${-h * 0.62} H${w} V0" stroke="#191919"
+                      stroke-width="${Math.max(1.3, h * 0.055)}"/>
+                <path d="M0 ${-h * 0.10} V${-h * 0.92} M${-h * 0.17} ${-h * 0.74} L0 ${-h * 0.95}
+                         L${h * 0.17} ${-h * 0.74}" stroke="${col}"
+                      stroke-width="${Math.max(1.3, h * 0.065)}" stroke-linejoin="round"/>
+            </g>`;
+        }
+
+        function synMaison(h, col) {
+            const w = h * 0.95;
+            return `<g stroke="${col}" stroke-width="${Math.max(1.3, h * 0.06)}" fill="#fff"
+                       stroke-linejoin="round">
+                <path d="M${-w / 2} 0 V${-h * 0.56} h${w} V0 Z"/>
+                <path d="M${-w * 0.60} ${-h * 0.56} L0 ${-h} L${w * 0.60} ${-h * 0.56} Z"/>
+                <path d="M${-w * 0.14} 0 V${-h * 0.30} h${w * 0.28} V0" fill="none"/>
+            </g>`;
+        }
+
+        // LEQ : le triangle vert du document, et sa prise de terre.
+        function synLeq(h, col) {
+            const w = h * 0.78;
+            return `<g stroke="${col}" stroke-width="${Math.max(1.3, h * 0.07)}"
+                       stroke-linecap="round" stroke-linejoin="round">
+                <path d="M${-w / 2} ${-h} H${w / 2} L0 ${-h * 0.42} Z" fill="${col}"/>
+                <path d="M0 ${-h * 0.42} V${-h * 0.26}" fill="none"/>
+                <path d="M${-w * 0.42} ${-h * 0.26} H${w * 0.42}" fill="none"/>
+                <path d="M${-w * 0.26} ${-h * 0.13} H${w * 0.26}" fill="none"/>
+                <path d="M${-w * 0.11} 0 H${w * 0.11}" fill="none"/>
+            </g>`;
+        }
+
+        // CDG : le mat gradue 0 / 4 / 8 et son triangle d'alerte.
+        function synCdg(h, col) {
+            const e = Math.max(1.3, h * 0.045), g = h * 0.22, t = h * 0.42;
+            const marque = (y, c) => `<circle cx="0" cy="${-y}" r="${h * 0.045}" fill="${c}"/>
+                <path d="M0 ${-y} h${g}" stroke="${c}" stroke-width="${e}"/>`;
+            return `<g>
+                <path d="M0 0 V${-h}" stroke="${col}" stroke-width="${e}"/>
+                <path d="M${-h * 0.13} 0 H${h * 0.13} M${-h * 0.13} 0 l${-h * 0.07} ${h * 0.09}
+                         M${-h * 0.03} 0 l${-h * 0.07} ${h * 0.09} M${h * 0.07} 0 l${-h * 0.07} ${h * 0.09}"
+                      stroke="${col}" stroke-width="${e * 0.8}" fill="none"/>
+                ${marque(h * 0.20, '#d04a3a')}${marque(h * 0.58, '#fab928')}${marque(h * 0.94, '#2e9e4f')}
+                <path d="M${h * 0.86} ${-h * 0.30} L${h * 1.44} ${-h * 0.30} L${h * 1.15} ${-h * 0.86} Z"
+                      fill="#fff" stroke="#d04a3a" stroke-width="${e * 1.4}" stroke-linejoin="round"/>
+                <path d="M${h * 1.15} ${-h * 0.42} V${-h * 0.70}" stroke="#d04a3a"
+                      stroke-width="${e * 1.3}" stroke-linecap="round"/>
+            </g>`;
+        }
+
+        function synDessin(o) {
+            const col = synCoul(o), h = o.h;
+            if(o.t === 'pyl')    return synPylone(h, col);
+            if(o.t === 'frein')  return synMachine(h, col, false);
+            if(o.t === 'treuil') return synMachine(h, col, true);
+            if(o.t === 'route')  return synRoute(h, col);
+            if(o.t === 'maison') return synMaison(h, col);
+            if(o.t === 'leq')    return synLeq(h, col);
+            if(o.t === 'cdg')    return synCdg(h, col);
+            if(o.t === 'txt')    return '';
+            return synPortique(h, col);
+        }
+
+        // Les libelles suivent le document de base : au-dessus de la bande
+        // pour les pylones, sous le sol pour les machines et les routes,
+        // au-dessus du dessin pour tout ce qui est franchi.
+        function synLabels(o) {
+            const txt = (y, t, c, s, g) => t
+                ? `<text y="${y}" text-anchor="middle" font-size="${s}"
+                         font-weight="${g ? 800 : 500}" fill="${c}">${esc(t)}</text>` : '';
+            if(o.t === 'pyl') {
+                const y = -SYN_SOL;
+                return txt(y + 30, o.n, SYN_ROUGE, 24, true)
+                     + txt(y + 56, o.s, SYN_ROUGE, 21)
+                     + txt(y + 80, o.p, '#191919', 20);
+            }
+            if(o.t === 'frein' || o.t === 'treuil' || o.t === 'route') {
+                return txt(34, o.n, '#191919', 21, o.t !== 'route')
+                     + txt(58, o.s, '#191919', 19);
+            }
+            const y = -o.h - 12;
+            return txt(y - 22, o.n, '#191919', 19)
+                 + txt(y, o.s, synCoul(o), 19, true);
+        }
+
+        function synSvg(d, interactif) {
+            const H = d.b * SYN_BH;
+            const cab = synCable(d);
+            const accroche = o => ({ x: o.x,
+                y: o.b * SYN_BH + SYN_SOL - o.h * (o.t === 'pyl' ? 0.74 : 0.50) });
+            let sols = '', cables = '';
+            for(let b = 0; b < d.b; b++) {
+                const y = b * SYN_BH + SYN_SOL;
+                sols += `<path d="M12 ${y} H${SYN_L - 12}" stroke="#191919" stroke-width="2.6"/>`;
+                const sup = d.n.filter(o => o.b === b && synPorte(o)).sort((u, v) => u.x - v.x);
+                for(let i = 0; i + 1 < sup.length; i++) {
+                    if(sup[i].nc) continue;
+                    const a = accroche(sup[i]), z = accroche(sup[i + 1]);
+                    const fl = Math.abs(z.x - a.x) * cab.f;
+                    cables += `<path d="M${a.x} ${a.y} Q ${(a.x + z.x) / 2} ${(a.y + z.y) / 2 + fl * 2}
+                                        ${z.x} ${z.y}" fill="none" stroke="${cab.col}"
+                                     stroke-width="${cab.e}" stroke-linecap="round"/>`;
+                }
+            }
+            // Chaque objet porte une zone de prise transparente : un
+            // treillis de traits fins ne se saisit pas au doigt.
+            const objets = d.n.map(o => `
+                <g transform="translate(${o.x},${o.b * SYN_BH + SYN_SOL})"
+                   ${interactif ? `class="syn-o${d.sel === o.id ? ' sel' : ''}" data-id="${o.id}"` : ''}>
+                    ${d.sel === o.id && interactif
+                        ? `<rect class="sch-sel" x="${-o.h * 0.95}" y="${-o.h - 10}"
+                                 width="${o.h * 1.9}" height="${o.h + 20}" rx="8"
+                                 fill="#e0f2fe" stroke="#00a6d9" stroke-width="2.5"/>` : ''}
+                    ${interactif ? `<rect x="${-Math.max(30, o.h * 0.42)}" y="${-o.h - 10}"
+                                 width="${Math.max(60, o.h * 0.84)}" height="${o.h + 20}"
+                                 fill="transparent"/>` : ''}
+                    ${synDessin(o)}
+                    ${o.t === 'pyl' ? `<circle cy="${-o.h * 0.74}" r="${o.h * 0.055}"
+                                               fill="${synCable(d).col}"/>` : ''}
+                    ${synLabels(o)}
+                </g>`).join('');
+            return `<svg class="pd-sch-svg" viewBox="0 0 ${SYN_L} ${H}"
+                         preserveAspectRatio="xMidYMid meet"
+                         ${interactif ? 'onpointerdown="synPointe(event)"' : ''}>
+                <rect width="${SYN_L}" height="${H}" fill="#fff"/>
+                <rect width="${SYN_L}" height="${H}" fill="none" stroke="#191919" stroke-width="3"/>
+                ${sols}${cables}${objets}
+            </svg>`;
+        }
+
+        // Glisser pose l'objet ou on le lache : la bande se deduit de la
+        // hauteur, le sol n'a donc jamais a etre vise.
+        let synGlisse = null;
+        function synPointe(e) {
+            const g = e.target.closest('.syn-o');
+            const svg = e.currentTarget;
+            if(!g) return;
+            const d = synLire();
+            const o = d.n.find(x => x.id === g.dataset.id);
+            if(!o) return;
+            const H = d.b * SYN_BH;
+            const pt = q => {
+                const r = svg.getBoundingClientRect();
+                return { x: (q.clientX - r.left) / r.width * SYN_L,
+                         y: (q.clientY - r.top) / r.height * H };
+            };
+            const dep = pt(e);
+            const bande = y => Math.max(0, Math.min(d.b - 1, Math.floor(y / SYN_BH)));
+            synGlisse = { id: o.id, dx: o.x - dep.x,
+                          dy: (o.b * SYN_BH + SYN_SOL) - dep.y, bouge: false };
+            svg.setPointerCapture(e.pointerId);
+            const bouger = ev => {
+                const q = pt(ev);
+                synGlisse.bouge = true;
+                const b = bande(q.y + synGlisse.dy - SYN_SOL + SYN_BH / 2);
+                g.setAttribute('transform', 'translate(' + Math.round(q.x + synGlisse.dx)
+                                          + ',' + (b * SYN_BH + SYN_SOL) + ')');
+                synGlisse.b = b;
+            };
+            const lacher = ev => {
+                svg.removeEventListener('pointermove', bouger);
+                svg.removeEventListener('pointerup', lacher);
+                const q = pt(ev);
+                if(synGlisse.bouge) {
+                    const b = synGlisse.b === undefined ? o.b : synGlisse.b;
+                    synMaj(dd => {
+                        const t = dd.n.find(x => x.id === synGlisse.id);
+                        if(!t) return;
+                        t.x = Math.max(40, Math.min(SYN_L - 40, Math.round(q.x + synGlisse.dx)));
+                        t.b = b;
+                    });
+                } else { synSelect(synGlisse.id); }
+                synGlisse = null;
+            };
+            svg.addEventListener('pointermove', bouger);
+            svg.addEventListener('pointerup', lacher);
+            e.preventDefault();
+        }
+
+        function synoptique() {
+            const d = synLire();
+            const obj = d.n.find(x => x.id === d.sel);
+            const cab = synCable(d);
+            const btn = (t, lib) => `<button class="btn-pd" onclick="synAjouter('${t}')">+ ${lib}</button>`;
+            return `
+            <div class="pd-note">Le canton vu de profil : la freineuse, les supports avec le diamètre
+            de leur poulie, le treuil, et ce que la portée survole — routes, lignes HTA, télécom, BT,
+            maisons. <b>Glissez</b> un élément pour le déplacer d'un bout à l'autre ou d'une bande à
+            l'autre, <b>cliquez-le</b> pour le régler. Le câble se trace tout seul d'un support au
+            suivant.</div>
+            ${grille('pd-g3', champ('Canton', chp('syn-canton', 'ex : 214-227'))
+                            + champ('Conducteur ancien', chp('syn-anc', 'ex : Canna 238'))
+                            + champ('Conducteur nouveau', chp('syn-nou', 'ex : Aster 228')))}
+            <div class="pd-sch-outils">
+                <button class="btn-pd pre" onclick="synCanton()">\u26a1 Monter le canton</button>
+                ${btn('pyl', 'Pylône')}${btn('frein', 'Freineuse')}${btn('treuil', 'Treuil')}
+                ${btn('route', 'Route')}${btn('hta', 'HTA')}${btn('tel', 'Télécom')}${btn('bt', 'BT')}
+                ${btn('maison', 'Maison')}${btn('leq', 'LEQ')}${btn('cdg', 'CDG')}${btn('txt', 'Texte')}
+                ${d.n.length ? `<button class="btn-pd" onclick="synVider()">\u{1f5d1} Tout effacer</button>` : ''}
+            </div>
+            <div class="pd-sch-reglage">
+                <label>Bandes <b>${d.b}</b>
+                    <button class="btn-pd" onclick="synBandes(-1)">\u2212</button>
+                    <button class="btn-pd" onclick="synBandes(1)">+</button></label>
+                <label>Câble ${schPalette(cab.col, 'synCab(\'col\', %c)')}</label>
+                <label>Épaisseur <input type="range" min="1" max="10" step="0.5" value="${cab.e}"
+                       onchange="synCab('e', this.value)"></label>
+                <label>Flèche <input type="range" min="0" max="0.3" step="0.01" value="${cab.f}"
+                       onchange="synCab('f', this.value)"></label>
+            </div>
+            ${obj ? `<div class="pd-sch-reglage">
+                <b>${esc((SYN_TYPES[obj.t] || {}).nom || '')}</b>
+                <label>${obj.t === 'pyl' ? 'Numéro' : 'Libellé'}
+                    <input class="pd-in" value="${esc(obj.n || '')}" style="width:130px"
+                           onchange="synChamp('n', this.value)"></label>
+                <label>${obj.t === 'pyl' ? 'Nature' : 'Précision'}
+                    <input class="pd-in" value="${esc(obj.s || '')}" style="width:170px"
+                           onchange="synChamp('s', this.value)"></label>
+                ${obj.t === 'pyl' ? `<label>Poulie
+                    <input class="pd-in" value="${esc(obj.p || '')}" style="width:150px"
+                           onchange="synChamp('p', this.value)"></label>` : ''}
+                <label>Taille <input type="range" min="36" max="210" step="2" value="${obj.h}"
+                       onchange="synChamp('h', +this.value)"></label>
+                <label>Bande <select class="pd-in" style="width:70px"
+                        onchange="synChamp('b', +this.value)">
+                        ${Array.from({ length: d.b }, (x, i) =>
+                            `<option value="${i}" ${obj.b === i ? 'selected' : ''}>${i + 1}</option>`).join('')}
+                    </select></label>
+                <label>Couleur ${schPalette(synCoul(obj), 'synChamp(\'col\', %c)')}</label>
+                ${synPorte(obj) ? `<label><input type="checkbox" ${obj.nc ? '' : 'checked'}
+                        onchange="synChamp('nc', !this.checked)"> Câble vers le suivant</label>` : ''}
+                <button class="pd-sup" onclick="synSupprimer()">&times; Supprimer</button>
+            </div>` : ''}
+            <div class="pd-sch-cadre">${synSvg(d, true)}</div>
+            ${d.n.length ? '' : `<div class="pd-syn-aide">Renseignez le canton puis
+             <b>Monter le canton</b> : la freineuse, les supports numérotés et le treuil se posent
+             d'eux-mêmes, il ne reste qu'à ajouter les franchissements.</div>`}`;
         }
 
         // ==================================================================
