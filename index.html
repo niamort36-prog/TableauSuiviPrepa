@@ -5514,13 +5514,12 @@
             frein:  { nom: 'Freineuse',     col: '#191919', h: 62, n: 'Freineuse' },
             treuil: { nom: 'Treuil',        col: '#191919', h: 62, n: 'Treuil' },
             route:  { nom: 'Route',         col: '#191919', h: 40, n: 'RD' },
-            hta:    { nom: 'Ligne HTA',     col: '#d04a3a', h: 74, n: 'Portique', s: 'HTA' },
-            tel:    { nom: 'Télécom / PTT', col: '#7a5ea8', h: 74, n: 'Portique', s: 'Télécom' },
-            bt:     { nom: 'Ligne BT',      col: '#2f6fb5', h: 74, n: 'Portique', s: 'BT' },
+            hta:    { nom: 'Ligne HTA',     col: '#d04a3a', h: 74, s: 'HTA' },
+            tel:    { nom: 'Télécom / PTT', col: '#7a5ea8', h: 74, s: 'Télécom' },
+            bt:     { nom: 'Ligne BT',      col: '#2f6fb5', h: 74, s: 'BT' },
             maison: { nom: 'Maison',        col: '#8a6a3a', h: 62, n: '' },
             leq:    { nom: 'LEQ',           col: '#2e9e4f', h: 54, n: 'LEQ' },
-            cdg:    { nom: 'CDG',           col: '#054191', h: 96, n: 'CDG' },
-            txt:    { nom: 'Texte libre',   col: '#191919', h: 40, n: 'Texte' }
+            txt:    { nom: 'Texte libre',   col: '#191919', h: 46, n: 'Texte' }
         };
         const synPorte = o => SYN_PORTE.indexOf(o.t) >= 0;
         const synCoul  = o => (o && o.col) || (SYN_TYPES[o.t] || {}).col || '#191919';
@@ -5585,6 +5584,28 @@
             synMaj(d => { const o = d.n.find(x => x.id === d.sel); if(o) o[cle] = v; });
         }
         function synSupprimer() { synMaj(d => { d.n = d.n.filter(x => x.id !== d.sel); d.sel = null; }); }
+        // Pas a pas, quand le doigt vise mal.
+        function synDecaler(v) {
+            synMaj(d => {
+                const o = d.n.find(x => x.id === d.sel);
+                if(o) o.x = Math.max(40, Math.min(SYN_L - 40, o.x + v));
+            });
+        }
+        // Ecarter les portees d'une bande : tout s'ecarte de son milieu, ce
+        // qui ouvre la place sous les portees sans deranger l'ordre.
+        function synEcarter(k) {
+            synMaj(d => {
+                const o = d.n.find(x => x.id === d.sel);
+                const b = o ? o.b : d.b - 1;
+                const dans = d.n.filter(x => x.b === b);
+                if(dans.length < 2) return;
+                const xs = dans.map(x => x.x);
+                const c = (Math.min.apply(null, xs) + Math.max.apply(null, xs)) / 2;
+                dans.forEach(x => {
+                    x.x = Math.max(40, Math.min(SYN_L - 40, Math.round(c + (x.x - c) * k)));
+                });
+            });
+        }
         function synBandes(v) {
             synMaj(d => {
                 d.b = Math.min(SYN_BANDES, Math.max(1, d.b + v));
@@ -5688,12 +5709,13 @@
             </g>`;
         }
 
-        // Portique de protection, et la fleche de ce qui est franchi.
-        function synPortique(h, col) {
+        // Ce que la portee franchit : la fleche seule, et le portique de
+        // protection par-dessus quand il y en a un de monte.
+        function synFranchi(h, col, portique) {
             const w = h * 0.62;
             return `<g fill="none" stroke-linecap="round">
-                <path d="M${-w} 0 V${-h * 0.62} H${w} V0" stroke="#191919"
-                      stroke-width="${Math.max(1.3, h * 0.055)}"/>
+                ${portique ? `<path d="M${-w} 0 V${-h * 0.62} H${w} V0" stroke="#191919"
+                      stroke-width="${Math.max(1.3, h * 0.055)}"/>` : ''}
                 <path d="M0 ${-h * 0.10} V${-h * 0.92} M${-h * 0.17} ${-h * 0.74} L0 ${-h * 0.95}
                          L${h * 0.17} ${-h * 0.74}" stroke="${col}"
                       stroke-width="${Math.max(1.3, h * 0.065)}" stroke-linejoin="round"/>
@@ -5710,34 +5732,17 @@
             </g>`;
         }
 
-        // LEQ : le triangle vert du document, et sa prise de terre.
+        // LEQ : le triangle vert et sa prise de terre, sous la ligne de sol
+        // — la liaison equipotentielle se prend a la terre, pas en l'air.
         function synLeq(h, col) {
             const w = h * 0.78;
             return `<g stroke="${col}" stroke-width="${Math.max(1.3, h * 0.07)}"
                        stroke-linecap="round" stroke-linejoin="round">
-                <path d="M${-w / 2} ${-h} H${w / 2} L0 ${-h * 0.42} Z" fill="${col}"/>
-                <path d="M0 ${-h * 0.42} V${-h * 0.26}" fill="none"/>
-                <path d="M${-w * 0.42} ${-h * 0.26} H${w * 0.42}" fill="none"/>
-                <path d="M${-w * 0.26} ${-h * 0.13} H${w * 0.26}" fill="none"/>
-                <path d="M${-w * 0.11} 0 H${w * 0.11}" fill="none"/>
-            </g>`;
-        }
-
-        // CDG : le mat gradue 0 / 4 / 8 et son triangle d'alerte.
-        function synCdg(h, col) {
-            const e = Math.max(1.3, h * 0.045), g = h * 0.22, t = h * 0.42;
-            const marque = (y, c) => `<circle cx="0" cy="${-y}" r="${h * 0.045}" fill="${c}"/>
-                <path d="M0 ${-y} h${g}" stroke="${c}" stroke-width="${e}"/>`;
-            return `<g>
-                <path d="M0 0 V${-h}" stroke="${col}" stroke-width="${e}"/>
-                <path d="M${-h * 0.13} 0 H${h * 0.13} M${-h * 0.13} 0 l${-h * 0.07} ${h * 0.09}
-                         M${-h * 0.03} 0 l${-h * 0.07} ${h * 0.09} M${h * 0.07} 0 l${-h * 0.07} ${h * 0.09}"
-                      stroke="${col}" stroke-width="${e * 0.8}" fill="none"/>
-                ${marque(h * 0.20, '#d04a3a')}${marque(h * 0.58, '#fab928')}${marque(h * 0.94, '#2e9e4f')}
-                <path d="M${h * 0.86} ${-h * 0.30} L${h * 1.44} ${-h * 0.30} L${h * 1.15} ${-h * 0.86} Z"
-                      fill="#fff" stroke="#d04a3a" stroke-width="${e * 1.4}" stroke-linejoin="round"/>
-                <path d="M${h * 1.15} ${-h * 0.42} V${-h * 0.70}" stroke="#d04a3a"
-                      stroke-width="${e * 1.3}" stroke-linecap="round"/>
+                <path d="M${-w / 2} ${h * 0.06} H${w / 2} L0 ${h * 0.56} Z" fill="${col}"/>
+                <path d="M0 ${h * 0.56} V${h * 0.68}" fill="none"/>
+                <path d="M${-w * 0.42} ${h * 0.68} H${w * 0.42}" fill="none"/>
+                <path d="M${-w * 0.26} ${h * 0.80} H${w * 0.26}" fill="none"/>
+                <path d="M${-w * 0.11} ${h * 0.92} H${w * 0.11}" fill="none"/>
             </g>`;
         }
 
@@ -5749,9 +5754,8 @@
             if(o.t === 'route')  return synRoute(h, col);
             if(o.t === 'maison') return synMaison(h, col);
             if(o.t === 'leq')    return synLeq(h, col);
-            if(o.t === 'cdg')    return synCdg(h, col);
-            if(o.t === 'txt')    return '';
-            return synPortique(h, col);
+            if(o.t === 'hta' || o.t === 'tel' || o.t === 'bt') return synFranchi(h, col, o.po);
+            return '';
         }
 
         // Les libelles suivent le document de base : au-dessus de la bande
@@ -5771,27 +5775,52 @@
                 return txt(34, o.n, '#191919', 21, o.t !== 'route')
                      + txt(58, o.s, '#191919', 19);
             }
+            // Le texte libre se pose la ou on l'a lache, a sa propre taille.
+            if(o.t === 'txt') {
+                const c = Math.max(13, o.h * 0.42);
+                return txt(0, o.n, synCoul(o), c, true) + txt(c * 1.25, o.s, synCoul(o), c);
+            }
+            // La LEQ est sous le sol : son libelle reste au-dessus du trait.
+            if(o.t === 'leq') return txt(-14, o.n, synCoul(o), 19, true);
             const y = -o.h - 12;
             return txt(y - 22, o.n, '#191919', 19)
                  + txt(y, o.s, synCoul(o), 19, true);
         }
 
-        // Un pylone equipe d'une poulie de pied recoit le cable au sol, du
-        // cote de la machine, avant de le renvoyer a la poulie du haut.
-        // De quel cote il arrive se deduit de la bande : celui ou se tient
-        // la freineuse ou le treuil, a defaut le bout le plus proche.
-        function synPieds(d) {
-            const pieds = {};
-            const mach = o => o && (o.t === 'frein' || o.t === 'treuil');
+        // La ligne va de pylone en pylone. Une machine n'en fait pas partie :
+        // elle s'y raccorde par un brin vers le pylone qui la precede — le
+        // premier de la bande si elle est en tete — et la ligne lui passe
+        // au-dessus sans passer par elle.
+        function synRefs(d) {
+            const refs = {};
             for(let b = 0; b < d.b; b++) {
                 const sup = d.n.filter(o => o.b === b && synPorte(o)).sort((u, v) => u.x - v.x);
-                sup.forEach((o, i) => {
-                    if(o.t !== 'pyl' || !o.pp) return;
-                    pieds[o.id] = mach(sup[i - 1]) ? 'g'
-                                : mach(sup[i + 1]) ? 'd'
-                                : (i <= sup.length - 1 - i ? 'g' : 'd');
+                const pyl = sup.filter(o => o.t === 'pyl');
+                sup.filter(o => o.t !== 'pyl').forEach(m => {
+                    let r = null;
+                    pyl.forEach(q => { if(q.x < m.x) r = q; });
+                    if(!r) r = pyl.find(q => q.x > m.x) || null;
+                    if(r) refs[m.id] = r.id;
                 });
             }
+            return refs;
+        }
+
+        // Un pylone equipe d'une poulie de pied recoit au sol le brin de la
+        // machine qui s'y raccorde, du cote ou elle se tient, avant de le
+        // renvoyer a la poulie du haut.
+        function synPieds(d, refs) {
+            const pieds = {};
+            d.n.forEach(m => {
+                const r = d.n.find(x => x.id === refs[m.id]);
+                if(r && r.pp) pieds[r.id] = m.x > r.x ? 'd' : 'g';
+            });
+            // Une poulie de pied sans machine en face garde un cote : celui
+            // du bout de bande le plus proche.
+            d.n.forEach(o => {
+                if(o.t === 'pyl' && o.pp && !pieds[o.id])
+                    pieds[o.id] = o.x < SYN_L / 2 ? 'g' : 'd';
+            });
             return pieds;
         }
         const synDecalPied = o => o.h * 0.34;      // l'ecart de la poulie au fut
@@ -5810,10 +5839,23 @@
             </g>`;
         }
 
+        // La boite d'un objet : ce que le halo entoure, et ce que le doigt
+        // peut saisir. Tout ne monte pas depuis le sol.
+        function synBoite(o) {
+            if(o.t === 'txt') {
+                const c = Math.max(13, o.h * 0.42);
+                return { x: -Math.max(80, o.h * 1.3), y: -c, w: Math.max(160, o.h * 2.6), h: c * 2.6 };
+            }
+            if(o.t === 'leq') return { x: -o.h * 0.52, y: -26, w: o.h * 1.04, h: o.h + 26 };
+            return { x: -Math.max(30, o.h * 0.42), y: -o.h - 10,
+                     w: Math.max(60, o.h * 0.84), h: o.h + 20 };
+        }
+
         function synSvg(d, interactif) {
             const H = d.b * SYN_BH;
             const cab = synCable(d);
-            const pieds = synPieds(d);
+            const refs = synRefs(d);
+            const pieds = synPieds(d, refs);
             // `vers` est l'abscisse de l'autre bout : une poulie de pied ne
             // prend que le cable qui vient de son cote.
             const accroche = (o, vers) => {
@@ -5825,32 +5867,38 @@
                 return { x: o.x, y: sol - o.h * (o.t === 'pyl' ? 0.74 : 0.50) };
             };
             let sols = '', cables = '';
+            const brin = (u, v, y) => {
+                const a = accroche(u, v.x), z = accroche(v, u.x);
+                const fl = Math.abs(z.x - a.x) * cab.f;
+                // La fleche ne descend jamais sous le sol de la bande.
+                const cy = Math.min((a.y + z.y) / 2 + fl * 2, y - 8);
+                cables += `<path d="M${a.x} ${a.y} Q ${(a.x + z.x) / 2} ${cy}
+                                    ${z.x} ${z.y}" fill="none" stroke="${cab.col}"
+                                 stroke-width="${cab.e}" stroke-linecap="round"/>`;
+            };
             for(let b = 0; b < d.b; b++) {
                 const y = b * SYN_BH + SYN_SOL;
                 sols += `<path d="M12 ${y} H${SYN_L - 12}" stroke="#191919" stroke-width="2.6"/>`;
                 const sup = d.n.filter(o => o.b === b && synPorte(o)).sort((u, v) => u.x - v.x);
-                for(let i = 0; i + 1 < sup.length; i++) {
-                    if(sup[i].nc) continue;
-                    const a = accroche(sup[i], sup[i + 1].x), z = accroche(sup[i + 1], sup[i].x);
-                    const fl = Math.abs(z.x - a.x) * cab.f;
-                    // La fleche ne descend jamais sous le sol de la bande.
-                    const cy = Math.min((a.y + z.y) / 2 + fl * 2, y - 8);
-                    cables += `<path d="M${a.x} ${a.y} Q ${(a.x + z.x) / 2} ${cy}
-                                        ${z.x} ${z.y}" fill="none" stroke="${cab.col}"
-                                     stroke-width="${cab.e}" stroke-linecap="round"/>`;
-                }
+                const pyl = sup.filter(o => o.t === 'pyl');
+                for(let i = 0; i + 1 < pyl.length; i++)
+                    if(!pyl[i].nc) brin(pyl[i], pyl[i + 1], y);
+                sup.filter(o => o.t !== 'pyl').forEach(m => {
+                    const r = d.n.find(x => x.id === refs[m.id]);
+                    if(r && !m.nc) brin(m, r, y);
+                });
             }
             // Chaque objet porte une zone de prise transparente : un
             // treillis de traits fins ne se saisit pas au doigt.
             const objets = d.n.map(o => `
-                <g transform="translate(${o.x},${o.b * SYN_BH + SYN_SOL})"
+                <g transform="translate(${o.x},${o.b * SYN_BH + SYN_SOL + (o.dy || 0)})"
                    ${interactif ? `class="syn-o${d.sel === o.id ? ' sel' : ''}" data-id="${o.id}"` : ''}>
                     ${d.sel === o.id && interactif
-                        ? `<rect class="sch-sel" x="${-o.h * 0.95}" y="${-o.h - 10}"
-                                 width="${o.h * 1.9}" height="${o.h + 20}" rx="8"
+                        ? `<rect class="sch-sel" x="${synBoite(o).x - 10}" y="${synBoite(o).y - 8}"
+                                 width="${synBoite(o).w + 20}" height="${synBoite(o).h + 16}" rx="8"
                                  fill="#e0f2fe" stroke="#00a6d9" stroke-width="2.5"/>` : ''}
-                    ${interactif ? `<rect x="${-Math.max(30, o.h * 0.42)}" y="${-o.h - 10}"
-                                 width="${Math.max(60, o.h * 0.84)}" height="${o.h + 20}"
+                    ${interactif ? `<rect x="${synBoite(o).x}" y="${synBoite(o).y}"
+                                 width="${synBoite(o).w}" height="${synBoite(o).h}"
                                  fill="transparent"/>` : ''}
                     ${synDessin(o)}
                     ${pieds[o.id] ? synPoulieDePied(o, pieds[o.id], cab) : ''}
@@ -5884,29 +5932,37 @@
                          y: (q.clientY - r.top) / r.height * H };
             };
             const dep = pt(e);
+            const libre = o.t === 'txt';          // le texte se pose ou l'on veut
             const bande = y => Math.max(0, Math.min(d.b - 1, Math.floor(y / SYN_BH)));
             synGlisse = { id: o.id, dx: o.x - dep.x,
-                          dy: (o.b * SYN_BH + SYN_SOL) - dep.y, bouge: false };
+                          dy: (o.b * SYN_BH + SYN_SOL + (o.dy || 0)) - dep.y, bouge: false };
             svg.setPointerCapture(e.pointerId);
+            // Ce qui tient au sol se recale sur la ligne de sa bande ; le
+            // texte garde la hauteur ou il a ete lache.
+            const poser = q => {
+                const brut = q.y + synGlisse.dy;
+                const b = libre ? bande(brut) : bande(brut - SYN_SOL + SYN_BH / 2);
+                const sol = b * SYN_BH + SYN_SOL;
+                const dy = libre ? Math.max(-SYN_SOL + 24,
+                                   Math.min(SYN_BH - SYN_SOL - 12, Math.round(brut - sol))) : 0;
+                return { b: b, dy: dy, y: sol + dy,
+                         x: Math.max(40, Math.min(SYN_L - 40, Math.round(q.x + synGlisse.dx))) };
+            };
             const bouger = ev => {
-                const q = pt(ev);
                 synGlisse.bouge = true;
-                const b = bande(q.y + synGlisse.dy - SYN_SOL + SYN_BH / 2);
-                g.setAttribute('transform', 'translate(' + Math.round(q.x + synGlisse.dx)
-                                          + ',' + (b * SYN_BH + SYN_SOL) + ')');
-                synGlisse.b = b;
+                const r = poser(pt(ev));
+                g.setAttribute('transform', 'translate(' + r.x + ',' + r.y + ')');
+                synGlisse.r = r;
             };
             const lacher = ev => {
                 svg.removeEventListener('pointermove', bouger);
                 svg.removeEventListener('pointerup', lacher);
-                const q = pt(ev);
                 if(synGlisse.bouge) {
-                    const b = synGlisse.b === undefined ? o.b : synGlisse.b;
+                    const r = synGlisse.r || poser(pt(ev));
                     synMaj(dd => {
                         const t = dd.n.find(x => x.id === synGlisse.id);
                         if(!t) return;
-                        t.x = Math.max(40, Math.min(SYN_L - 40, Math.round(q.x + synGlisse.dx)));
-                        t.b = b;
+                        t.x = r.x; t.b = r.b; t.dy = r.dy;
                     });
                 } else { synSelect(synGlisse.id); }
                 synGlisse = null;
@@ -5927,7 +5983,10 @@
             maisons. <b>Glissez</b> un élément pour le déplacer d'un bout à l'autre ou d'une bande à
             l'autre, <b>cliquez-le</b> pour le régler. Le câble se trace tout seul d'un support au
             suivant ; cochez <b>Poulie de pied</b> sur un pylône pour que le câble de la machine
-            arrive au sol et remonte ensuite à la poulie du haut.</div>
+            arrive au sol et remonte ensuite à la poulie du haut. Une machine pos&eacute;e entre deux
+            pylônes se raccorde au premier des deux : la ligne lui passe <b>au-dessus</b>. Une ligne
+            franchie se dessine d'une flèche seule, et porte son <b>portique</b> quand la case est
+            cochée.</div>
             ${grille('pd-g3', champ('Canton', chp('syn-canton', 'ex : 214-227'))
                             + champ('Conducteur ancien', chp('syn-anc', 'ex : Canna 238'))
                             + champ('Conducteur nouveau', chp('syn-nou', 'ex : Aster 228')))}
@@ -5935,7 +5994,7 @@
                 <button class="btn-pd pre" onclick="synCanton()">\u26a1 Monter le canton</button>
                 ${btn('pyl', 'Pylône')}${btn('frein', 'Freineuse')}${btn('treuil', 'Treuil')}
                 ${btn('route', 'Route')}${btn('hta', 'HTA')}${btn('tel', 'Télécom')}${btn('bt', 'BT')}
-                ${btn('maison', 'Maison')}${btn('leq', 'LEQ')}${btn('cdg', 'CDG')}${btn('txt', 'Texte')}
+                ${btn('maison', 'Maison')}${btn('leq', 'LEQ')}${btn('txt', 'Texte')}
                 ${d.n.length ? `<button class="btn-pd" onclick="synVider()">\u{1f5d1} Tout effacer</button>` : ''}
             </div>
             <div class="pd-sch-reglage">
@@ -5966,11 +6025,20 @@
                         ${Array.from({ length: d.b }, (x, i) =>
                             `<option value="${i}" ${obj.b === i ? 'selected' : ''}>${i + 1}</option>`).join('')}
                     </select></label>
+                <label>Position
+                    <button class="btn-pd" onclick="synDecaler(-20)">\u25c0</button>
+                    <button class="btn-pd" onclick="synDecaler(20)">\u25b6</button></label>
+                <label>Portées de la bande
+                    <button class="btn-pd" onclick="synEcarter(0.92)" title="Resserrer les portées">\u2192\u2190</button>
+                    <button class="btn-pd" onclick="synEcarter(1.08)" title="Écarter les portées">\u2190\u2192</button></label>
                 <label>Couleur ${schPalette(synCoul(obj), 'synChamp(\'col\', %c)')}</label>
                 ${synPorte(obj) ? `<label><input type="checkbox" ${obj.nc ? '' : 'checked'}
-                        onchange="synChamp('nc', !this.checked)"> Câble vers le suivant</label>` : ''}
+                        onchange="synChamp('nc', !this.checked)">
+                        ${obj.t === 'pyl' ? 'Câble vers le suivant' : 'Câble raccordé'}</label>` : ''}
                 ${obj.t === 'pyl' ? `<label><input type="checkbox" ${obj.pp ? 'checked' : ''}
                         onchange="synChamp('pp', this.checked)"> Poulie de pied</label>` : ''}
+                ${/^(hta|tel|bt)$/.test(obj.t) ? `<label><input type="checkbox" ${obj.po ? 'checked' : ''}
+                        onchange="synChamp('po', this.checked)"> Portique</label>` : ''}
                 <button class="pd-sup" onclick="synSupprimer()">&times; Supprimer</button>
             </div>` : ''}
             <div class="pd-sch-cadre">${synSvg(d, true)}</div>
