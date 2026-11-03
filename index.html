@@ -5546,15 +5546,19 @@
                      t: t, b: b, x: x, h: m.h || 80,
                      n: m.n || '', s: m.s || '', p: '', col: m.col || '#191919' };
         }
-        // Le nouvel objet se pose dans le premier creux de sa bande : un
-        // franchissement arrive entre deux supports, et rien ne vient se
+        // Le nouvel objet se pose au milieu du plus grand vide de sa bande :
+        // un franchissement arrive entre deux supports, et rien ne vient se
         // garer sur le dessin d'a cote.
-        function synPlace(d, b, ecart) {
-            const xs = d.n.filter(o => o.b === b).map(o => o.x);
+        function synPlace(d, b) {
+            const xs = d.n.filter(o => o.b === b).map(o => o.x).sort((u, v) => u - v);
             if(!xs.length) return 100;
-            for(let x = 95; x <= SYN_L - 95; x += 15)
-                if(xs.every(v => Math.abs(v - x) >= ecart)) return x;
-            return 100 + (xs.length % 12) * 55;      // bande pleine : on etale
+            const bords = [150].concat(xs, [SYN_L - 150]).sort((u, v) => u - v);
+            let mieux = 0, large = -1;
+            for(let i = 0; i + 1 < bords.length; i++) {
+                const e = bords[i + 1] - bords[i];
+                if(e > large) { large = e; mieux = (bords[i] + bords[i + 1]) / 2; }
+            }
+            return mieux;
         }
         function synAjouter(t) {
             synMaj(d => {
@@ -5567,9 +5571,9 @@
                     const xs = d.n.filter(o => o.b === b && synPorte(o)).map(o => o.x);
                     x = xs.length ? Math.max.apply(null, xs) + 165 : 100;
                     if(x > SYN_L - 70) {
-                        if(b + 1 < d.b) { b++; x = 100; } else x = synPlace(d, b, 95);
+                        if(b + 1 < d.b) { b++; x = 100; } else x = synPlace(d, b);
                     }
-                } else { x = synPlace(d, b, 80); }
+                } else { x = synPlace(d, b); }
                 const o = synNouvel(t, b, Math.round(x));
                 if(t === 'pyl') { o.s = 'Suspension'; o.p = 'Poulie Ø600 mm'; }
                 d.n.push(o);
@@ -5772,11 +5776,54 @@
                  + txt(y, o.s, synCoul(o), 19, true);
         }
 
+        // Un pylone equipe d'une poulie de pied recoit le cable au sol, du
+        // cote de la machine, avant de le renvoyer a la poulie du haut.
+        // De quel cote il arrive se deduit de la bande : celui ou se tient
+        // la freineuse ou le treuil, a defaut le bout le plus proche.
+        function synPieds(d) {
+            const pieds = {};
+            const mach = o => o && (o.t === 'frein' || o.t === 'treuil');
+            for(let b = 0; b < d.b; b++) {
+                const sup = d.n.filter(o => o.b === b && synPorte(o)).sort((u, v) => u.x - v.x);
+                sup.forEach((o, i) => {
+                    if(o.t !== 'pyl' || !o.pp) return;
+                    pieds[o.id] = mach(sup[i - 1]) ? 'g'
+                                : mach(sup[i + 1]) ? 'd'
+                                : (i <= sup.length - 1 - i ? 'g' : 'd');
+                });
+            }
+            return pieds;
+        }
+        const synDecalPied = o => o.h * 0.34;      // l'ecart de la poulie au fut
+        const synHautPied  = o => o.h * 0.07;      // et sa hauteur au-dessus du sol
+
+        // La poulie de renvoi au pied, et la remontee vers celle du haut.
+        function synPoulieDePied(o, cote, cab) {
+            const x = (cote === 'g' ? -1 : 1) * synDecalPied(o), y = -synHautPied(o);
+            const r = Math.max(4, o.h * 0.075);
+            return `<g>
+                <path d="M${x} ${y} L0 ${-o.h * 0.74}" fill="none" stroke="${cab.col}"
+                      stroke-width="${cab.e}" stroke-linecap="round"/>
+                <path d="M${x} ${y + r} V0" stroke="#191919" stroke-width="${Math.max(1.2, o.h * 0.022)}"/>
+                <circle cx="${x}" cy="${y}" r="${r}" fill="#fff" stroke="${cab.col}"
+                        stroke-width="${Math.max(1.4, cab.e * 0.8)}"/>
+            </g>`;
+        }
+
         function synSvg(d, interactif) {
             const H = d.b * SYN_BH;
             const cab = synCable(d);
-            const accroche = o => ({ x: o.x,
-                y: o.b * SYN_BH + SYN_SOL - o.h * (o.t === 'pyl' ? 0.74 : 0.50) });
+            const pieds = synPieds(d);
+            // `vers` est l'abscisse de l'autre bout : une poulie de pied ne
+            // prend que le cable qui vient de son cote.
+            const accroche = (o, vers) => {
+                const sol = o.b * SYN_BH + SYN_SOL;
+                const c = pieds[o.id];
+                if(c && (c === 'g' ? vers < o.x : vers > o.x))
+                    return { x: o.x + (c === 'g' ? -1 : 1) * synDecalPied(o),
+                             y: sol - synHautPied(o) };
+                return { x: o.x, y: sol - o.h * (o.t === 'pyl' ? 0.74 : 0.50) };
+            };
             let sols = '', cables = '';
             for(let b = 0; b < d.b; b++) {
                 const y = b * SYN_BH + SYN_SOL;
@@ -5784,9 +5831,11 @@
                 const sup = d.n.filter(o => o.b === b && synPorte(o)).sort((u, v) => u.x - v.x);
                 for(let i = 0; i + 1 < sup.length; i++) {
                     if(sup[i].nc) continue;
-                    const a = accroche(sup[i]), z = accroche(sup[i + 1]);
+                    const a = accroche(sup[i], sup[i + 1].x), z = accroche(sup[i + 1], sup[i].x);
                     const fl = Math.abs(z.x - a.x) * cab.f;
-                    cables += `<path d="M${a.x} ${a.y} Q ${(a.x + z.x) / 2} ${(a.y + z.y) / 2 + fl * 2}
+                    // La fleche ne descend jamais sous le sol de la bande.
+                    const cy = Math.min((a.y + z.y) / 2 + fl * 2, y - 8);
+                    cables += `<path d="M${a.x} ${a.y} Q ${(a.x + z.x) / 2} ${cy}
                                         ${z.x} ${z.y}" fill="none" stroke="${cab.col}"
                                      stroke-width="${cab.e}" stroke-linecap="round"/>`;
                 }
@@ -5804,8 +5853,9 @@
                                  width="${Math.max(60, o.h * 0.84)}" height="${o.h + 20}"
                                  fill="transparent"/>` : ''}
                     ${synDessin(o)}
+                    ${pieds[o.id] ? synPoulieDePied(o, pieds[o.id], cab) : ''}
                     ${o.t === 'pyl' ? `<circle cy="${-o.h * 0.74}" r="${o.h * 0.055}"
-                                               fill="${synCable(d).col}"/>` : ''}
+                                               fill="${cab.col}"/>` : ''}
                     ${synLabels(o)}
                 </g>`).join('');
             return `<svg class="pd-sch-svg" viewBox="0 0 ${SYN_L} ${H}"
@@ -5876,7 +5926,8 @@
             de leur poulie, le treuil, et ce que la portée survole — routes, lignes HTA, télécom, BT,
             maisons. <b>Glissez</b> un élément pour le déplacer d'un bout à l'autre ou d'une bande à
             l'autre, <b>cliquez-le</b> pour le régler. Le câble se trace tout seul d'un support au
-            suivant.</div>
+            suivant ; cochez <b>Poulie de pied</b> sur un pylône pour que le câble de la machine
+            arrive au sol et remonte ensuite à la poulie du haut.</div>
             ${grille('pd-g3', champ('Canton', chp('syn-canton', 'ex : 214-227'))
                             + champ('Conducteur ancien', chp('syn-anc', 'ex : Canna 238'))
                             + champ('Conducteur nouveau', chp('syn-nou', 'ex : Aster 228')))}
@@ -5918,6 +5969,8 @@
                 <label>Couleur ${schPalette(synCoul(obj), 'synChamp(\'col\', %c)')}</label>
                 ${synPorte(obj) ? `<label><input type="checkbox" ${obj.nc ? '' : 'checked'}
                         onchange="synChamp('nc', !this.checked)"> Câble vers le suivant</label>` : ''}
+                ${obj.t === 'pyl' ? `<label><input type="checkbox" ${obj.pp ? 'checked' : ''}
+                        onchange="synChamp('pp', this.checked)"> Poulie de pied</label>` : ''}
                 <button class="pd-sup" onclick="synSupprimer()">&times; Supprimer</button>
             </div>` : ''}
             <div class="pd-sch-cadre">${synSvg(d, true)}</div>
