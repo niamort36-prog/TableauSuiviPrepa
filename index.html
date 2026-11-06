@@ -576,6 +576,8 @@
         /* Au papier, la precision d'un « Autre » est une ligne a ecrire. */
         body.prepa-impression #pd-pages .pd-coches-col .pd-fige {
             align-self: stretch; margin-left: 23px; }
+        .pd-page-tete .pd-bulle { width: 17px; height: 17px; font-size: .7rem; }
+        .pd-page-tete + .pd-bulle-texte { margin-top: -4px; }
         .pd-bulle { display: inline-flex; align-items: center; justify-content: center;
                     width: 15px; height: 15px; margin-left: 5px; border-radius: 50%;
                     background: #e8f0fb; border: 1px solid #b7cdf0; color: var(--primary);
@@ -6014,7 +6016,8 @@
                           onclick="montrerBulle(this)">?</span>`;
         }
         function montrerBulle(el) {
-            const hote = el.closest('.pd-champ, .pd-coche, .pd-sous, .pd-pf-etape, .pd-l') || el;
+            const hote = el.closest('.pd-champ, .pd-coche, .pd-sous, .pd-pf-etape, .pd-l,'
+                                  + ' .pd-page-tete') || el;
             const ouverte = hote.nextElementSibling
                          && hote.nextElementSibling.classList.contains('pd-bulle-texte');
             document.querySelectorAll('.pd-bulle-texte').forEach(e => e.remove());
@@ -6209,6 +6212,190 @@
               + 'insiste sur ce point.')}</div>
             <div class="pd-coches pd-coches-col">${pfListe(PF_APRES)}
             ${cocheLibre('pf-r0', 'Autre', 'pf-rtxt')}</div>`;
+        }
+
+        // --- Les conseils de remplissage -------------------------------------
+        // Un ? en tete de chaque page : ce qu'on aurait dit a quelqu'un qui
+        // la remplit pour la premiere fois. Rien de tout cela ne s'imprime.
+        const CONSEILS = {
+            couverture:
+                'Une seule photo, prise de face et en pleine lumière : elle est réduite à '
+              + 'l\'import, vingt mégaoctets acceptés.\n'
+              + 'Tout le reste — ligne, dates, chargé de travaux — vient de la fiche du '
+              + 'chantier. Corrigez-le là-bas : ici, il ne fait que s\'afficher.',
+            sommaire:
+                'Rien à remplir : il se monte tout seul à partir des pages cochées, et se '
+              + 'renumérote à chaque impression.\n'
+              + 'Décochez une page dans la colonne de gauche et elle disparaît aussi du '
+              + 'sommaire.',
+            travaux:
+                'Décrivez le travail comme vous l\'expliqueriez à quelqu\'un qui arrive : '
+              + 'l\'ouvrage, ce qu\'on dépose, ce qu\'on pose, et sur quelles portées.\n'
+              + 'Les remarques sont la seule case qu\'un collègue venu par le lien de partage '
+              + 'peut remplir : servez-vous-en pour faire relire la préparation.',
+            annexes:
+                'Ne cochez que ce que le dossier emporte vraiment : une annexe cochée mais '
+              + 'absente se voit à la première relecture.\n'
+              + 'Les numéros suivent l\'ordre des pages. Ajoutez une pièce jointe et les '
+              + 'annexes suivantes se renumérotent seules.\n'
+              + 'Une pièce de plus de trois mégaoctets est refusée : scannez en noir et blanc '
+              + 'plutôt qu\'en couleur.',
+            secours:
+                'Partez du carnet de l\'équipe — bouton « Reprendre le carnet » — plutôt que '
+              + 'de tout ressaisir : il est tenu dans les Options et vaut pour tous les '
+              + 'chantiers.\n'
+              + 'Les numéros d\'urgence fixes sont déjà là. Ce qui reste vraiment à porter '
+              + 'ici, c\'est l\'adresse précise du point de rendez-vous des secours, celle '
+              + 'qu\'on donnera au téléphone.',
+            regles:
+                'Rien à remplir : ce sont les règles qui sauvent, à afficher et à commenter au '
+              + 'briefing du matin.',
+            nip:
+                'Le document importé est rendu page par page en image : c\'est ce qui permet '
+              + 'de l\'imprimer avec le reste du dossier.\n'
+              + 'Les informations lues dedans ont rempli la page NIP. Relisez-les : un plan '
+              + 'tramé ne contient aucun texte, et seul son nom de fichier a pu être exploité.',
+            unifilaire:
+                'Le schéma importé est rendu page par page en image, pour sortir avec le '
+              + 'dossier.\n'
+              + 'Beaucoup de schémas sont des plans tramés, sans texte : vérifiez le numéro, '
+              + 'l\'indice et la plage de pylônes, que seul le plan porte.',
+            moyens:
+                'Un agent par ligne, avec son habilitation à jour.\n'
+              + 'Les agents viennent du carnet des Options : s\'il en manque un, ajoutez-le '
+              + 'là-bas, il servira aux prochains chantiers.\n'
+              + 'N\'oubliez pas les véhicules et leur contrôle réglementaire : c\'est la ligne '
+              + 'qu\'on oublie et qu\'on vous demandera.',
+            modeop:
+                'Découpez dans l\'ordre réel du chantier : une action par ligne, et le nom de '
+              + 'celui qui la fait.\n'
+              + 'Les points d\'arrêt se portent dans la colonne prévue. C\'est sur eux que '
+              + 's\'appuie la validation technique : un point d\'arrêt non programmé se '
+              + 'traite dans la page MALT / CC, pas ici.\n'
+              + 'Le bouton « Pré-remplir » verse le modèle du classeur sans écraser ce que '
+              + 'vous avez déjà écrit.',
+            modeop2:
+                'La suite du mode opératoire, quand les étapes débordent de la première page. '
+              + 'Gardez la numérotation continue.',
+            permisfeu:
+                'Le permis de feu n\'est obligatoire que dans deux cas : soudage '
+              + 'oxyacéthylénique confié à une entreprise extérieure, et intervention sur un '
+              + 'site ICPE dont l\'arrêté l\'impose.\n'
+              + 'Hors de là, les risques de point chaud s\'intègrent simplement à la '
+              + 'préparation de travail.\n'
+              + 'Les ? bleus de la page expliquent chaque case une par une.',
+            nacelle:
+                'À remplir seulement si le chantier emploie une PEMP.\n'
+              + 'Vérifiez le contrôle réglementaire de l\'engin, la zone d\'évolution et la '
+              + 'distance aux pièces nues sous tension : c\'est ce qui décide du mode '
+              + 'opératoire, pas l\'inverse.',
+            adequation:
+                'C\'est un constat, pas une déclaration : il se remplit avec le loueur, engin '
+              + 'en main, le jour de la livraison.\n'
+              + 'Les deux colonnes se signent sur place. Un loueur venu par le lien de partage '
+              + 'peut remplir et signer la sienne.',
+            maltcc:
+                'La section se calcule : portez le code de LIT, puis « Calculer la section ». '
+              + 'Elle sort de l\'Icc de la liaison et de la durée d\'élimination, d\'après le '
+              + 'fichier GEMCC.\n'
+              + 'Pour un faisceau multiple, la section calculée peut être divisée par le '
+              + 'nombre de MALT utilisées, sans jamais descendre sous la section minimale.\n'
+              + 'Cochez la ligne voisine si l\'ouvrage est en double terne ou croisé : l\'Icc '
+              + 'à retenir devient celle des deux.\n'
+              + 'Les aléas se préparent avant, pas pendant : une ligne par aléa envisagé, avec '
+              + 'l\'action décidée.',
+            pave:
+                'Le schéma se dessine à la souris : posez les pylônes, le poste et les mises à '
+              + 'la terre, puis reliez-les deux à deux.\n'
+              + 'Cliquez un objet pour régler son numéro, sa taille et sa couleur ; glissez-le '
+              + 'pour le placer. Le câble pend toujours vers le bas.\n'
+              + 'Le quadrillage reste imprimé sous le dessin : ce qui n\'a pas été placé à '
+              + 'l\'écran se finit à la main sur le chantier.',
+            schemaop:
+                'Un chantier ne concerne qu\'une ou deux planches : décochez les autres, elles '
+              + 'ne partent pas à l\'impression.\n'
+              + 'Gardez celle qui correspond vraiment au mode opératoire retenu — c\'est elle '
+              + 'qu\'on montrera au briefing.',
+            sue:
+                'Ne gardez que les fiches que le chantier peut rencontrer.\n'
+              + 'Ce n\'est pas une formalité : les actions préventives de la fiche se '
+              + 'reprennent dans la préparation, et la liste des personnes à prévenir doit '
+              + 'être à jour avant de partir.\n'
+              + 'La liste du document n\'est pas exhaustive : complétez-la selon le contexte '
+              + 'local.',
+            synoptique:
+                'Montez le canton d\'un coup — par exemple 214-227 — puis corrigez : c\'est '
+              + 'plus rapide que de poser les supports un par un.\n'
+              + 'Glissez un objet pour le déplacer, cliquez-le pour régler son numéro, sa '
+              + 'poulie et sa taille.\n'
+              + 'Écartez les portées quand plusieurs franchissements doivent tenir dessous, et '
+              + 'servez-vous du texte libre pour ce que le dessin ne dit pas.\n'
+              + 'La note, elle, s\'imprime : c\'est là que vont les consignes de déroulage.',
+            planif:
+                'Une ligne par jour, et ce qui est réellement prévu : c\'est ce tableau que '
+              + 'l\'équipe regarde le matin.\n'
+              + 'Laissez de la place aux aléas plutôt que de remplir les cinq jours au '
+              + 'maximum.',
+            cables:
+                'Tout calcul de câble se fait sous CELESTE : portez ici les résultats, jamais '
+              + 'une estimation.\n'
+              + 'Choisir le type de câble renseigne seul le diamètre, ω et l\'UPK ; la cote C '
+              + 'se déduit du paramètre que vous saisissez.\n'
+              + 'Joignez à la préparation les données du canton, la température finale, le '
+              + 'paramètre de base et les résultats — surcharges, efforts, longueurs '
+              + 'naturelles, haubanages.',
+            outillage:
+                'Décochez les familles que le chantier n\'emporte pas : elles ne partent pas à '
+              + 'l\'impression.\n'
+              + 'Le panier Invent\u2019RTE évite de tout ressaisir : collez son lien de partage '
+              + 'et importez-le. La liste est recopiée dans le chantier, elle se relit sans '
+              + 'réseau.',
+            metrologie:
+                'Un appareil de mesure ne vaut que par son contrôle : portez son numéro et la '
+              + 'date du dernier étalonnage, pas seulement son nom.\n'
+              + 'Un appareil hors validité se remplace avant le départ, pas sur le chantier.',
+            manchonnage:
+                'Un procès-verbal par manchon : repère, type de manchon, matricule de la '
+              + 'presse et effort de sertissage.\n'
+              + 'C\'est la pièce qu\'on ressort des années plus tard en cas de défaut : '
+              + 'écrivez-la lisiblement, et faites-la signer le jour même.',
+            papoto:
+                'Relevez les angles terne par terne, sans mélanger les colonnes.\n'
+              + 'Notez les conditions — heure, température, vent, ensoleillement, aspect du '
+              + 'câble : un paramètre ne se lit qu\'à la lumière de ces conditions.\n'
+              + 'Tolérance : 0,5 % au maximum entre les paramètres. Au-delà, on recommence la '
+              + 'visée plutôt que de choisir le chiffre qui arrange.',
+            degats:
+                'Un formulaire par propriétaire : le bouton « + Ajouter un formulaire » en '
+              + 'crée autant qu\'il en faut, chacun sur sa feuille.\n'
+              + 'L\'assistant de barème donne la somme au m² : secteur, zone, culture, surface, '
+              + 'puis « Porter au tableau ».\n'
+              + 'Le barème n\'est qu\'une aide au chiffrage : les trois colonnes restent '
+              + 'libres, et une ligne peut toujours s\'écrire à la main.\n'
+              + 'Pour envoyer la page au propriétaire, enregistrez-la d\'abord en PDF : un '
+              + 'courriel ne peut pas porter la pièce jointe tout seul.',
+            materiel:
+                'Une ligne par support : type de chaînes, isolement, pièces de chaînes et '
+              + 'fixation à la charpente.\n'
+              + 'Le contrôle croisé PF 5 se signe par quelqu\'un d\'autre que celui qui a '
+              + 'rempli le tableau — c\'est tout l\'intérêt du contrôle croisé.',
+            rex:
+                'Écrivez-le à chaud, le soir du chantier : ce qui a bien marché autant que ce '
+              + 'qui a coincé.\n'
+              + 'Un REX utile donne des faits — ce qui s\'est passé, ce qu\'on a fait — plutôt '
+              + 'que des jugements.\n'
+              + 'Le REX se saisit aussi en questionnaire sur Kizeo ; cette page reste celle qui '
+              + 's\'imprime, se signe et s\'archive.',
+            cr:
+                'Le compte rendu clôt le dossier : ce qui a été fait, ce qui reste, et les '
+              + 'écarts par rapport à la préparation.\n'
+              + 'Un écart noté n\'est pas un reproche : c\'est ce qui permet de mieux préparer '
+              + 'la fois suivante.\n'
+              + 'Les deux validations se signent avant archivage.'
+        };
+
+        function conseilPage(id) {
+            return CONSEILS[id] ? bulle(CONSEILS[id]) : '';
         }
 
         // Les onze familles d'outillage du classeur, dans son ordre.
@@ -8140,6 +8327,7 @@
                     <section class="pd-page${pg.images ? ' pd-page-images' : ''}${pg.paysage ? ' pd-paysage' : ''}${pg.planches ? ' pd-planches' : ''}" id="pdp-${pg.id}"><div class="pd-fit">
                         <div class="pd-page-tete">
                             <span class="pd-page-titre">${esc(pg.titre)}</span>
+                            ${conseilPage(pg.id)}
                             ${pg.annexe ? `<span class="pd-annexe">${esc(pg.annexe)}</span>` : ''}
                         </div>
                         ${pg.corps()}
@@ -8192,14 +8380,19 @@
         // correspondantes du suivi. On ne fait que cocher : decocher reste
         // la main de l'utilisateur.
         function majAvancementPrepa() {
-            // Le nom peut venir de la fiche sans avoir ete saisi : c'est
-            // le nom effectif qui compte, la date reste indispensable.
-            const signe = (p, role) => nomSignataire(p, role) !== ''
-                                    && String(pv(p + '-date')).trim() !== '';
+            // Une signature vaut par son trace autant que par le nom et la
+            // date : un visa pose suffit a valider la tache. Le nom peut
+            // venir de la fiche sans avoir ete saisi : c'est le nom effectif
+            // qui compte.
+            const signe = (p, role) => !!SIGNES[p + '-visa']
+                                    || (nomSignataire(p, role) !== ''
+                                        && String(pv(p + '-date')).trim() !== '');
             const faits = [];
             if(signe('sig-prep', 'cdt') && signe('sig-cdt', 'cdt')) faits.push('pr4');
             if(signe('sig-tech')) faits.push('pr5');
             if(signe('sig-mgmt')) faits.push('pr6');
+            // Une NIP importee vaut le document technique coche sur la fiche.
+            if(pieces.nip && pieces.nip.fichier) faits.push('d1');
 
             let change = false;
             faits.forEach(k => { if(states[k] !== 'yes') { states[k] = 'yes'; change = true; } });
