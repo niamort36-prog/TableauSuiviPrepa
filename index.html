@@ -495,6 +495,16 @@
         .pd-malt tbody td { height: 11mm; }
 
         /* Famille d'outillage repliee : le titre reste, pour la rouvrir. */
+        .pd-sue td { vertical-align: top; }
+        .pd-sue .su-leg { font-weight: 500; color: #475569; text-transform: none; }
+        .pd-sue .su-fact td { background: #f1f5f9; font-weight: 700; color: #334155; }
+        .pd-sue .su-qui { width: 118px; text-align: center; font-weight: 700;
+                          font-size: .76rem; color: var(--primary); }
+        .pd-sue .su-a { padding-left: 20px; position: relative; }
+        .pd-sue .su-a::before { content: '\25aa'; position: absolute; left: 7px; color: #94a3b8; }
+        .pd-sue .su-sous { padding-left: 36px; }
+        .pd-sue .su-sous::before { content: '\2013'; left: 23px; }
+        .su-sigles { font-size: .68rem; line-height: 1.55; }
         .pd-grp-tete { display: flex; align-items: center; gap: 8px; cursor: pointer; }
         .pd-grp-tete input { width: 15px; height: 15px; flex: 0 0 15px; cursor: pointer; }
         .pd-grp.masque .pd-grp-tete { opacity: .45; }
@@ -4640,6 +4650,669 @@
             renderPrepa();
         }
 
+        // --- Les fiches SUE -------------------------------------------------
+        // Fiche generique de traitement des SUE (RTE, version d'octobre 2019).
+        // Une preparation n'est concernee que par une ou deux fiches : les
+        // autres se decochent et ne sortent pas a l'impression. Les fiches
+        // offshore et les tours aero-refrigerantes sont masquees d'office,
+        // une equipe ligne HTB n'en a jamais l'usage.
+        //
+        // Une ligne est [texte, qui]. Le premier caractere du texte donne sa
+        // forme : » un facteur aggravant, = un intertitre ou une etape
+        // numerotee, - une sous-puce, rien du tout une action.
+        const SUE_FICHES = [
+            { n: '1', t: 'Incendie sous une ligne aérienne', s: [
+                ['Actions préventives', '(Préparation à une SUE)', [
+                    ["Etablir la liste, avec les coordonnées mises à jour des personnes à prévenir en cas de SUE : GdP, astreinte du GMR, pompiers, police, mairie de la commune, préfecture et sous-préfecture du département, autres services de l’Etat (DREAL, DDT-M, ARS,…),…"],
+                    ["S’assurer de disposer également des informations suivantes :"],
+                    ["- Le plan d’accès à l’ouvrage et/ou au chantier"],
+                    ["- La localisation des matériels de première intervention pour combattre l’incendie"],
+                    ["- La liste des facteurs aggravants de SUE spécifique à l’ouvrage"],
+                    ["= Dans la préparation de travail, reprendre l’ensemble des informations décrites ci-dessus et :"],
+                    ["Spécifier le choix du mode opératoire de moindre risque : limiter les opérations générant du feu ou des étincelles"],
+                    ["Disposer des moyens d’alerte opérationnels sur l’ensemble du chantier, coordonnées des secours à disposition du chargé de travaux,…"],
+                    ["Spécifier les moyens d’intervention prévus pour le chantier (extincteurs, citernes), en tenant compte de ses spécificités"],
+                    ["Identifier les facteurs aggravants spécifiques à l’ouvrage"]
+                ]],
+                ['Actions préventives supplémentaires', '(Liées aux facteurs aggravants de SUE identifiés)', [
+                    ["» Proximité de tiers"],
+                    ["Etre à l’écoute et sensibiliser les riverains"],
+                    ["» Proximité d’un site industriel classé"],
+                    ["Identifier les sites SEVESO (seuil haut ou bas) ou ICPE à proximité du poste"],
+                    ["» Présence d’une zone environnementale protégée"],
+                    ["Connaître les prescriptions particulières de la zone (fiche INFOTER Lot 3)"],
+                    ["Préparer la coordination des actions avec le gestionnaire de la zone"]
+                ]],
+                ['Actions curatives immédiates', '(Réponse à une SUE)', [
+                    ["Faire appel aux pompiers : leur préciser le département d’intervention et leur communiquer l’adresse précise du lieu de l’incendie, les moyens d’accès et les risques potentiels identifiés (risques électriques, stockage proche de produits dangereux,…)", 'CEX / CDT'],
+                    ["En cas d’incendie éteint, alerter quand même les pompiers", 'CEX'],
+                    ["Se rendre sur le lieu de l’incendie pour assurer la sécurité des personnes et des biens (Cf. CCRT, DOC OP)", 'CEX'],
+                    ["Prévenir l’ingénieur d’astreinte", 'CEX'],
+                    ["Prévenir la permanence de direction", 'IA']
+                ]],
+                ['Actions curatives supplémentaires', '(Liées aux facteurs aggravants de SUE identifiés)', [
+                    ["» Proximité de tiers"],
+                    ["Préciser aux secours la proximité de tiers", 'CEX'],
+                    ["Assurer une communication de proximité auprès des tiers, en relation avec la permanence de direction", 'IA'],
+                    ["Prévenir la mairie de la commune concernée en cas de danger pour la sécurité civile", 'IA'],
+                    ["» Proximité d’un site industriel classé"],
+                    ["Préciser aux secours la proximité de site SEVESO (seuil haut ou bas) ou ICPE", 'CEX'],
+                    ["Prévenir la préfecture et la DREAL / DRIEE si un site SEVESO ou ICPE est menacé", 'IA'],
+                    ["Prévenir la mairie de la commune concernée en cas de danger pour la sécurité civile", 'IA'],
+                    ["» Présence d’une zone environnementale protégée"],
+                    ["Prévenir la DREAL / DRIEE et les gestionnaires de zones", 'IA']
+                ]],
+                ['Actions curatives complémentaires', '(Réponse à une SUE)', [
+                    ["Déclaration de la SUE au rapport journalier d’exploitation (RJE)", 'GdP'],
+                    ["= Actions de communication et de gestion de crise"],
+                    ["Si impact significatif sur l’environnement, émettre un message d’information interne, conformément à la stratégie et aux outils de communication définis dans le dispositif ORTEC", 'IA'],
+                    ["Si nécessaire, mettre en place une cellule de crise conformément au dispositif ORTEC", 'IA'],
+                    ["= Actions postérieures à la SUE"],
+                    ["Mettre en œuvre les dispositions nécessaires à limiter la pollution des sols une fois l’incendie éteint sans perturber les éléments nécessaires à une éventuelle expertise", 'GMR'],
+                    ["Recueillir sur place les informations utiles à l’élaboration du REX et à l’analyse des causes", 'GMR']
+                ]]
+            ]},
+
+            { n: '2', t: 'Incendie dans un poste', s: [
+                ['Actions préventives', '(Préparation à une SUE)', [
+                    ["Etablir la liste, avec les coordonnées mises à jour des personnes à prévenir en cas de SUE : GdP, astreinte du GMR, pompiers, police, mairie de la commune, préfecture et sous-préfecture du département, autres services de l’Etat (DREAL, DDT-M, ARS,…), prestataires agréés (récupération terres souillées, vidange de fosse…),…"],
+                    ["S’assurer de disposer également des informations suivantes :"],
+                    ["- Le plan du poste indiquant les accès et les différentes entrées"],
+                    ["- Le plan à jour des réseaux d’eaux enterrés du poste"],
+                    ["- La vulnérabilité de la ressource en eau vis-à-vis du site (BRGM)"],
+                    ["- Les installations à risque du poste : ICPE, transformateur de puissance sans dispositif de rétention, etc."],
+                    ["- La localisation du stockage des matériels d’intervention pour combattre l’incendie et protéger l’environnement (kit absorbants…)"],
+                    ["- La liste des facteurs aggravants de SUE : le cas échéant, établir et mettre à jour la FLT"],
+                    ["- L’inventaire des produits chimiques utilisés sur le site avec leur fiche de données sécurité (FDS) à jour"],
+                    ["- La liste des collecteurs agréés (produits chimiques, déchets dangereux…)"],
+                    ["= S’il existe des installations d’un client dans le poste RTE :"],
+                    ["Connaître les limites de propriétés"],
+                    ["Disposer des coordonnées d’un interlocuteur chez le client"],
+                    ["S’informer sur les non conformités (NC) réglementaires éventuelles et les facteurs aggravants des installations du client afin d’informer les pompiers (présence de PCB…)"],
+                    ["= Si RTE possède des installations dans un poste client :"],
+                    ["Informer le client des NC réglementaires éventuelles et des facteurs aggravants des installations RTE"],
+                    ["Fournir les coordonnées du GdP"],
+                    ["= Dans la préparation de travail, reprendre l’ensemble des informations décrites ci-dessus et :"],
+                    ["Spécifier le choix du mode opératoire de moindre risque : limiter les opérations générant du feu ou des étincelles"],
+                    ["Disposer des moyens d’alerte opérationnels sur l’ensemble du chantier, à disposition du chargé de travaux"],
+                    ["Spécifier les moyens d’intervention prévus, en tenant compte des spécificités du poste"]
+                ]],
+                ['Actions préventives supplémentaires', '(Liées aux facteurs aggravants de SUE identifiés)', [
+                    ["» Présence de PCB"],
+                    ["Prévoir des dispositifs de protection individuelle contrôlés régulièrement et une information auprès des équipes"],
+                    ["Assurer et vérifier l’étiquetage des appareils contenant des PCB"],
+                    ["Contractualiser des interventions d’urgence avec des entreprises agréées pour la collecte de ces déchets dangereux et vérifier régulièrement les numéros d’appel"],
+                    ["» Fosse non adaptée"],
+                    ["Inspecter périodiquement les fosses et vérifier les dispositifs automatiques de pompage"],
+                    ["Prévoir des absorbants et dispositifs d’occultation des regards (boudins, plaques,…)"],
+                    ["Disposer des coordonnées d’un prestataire externe agréé pour vider la fosse si besoin"],
+                    ["» Proximité de tiers"],
+                    ["Etre à l’écoute et sensibiliser les riverains"],
+                    ["» Proximité d’un site industriel classé"],
+                    ["Identifier les sites SEVESO (seuil haut ou bas) ou ICPE à proximité du poste"],
+                    ["» Présence d’une zone environnementale protégée"],
+                    ["Connaître les prescriptions particulières de la zone (fiche INFOTER Lot 3)"],
+                    ["Préparer la coordination des actions avec le gestionnaire de la zone"],
+                    ["» Présence d’eau"],
+                    ["Avoir à disposition un kit anti-pollution (absorbants, boudins, obturateurs,…)"],
+                    ["» Présence de SF6"],
+                    ["S’approprier les modalités d’intervention décrites dans la note « DOC OP J »"]
+                ]],
+                ['Actions curatives immédiates', '(Réponse à une SUE)', [
+                    ["Assurer la sécurité des personnes et des biens (Cf. CCRT, DOC OP)", 'CEX'],
+                    ["Prévenir l’ingénieur d’astreinte", 'CEX'],
+                    ["Prévenir la permanence de direction", 'IA'],
+                    ["Tenter de maîtriser l’incendie avec les moyens prévus", 'CEX'],
+                    ["Si l’incendie est maîtrisé : informer les pompiers et décider de la surveillance adéquate à mettre en œuvre", 'CEX'],
+                    ["= Si l’incendie n’est pas maîtrisable :"],
+                    ["Faire appel aux pompiers, en leur précisant l’entrée du poste où ils sont attendus si plusieurs entrées", 'CEX'],
+                    ["Communiquer aux pompiers l’adresse précise du lieu de l’incendie, les moyens d’accès et les risques potentiels identifiés (risques électriques, stockage proche de produits dangereux, présence potentielle de produits de décomposition de gaz SF6,…)", 'CEX'],
+                    ["= S’il existe des installations d’un client dans le poste RTE :"],
+                    ["Prévenir le client de la survenue de la SUE", 'CEX'],
+                    ["= Si RTE possède des installations dans un poste client :"],
+                    ["Demander au client d’avertir le Groupement de poste de la survenue d’une SUE", 'CEX'],
+                    ["Faire appel à une entreprise agréée pour le traitement des déchets et la récupération du SF6 et ses produits de décomposition (le cas échéant)", 'CEX']
+                ]],
+                ['Actions curatives supplémentaires', '(Liées aux facteurs aggravants de SUE identifiés)', [
+                    ["» Présence de PCB"],
+                    ["Informer l’inspection des installations classées (DREAL, DRIEE)", 'IA'],
+                    ["Informer les secours du risque PCB (localisation, teneur)", 'CEX'],
+                    ["Utiliser les EPI requis : gants de protection imperméables, protection des yeux, tablier ou combinaison imperméable, masque de protection respiratoire", 'CEX'],
+                    ["Réserver l’accès de la zone affectée au personnel compétent", 'CEX'],
+                    ["Prévenir en urgence un collecteur agréé PCB", 'CEX'],
+                    ["Faire nettoyer les zones polluées et décontaminer ou remplacer le matériel selon les méthodes agréées", 'CEX'],
+                    ["» Fosse non adaptée"],
+                    ["Mettre en place un dispositif adapté pour limiter la propagation de l’incendie (boudins, sacs de sable,…) en coordination avec les secours, en cas d’incendie sur un transformateur de puissance avec un risque de débordement de mélange en flamme", 'CEX'],
+                    ["Faire appel à un prestataire agréé pour procéder à la vidange de la fosse si besoin", 'CEX'],
+                    ["» Proximité de tiers"],
+                    ["Préciser aux secours la proximité de tiers", 'CEX'],
+                    ["Assurer une communication de proximité auprès des tiers, en relation avec la permanence de direction", 'IA'],
+                    ["Prévenir la mairie de la commune concernée en cas de danger pour la sécurité civile", 'IA'],
+                    ["» Proximité d’un site industriel classé"],
+                    ["Préciser aux secours la proximité d’un site SEVESO (seuil haut ou bas) ou ICPE", 'CEX'],
+                    ["Prévenir la préfecture et la DREAL / DRIEE si un site SEVESO ou ICPE est menacé", 'IA'],
+                    ["Prévenir la mairie de la commune concernée en cas de danger pour la sécurité civile", 'IA'],
+                    ["» Présence d’une zone environnementale protégée"],
+                    ["Prévenir la DREAL / DRIEE et les gestionnaires de zones", 'IA'],
+                    ["» Présence d’eau"],
+                    ["Prévenir les pompiers, la police ou la gendarmerie puis la police de l’eau (DDT-M, ARS, OFB…)", 'CEX'],
+                    ["Mettre en place les dispositifs d’obturation des réseaux d’évacuation d’eau en coordination avec les secours, en cas d’incendie sur un transformateur de puissance avec un risque de débordement de mélange en flamme", 'CEX'],
+                    ["Prévenir la mairie de la commune concernée", 'IA'],
+                    ["» Présence de SF6"],
+                    ["Mettre en œuvre les modalités d’intervention décrites dans la note « DOC OP J »", 'CEX']
+                ]],
+                ['Actions curatives complémentaires', '(Réponse à une SUE)', [
+                    ["Déclaration de la SUE au rapport journalier d’exploitation (RJE)", 'GdP'],
+                    ["= Actions de communication et de gestion de crise"],
+                    ["Si impact significatif sur l’environnement, émettre un message d’information interne, conformément à la stratégie et aux outils de communication définis dans le dispositif ORTEC", 'IA'],
+                    ["Si nécessaire, mettre en place une cellule de crise conformément au dispositif ORTEC", 'IA'],
+                    ["= Actions postérieures à la SUE"],
+                    ["Mettre en œuvre les dispositions nécessaires à limiter la pollution de l’environnement une fois l’incendie éteint et conserver les éléments nécessaires à une éventuelle expertise", 'GMR'],
+                    ["Traiter les déchets selon les dispositions locales (organisation GMR) et le guide RTE sur les déchets", 'GMR'],
+                    ["Recueillir sur place les informations utiles à l’élaboration du REX et à l’analyse des causes", 'GMR'],
+                    ["Prévoir, après l’enlèvement des terres souillées, une vérification de la qualité de l’intervention par une analyse des sols et des eaux le cas échéant", 'GMR']
+                ]]
+            ]},
+
+            { n: '3', t: 'Déversement d’huile ou de matières dangereuses au niveau d’ouvrages existants (poste et ligne aérienne)', s: [
+                ['Actions préventives', '(Préparation à une SUE)', [
+                    ["Etablir la liste, avec les coordonnées mises à jour des personnes à prévenir en cas de SUE : GdP, astreinte du GMR, pompiers, police, mairie de la commune, préfecture et sous-préfecture du département, autres services de l’Etat (DREAL, DDT-M, ARS,…), prestataires agréés (récupération terres souillées, vidange de fosse…),…"],
+                    ["S’assurer de disposer également des informations suivantes :"],
+                    ["- Le plan du poste indiquant les accès et les différentes entrées"],
+                    ["- Le plan à jour des réseaux d’eaux enterrés du poste"],
+                    ["- L’état de l’étanchéité des fosses de rétention"],
+                    ["- La vulnérabilité de la ressource en eau vis-à-vis du site (BRGM)"],
+                    ["- Les installations à risque du poste : ICPE, transformateur de puissance sans dispositif de rétention, etc."],
+                    ["- La présence d’habitations à proximité"],
+                    ["- La localisation du stockage des matériels d’intervention (kit absorbants…)"],
+                    ["- La liste des collecteurs agréés (produits chimiques, déchets dangereux…)"],
+                    ["= S’il existe des installations d’un client dans le poste RTE :"],
+                    ["Connaître les limites de propriétés"],
+                    ["Disposer des coordonnées d’un interlocuteur chez le client"],
+                    ["S’informer sur les non conformités (NC) réglementaires éventuelles et les facteurs aggravants des installations du client afin d’informer les pompiers (présence de PCB,…)"],
+                    ["= Si RTE possède des installations dans un poste client :"],
+                    ["Informer le client des NC réglementaires éventuelles et des facteurs aggravants des installations RTE"],
+                    ["Fournir les coordonnées du GdP"],
+                    ["= Dans la préparation de travail, reprendre l’ensemble des informations décrites ci-dessus et :"],
+                    ["Spécifier le choix du mode opératoire de moindre risque : risque d’éventrement de la cuve ou débordement de l’huile, ainsi que risque de perforation d’une bâche en cas de vidange"],
+                    ["Disposer des moyens d’alerte opérationnels sur l’ensemble du chantier, coordonnées des secours à disposition du chargé de travaux,…"],
+                    ["Spécifier les moyens d’intervention prévus, en tenant compte des spécificités du poste"]
+                ]],
+                ['Actions préventives supplémentaires', '(Liées aux facteurs aggravants de SUE identifiés)', [
+                    ["» Présence de PCB"],
+                    ["Prévoir des dispositifs de protection individuelle contrôlés régulièrement et une information auprès des équipes"],
+                    ["Prévoir des dispositifs de rétention"],
+                    ["Assurer et vérifier l’étiquetage des appareils contenant des PCB"],
+                    ["Contractualiser des interventions d’urgence avec des entreprises agréées pour la collecte de ces déchets dangereux et vérifier régulièrement les numéros d’appel"],
+                    ["» Fosse non adaptée"],
+                    ["Inspecter périodiquement les fosses et vérifier les dispositifs automatiques de pompage"],
+                    ["Prévoir des absorbants et dispositifs d’occultation des regards (boudins, plaques,…)"],
+                    ["Disposer des coordonnées d’un prestataire externe agréé pour vider la fosse si besoin"],
+                    ["» Proximité de tiers"],
+                    ["Etre à l’écoute des riverains"],
+                    ["» Présence d’une zone environnementale protégée"],
+                    ["Connaître les prescriptions particulières de la zone (fiche INFOTER Lot 3)"],
+                    ["Préparer la coordination des actions avec le gestionnaire de la zone"],
+                    ["» Présence d’eau"],
+                    ["Avoir à disposition un kit anti-pollution (absorbants, boudins, obturateurs,…)"]
+                ]],
+                ['Actions curatives immédiates', '(Réponse à une SUE)', [
+                    ["Faire un état des lieux de la situation : étanchéité de la fosse, volume d’huile déversée, caractéristiques de l’huile (polluée au PCB ou non) et de l’appareil,…", 'CEX'],
+                    ["Prévenir l’ingénieur d’astreinte", 'CEX'],
+                    ["Prévenir la permanence de direction", 'IA'],
+                    ["Si fuite de transformateur : pomper l’huile dans les fosses de transformateurs et transférer dans des conteneurs adaptés ou faire appel à un prestataire agréé", 'CEX'],
+                    ["Si fuite de matériel HTB : disperser des produits absorbants", 'CEX'],
+                    ["= S’il existe des installations d’un client dans le poste RTE :"],
+                    ["Prévenir le client de la survenue de la SUE", 'CEX'],
+                    ["= Si RTE possède des installations dans un poste client :"],
+                    ["Demander au client d’avertir le GdP de la survenue d’une SUE", 'CEX'],
+                    ["Faire appel à une entreprise agréée pour le traitement des déchets souillés à l’huile", 'CEX']
+                ]],
+                ['Actions curatives supplémentaires', '(Liées aux facteurs aggravants de SUE identifiés)', [
+                    ["» Présence de PCB"],
+                    ["Informer l’inspection des installations classées (DREAL, DRIEE)", 'IA'],
+                    ["Informer les secours du risque PCB (localisation, teneur)", 'CEX'],
+                    ["Utiliser les EPI requis : gants de protection imperméables, protection des yeux, tablier ou combinaison imperméable,…", 'CEX'],
+                    ["Réserver l’accès de la zone affectée au personnel compétent", 'CEX'],
+                    ["Prévenir en urgence un collecteur agréé PCB", 'CEX'],
+                    ["Faire nettoyer les zones polluées et décontaminer ou remplacer le matériel selon les méthodes agréées", 'CEX'],
+                    ["» Fosse non adaptée"],
+                    ["Pour les transformateurs : mettre en place les absorbants et dispositifs d’obturation des regards situés près de l’incident (boudins, plaques,…) en coordination avec les secours", 'CEX'],
+                    ["Pour les transformateurs : faire appel à un prestataire agréé pour procéder à la vidange de la fosse si besoin", 'CEX'],
+                    ["Pour les autres matériels HTB : sans objet"],
+                    ["» Proximité de tiers"],
+                    ["Gérer la communication auprès des tiers, en relation avec la permanence de direction", 'IA'],
+                    ["Prévenir la mairie de la commune concernée en cas de danger pour la sécurité civile", 'IA'],
+                    ["» Présence d’une zone environnementale protégée"],
+                    ["Prévenir la DREAL / DRIEE et les gestionnaires de zones", 'IA'],
+                    ["» Présence d’eau"],
+                    ["Prévenir les pompiers, la police ou la gendarmerie puis la police de l’eau (DDT-M, ARS, OFB,…)", 'IA'],
+                    ["Mettre en place les absorbants et les dispositifs d’obturation pour éviter la pollution des points d’eau en coordination avec les pompiers", 'CEX'],
+                    ["Prévenir la mairie de la commune concernée", 'IA']
+                ]],
+                ['Actions curatives complémentaires', '(Réponse à une SUE)', [
+                    ["Déclaration de la SUE au rapport journalier d’exploitation (RJE)", 'GdP'],
+                    ["= Actions de communication et de gestion de crise"],
+                    ["Si impact significatif sur l’environnement, émettre un message d’information interne, conformément à la stratégie et aux outils de communication définis dans le dispositif ORTEC", 'IA'],
+                    ["Si nécessaire, mettre en place une cellule de crise conformément au dispositif ORTEC", 'IA'],
+                    ["= Actions postérieures à la SUE"],
+                    ["Mettre en œuvre les dispositions nécessaires à limiter la pollution de l’environnement et conserver les éléments nécessaires à une éventuelle expertise", 'GMR'],
+                    ["Traiter les déchets selon les dispositions locales (organisation GMR) et le guide RTE sur les déchets", 'GMR'],
+                    ["Recueillir sur place les informations utiles à l’élaboration du REX et à l’analyse des causes", 'GMR'],
+                    ["Prévoir, après l’enlèvement des terres souillées, une vérification de la qualité de l’intervention par une analyse des sols et des eaux le cas échéant", 'GMR']
+                ]]
+            ]},
+
+            { n: '4', t: 'Fuite d’huile d’une liaison souterraine', s: [
+                ['Actions préventives', '(Préparation à une SUE)', [
+                    ["Etablir la liste, avec les coordonnées mises à jour des personnes à prévenir en cas de SUE : GdP, astreinte du GMR, pompiers, police, mairie de la commune, préfecture et sous-préfecture du département, autres services de l’Etat (DREAL, DDT-M, ARS,…), prestataires agréés (récupération terres souillées),…"],
+                    ["S’assurer de disposer des informations suivantes :"],
+                    ["- Le plan des postes ou pylônes d’extrémité (repérer les accès et les différentes entrées)"],
+                    ["- Le plan à jour des réseaux d’eaux enterrés des postes encadrants"],
+                    ["- La vulnérabilité de la ressource en eau vis-à-vis de l’ouvrage et des postes encadrants (BRGM)"],
+                    ["- Les limites de propriétés si poste mixte"],
+                    ["- La présence d’habitations à proximité"],
+                    ["- Les lieux de stockage des matériels d’intervention (kit absorbants…)"],
+                    ["S’assurer de disposer des informations suivantes pour la liaison souterraine : localisation sur plan des chambres de jonction, des soupapes de surpression, des vannes d’arrêt,…"],
+                    ["Mettre en place les équipements empêchant le stationnement sur les accès aux chambres de jonction, en partenariat avec la DREAL et les services municipaux"],
+                    ["Préparer la coordination des actions avec les pompiers"],
+                    ["Classer les DT / DICT pour la liaison souterraine concernée"],
+                    ["= Dans la préparation de travail, reprendre l’ensemble des informations décrites ci-dessus et :"],
+                    ["Spécifier le choix du mode opératoire de moindre risque : risque d’éventrement de la liaison souterraine"],
+                    ["Disposer des moyens d’alerte opérationnels sur l’ensemble du chantier, coordonnées des secours à disposition du chargé de travaux,…"],
+                    ["Disposer de la fiche de données sécurité (FDS) de l’huile contenue dans le câble"],
+                    ["Spécifier les moyens d’intervention prévus pour le chantier et tenant compte de ses spécificités"]
+                ]],
+                ['Actions préventives supplémentaires', '(Liées aux facteurs aggravants identifiés)', [
+                    ["» Proximité de tiers"],
+                    ["Etre à l’écoute des propriétaires et des riverains"],
+                    ["» Proximité d’un site industriel classé"],
+                    ["Identifier les sites SEVESO (seuil haut ou bas) ou ICPE à proximité"],
+                    ["» Présence d’une zone environnementale protégée"],
+                    ["Connaître les prescriptions particulières de la zone environnementale protégée (fiche INFOTER Lot 3)"],
+                    ["Préparer la coordination des actions avec le gestionnaire de la zone"],
+                    ["Récupérer les coordonnées de la DREAL"],
+                    ["» Présence d’eau"],
+                    ["Récupérer les coordonnées de la police de l’eau (DDT, DDT-M, ARS, OFB,…)"],
+                    ["Récupérer les coordonnées des Voies Navigables de France (VNF)"]
+                ]],
+                ['Actions curatives immédiates', '(Réponse à une SUE)', [
+                    ["Prévenir l’ingénieur d’astreinte (IA)", 'CEX'],
+                    ["Prévenir la permanence de direction", 'IA'],
+                    ["Pour une liaison souterraine à huile fluide : se référer au Recueil de maintenance conditionnelle FU-1", 'GdP'],
+                    ["Pour une liaison souterraine oléostatique : se référer au Recueil de maintenance conditionnelle FU-2 à 5", 'GdP'],
+                    ["Contacter une entreprise de pompage et/ou de dépollution des sols pour le nettoyage ou la récupération des terres", 'GMR'],
+                    ["Séparer les terres saines des terres polluées", 'GMR'],
+                    ["Réaliser une analyse locale en fonction des enjeux de la zone", 'GMR + appui MMRP']
+                ]],
+                ['Actions curatives supplémentaires', '(Liées aux facteurs aggravants de SUE identifiés)', [
+                    ["» Proximité de tiers"],
+                    ["Préciser aux secours la proximité de tiers", 'CEX'],
+                    ["Gérer la communication auprès des tiers, en relation avec la permanence de direction", 'IA'],
+                    ["Prévenir la mairie de la commune concernée en cas de danger pour la sécurité civile", 'IA'],
+                    ["» Proximité d’un site industriel classé"],
+                    ["Préciser aux secours la proximité d’un site SEVESO (seuil haut ou bas) ou ICPE", 'CEX'],
+                    ["Prévenir la mairie de la commune concernée en cas de danger pour la sécurité civile", 'IA'],
+                    ["» Présence d’une zone environnementale protégée"],
+                    ["Prévenir la DREAL / DRIEE et les instances compétentes", 'IA'],
+                    ["Prévenir la mairie de la commune concernée en cas de danger", 'IA'],
+                    ["» Présence d’eau"],
+                    ["Prévenir les services de l’Etat compétents : DREAL, DDT(M),…", 'IA'],
+                    ["Prévenir les Voies Navigables de France (VNF) pour les grands cours d’eau", 'IA']
+                ]],
+                ['Actions curatives complémentaires', '(Réponse à une SUE)', [
+                    ["Déclaration de la SUE au rapport journalier d’exploitation (RJE)", 'GdP'],
+                    ["= Actions de communication et de gestion de crise"],
+                    ["Si impact significatif sur l’environnement, émettre un message d’information interne, conformément à la stratégie et aux outils de communication définis dans le dispositif ORTEC", 'IA'],
+                    ["Si nécessaire, mettre en place une cellule de crise conformément au dispositif ORTEC", 'IA'],
+                    ["= Actions postérieures à la SUE"],
+                    ["Recueillir sur place les informations utiles à l’élaboration du REX et à l’analyse des causes", 'GMR'],
+                    ["Prévoir, après l’enlèvement des terres souillées, une vérification de la qualité de l’intervention par une analyse des sols et des eaux le cas échéant", 'GMR']
+                ]]
+            ]},
+
+            { n: '5', t: 'Incendie, déversement d’huile ou de matières dangereuses lors du transport ou lors d’un chantier de construction d’ouvrage neuf', s: [
+                ['Actions préventives', '(Préparation à une SUE)', [
+                    ["Intégrer dans le contrat (CCTG ou CCTP) la liste des coordonnées des interlocuteurs RTE (Groupement de poste, astreinte du GMR,…) à prévenir en cas de SUE et les facteurs aggravants si connus", 'RTE — Resp. de projet'],
+                    ["Etablir la liste, avec les coordonnées mises à jour, des personnes à prévenir en cas de SUE : interlocuteurs RTE, pompiers, police, mairie de la commune, préfecture du département, autres services de l’Etat (DREAL, ARS,…), prestataires agréés (récupération terres souillées,…),…", 'T / P'],
+                    ["Avoir à disposition des moyens de communication opérationnels (téléphone portable)", 'T / P'],
+                    ["= Dans la préparation de travail, reprendre les informations décrites ci-dessus et, pour le transport :"],
+                    ["Le matériel de signalisation adéquat à disposition dans les véhicules", 'T / P'],
+                    ["La vérification de l’itinéraire à emprunter et les éventuels gabarits routiers à respecter lors de transport de matériel de hauteur conséquente", 'T / P'],
+                    ["La vérification du bon état des contenants avant transport (étanchéité,…)", 'T / P'],
+                    ["La compatibilité des produits transportés (voir consignes affichées sur le lieu de stockage et FDS)", 'T / P'],
+                    ["Les moyens de transport adéquats avec moyens d’arrimage efficaces — SF6 : arrimage des bouteilles et transport dans un véhicule ventilé ; marchandises inflammables et bombes aérosols : transport dans un véhicule ventilé", 'T / P'],
+                    ["Les moyens de rétention mobiles et d’absorption des produits à disposition dans les véhicules — hydrocarbures : transport dans des bacs de rétention étanches", 'T / P'],
+                    ["En cas de transport de matières dangereuses (arrêté TMD), travailler avec des entreprises agréées et vérifier la validité de leurs agréments", 'T / P'],
+                    ["= Pour un chantier de construction d’un ouvrage neuf :"],
+                    ["Dans le Plan Assurance Qualité Environnement (PAQE), indiquer les modalités de gestion de SUE (moyens de prévention, de maîtrise et d’intervention, etc.)", 'T / P'],
+                    ["Vérifier dans le cadre d’une sous-traitance par l’attributaire, que les exigences environnementales (Cf. CCTG, CCTP ou autres) posées par RTE, les facteurs aggravants liés à la prestation ainsi que les interlocuteurs à prévenir en cas de SUE, ont été intégrés au contrat de sous-traitance", 'T / P'],
+                    ["= T = le transporteur (RTE ou entreprise externe) ; P = le prestataire."]
+                ]],
+                ['Actions préventives supplémentaires', '(Liées aux facteurs aggravants de SUE identifiés)', [
+                    ["Réaliser l’évaluation des risques pour identifier d’éventuelles autres SUE pouvant survenir lors de la prestation et indiquer les moyens de maîtrise retenus", 'T / P'],
+                    ["» Présence de PCB"],
+                    ["Prévoir des dispositifs de rétention", 'T / P'],
+                    ["Respecter la réglementation en vigueur (plan de prévention, agréments, habilitations et autorisation d’exécution,…)", 'T / P'],
+                    ["Traiter les équipements concernés conformément aux filières choisies par RTE (marchés cadre nationaux en vigueur)", 'T / P']
+                ]],
+                ['Actions curatives immédiates', '(Réponse à une SUE)', [
+                    ["Assurer la sécurité des personnes et des biens", 'T / P'],
+                    ["Mettre en œuvre les moyens de maîtrise prévus pour traiter l’évènement", 'T / P'],
+                    ["Informer dans les plus brefs délais le chargé d’exploitation et le manager de projet de la survenue d’une SUE n° 5 et des mesures prises pour la circonscrire et y remédier", 'T / P'],
+                    ["Informer les pompiers ou la gendarmerie en communiquant l’adresse précise du lieu de l’incident et en précisant les risques identifiés", 'T / P'],
+                    ["Prévenir l’ingénieur d’astreinte", 'RTE — CEX'],
+                    ["Prévenir la permanence de direction", 'RTE — IA'],
+                    ["= La communication vis-à-vis des autorités et des tiers, à l’exception des services d’urgence (pompiers, SAMU…), relève de la responsabilité de RTE."]
+                ]],
+                ['Actions curatives supplémentaires', '(Liées aux facteurs aggravants de SUE identifiés)', [
+                    ["» Présence de PCB"],
+                    ["Informer les secours du risque PCB (localisation, teneur)", 'T / P'],
+                    ["Prévenir en urgence les collecteurs agréés", 'T / P'],
+                    ["» Proximité de tiers"],
+                    ["Gérer la communication auprès des tiers, en relation avec la permanence de direction", 'RTE — Resp. de projet'],
+                    ["Prévenir la mairie de la commune concernée en cas de danger pour la sécurité civile", 'RTE — Resp. de projet'],
+                    ["Evacuer les personnes à proximité", 'RTE — Resp. de projet'],
+                    ["» Zone environnementale protégée"],
+                    ["Prévenir la DREAL / DRIEE et les instances compétentes", 'RTE — Resp. de projet'],
+                    ["» Présence d’eau"],
+                    ["Mettre en place les absorbants et dispositifs pour éviter la pollution des points d’eau", 'T / P'],
+                    ["Prévenir la mairie de la commune concernée en cas de danger", 'RTE — Resp. de projet'],
+                    ["Prévenir les pompiers, la police ou la gendarmerie puis la police de l’eau (DDT-M, ARS, DREAL,…)", 'RTE — Resp. de projet']
+                ]],
+                ['Actions curatives complémentaires', '(Réponse à une SUE)', [
+                    ["Déclaration de la SUE au rapport journalier d’exploitation (RJE)", 'RTE — Groupement'],
+                    ["= Actions de communication et de gestion de crise"],
+                    ["Si impact significatif sur l’environnement, émettre un message d’information interne, conformément à la stratégie et aux outils de communication définis dans le dispositif ORTEC", 'RTE — IA'],
+                    ["Si nécessaire, mettre en place une cellule de crise conformément au dispositif ORTEC", 'RTE — IA'],
+                    ["= Actions postérieures à la SUE"],
+                    ["Mettre en œuvre les dispositions nécessaires à limiter la pollution et conserver les éléments nécessaires à une éventuelle expertise", 'T / P'],
+                    ["Recueillir sur place les informations utiles à l’élaboration du REX et à l’analyse des causes", 'T / P'],
+                    ["Rédiger un rapport, le plus complet possible, de l’évènement", 'T / P']
+                ]]
+            ]},
+
+            { n: '5 Offshore', off: true, t: 'Incendie, déversement d’huile ou de matières dangereuses lors du transport ou lors d’un chantier de construction d’ouvrage neuf — Offshore', s: [
+                ['Actions préventives', '(Préparation à une SUE)', [
+                    ["S’assurer de la prise en compte des exigences prévues par le code de l’environnement français (arrêtés de prescription…)", 'Prestataire / Armateur / Capitaine'],
+                    ["Identifier et s’assurer de la prise en compte des exigences environnementales prévues par la réglementation maritime (conventions SOLAS, MARPOL…) et les spécifications environnementales issues du pavillon auquel le bateau est rattaché", 'Prestataire'],
+                    ["Suivre les prescriptions définies au contrat visant à prévenir l’occurrence d’une SUE (inspection du bateau par un MWS, audit régulier selon le référentiel de l’IMCA…)", 'Prestataire'],
+                    ["S’assurer de la mise à disposition du matériel d’intervention suffisant en cas d’épandage accidentel en tenant compte des quantités embarquées (kit SOPEP, dispersant,…)", 'Prestataire'],
+                    ["Vérifier l’état des contenants avant transport (état externe), la compatibilité des produits transportés (voir consignes de sécurité et FDS), les moyens de transport adéquats avec moyens d’arrimage efficaces, les bacs de rétention mobiles et d’absorption des produits à disposition", 'Prestataire'],
+                    ["Avoir à disposition des moyens de communication opérationnels (radios, téléphone satellite, téléphone portable,…)", 'Prestataire'],
+                    ["S’assurer du bon fonctionnement du séparateur d’hydrocarbures du bateau s’il existe et de tout autre dispositif permettant le relargage en mer de liquide ou de solide selon les seuils en vigueur", 'Armateur / Capitaine'],
+                    ["Réaliser les exercices de simulation d’urgence d’évènements accidentels selon les fréquences définies par la réglementation maritime", 'Armateur / Capitaine'],
+                    ["Etablir la liste, avec les coordonnées mises à jour (téléphone et adresse e-mail), des personnes à prévenir en cas de SUE avec notamment :", 'Prestataire'],
+                    ["- Le personnel d’encadrement à bord du bateau"],
+                    ["- Le DPA (Designated Person Ashore)"],
+                    ["- Le responsable de projet côté prestataire"],
+                    ["- Le responsable HSE du projet côté prestataire"],
+                    ["- Le représentant RTE du projet (à terre et/ou en mer)"],
+                    ["- Les instances externes : DDT-M, préfecture maritime, DREAL, OFB, ARS,…"],
+                    ["- Le producteur pour les travaux de raccordement de champs d’éoliennes"],
+                    ["- Les exploitants pouvant être impactés par la survenance de la SUE"],
+                    ["Vérifier dans le cadre d’une sous-traitance par le prestataire, que les exigences environnementales (Cf. CCTG, CCTP ou autres) posées par RTE, les facteurs aggravants liés à la prestation ainsi que les interlocuteurs à prévenir en cas de SUE, ont été intégrés au contrat de sous-traitance", 'Prestataire']
+                ]],
+                ['Actions préventives supplémentaires', '(Liées aux facteurs aggravants de SUE identifiés)', [
+                    ["Transmettre à RTE le plan d’urgence prévu au contrat qui décrit les mesures préventives à mettre en œuvre pour éviter toute pollution marine", 'Prestataire'],
+                    ["Réaliser l’évaluation des risques pour identifier d’éventuelles autres SUE pouvant survenir lors de la prestation et indiquer les moyens de maîtrise", 'Prestataire']
+                ]],
+                ['Actions curatives immédiates', '(Réponse à une SUE)', [
+                    ["Assurer la sécurité des personnes et des biens", 'Capitaine'],
+                    ["Mettre en œuvre les moyens de maîtrise prévus pour traiter l’évènement", 'Prestataire / Armateur'],
+                    ["Informer dans les plus brefs délais, à l’oral et par écrit, le représentant RTE du projet de la survenue d’une SUE n° 5 et des mesures immédiates prises pour la circonscrire et y remédier", 'Prestataire'],
+                    ["= En cas d’escalade de l’évènement, dès lors que les moyens à bord ne permettent plus de contrôler l’évènement et d’assurer la sécurité des biens, des personnes ou de l’environnement :"],
+                    ["Solliciter le CROSS (Centre régional opérationnel de surveillance et sauvetage)", 'Capitaine'],
+                    ["Informer le partenaire (par exemple le producteur pour les projets de raccordements) des potentiels impacts et des synergies de réactions possibles", 'RTE — Resp. de projet']
+                ]],
+                ['Actions curatives supplémentaires', '(Liées aux facteurs aggravants de SUE identifiés)', [
+                    ["= Dans tous les cas suivants, prévenir les services de l’Etat compétents : préfecture maritime, DREAL, DRIEE, direction départementale des territoires et de la mer, OFB,…"],
+                    ["» Proximité de tiers (pêcheurs, plaisanciers, etc.)"],
+                    ["Gérer la communication auprès des parties prenantes (notamment auprès des autorités portuaires locales, capitaineries, comité des pêches) en relation avec la permanence de direction", 'RTE — Resp. de projet'],
+                    ["» Zone environnementale protégée"],
+                    ["Informer le gestionnaire de la zone environnementale protégée", 'RTE — Resp. de projet'],
+                    ["» Proximité d’un ouvrage en exploitation"],
+                    ["Prévenir l’exploitant potentiellement impacté (exploitation de granulats marins, centrale nucléaire, gazoduc, port,…)", 'RTE — Resp. de projet']
+                ]],
+                ['Actions curatives complémentaires', '(Réponse à une SUE)', [
+                    ["Déclaration de la SUE au rapport journalier d’exploitation (RJE)", 'RTE — Groupement'],
+                    ["= Actions de communication et de gestion de crise"],
+                    ["Si impact significatif sur l’environnement, émettre un message d’information interne, conformément à la stratégie et aux outils de communication définis dans le dispositif ORTEC", 'RTE — Permanence de direction'],
+                    ["Si nécessaire, mettre en place une cellule de crise conformément au dispositif ORTEC", 'RTE — Permanence de direction'],
+                    ["= Actions postérieures à la SUE"],
+                    ["Conserver les éléments nécessaires (documentation, équipements…) à une éventuelle expertise", 'Prestataire'],
+                    ["Rédiger un rapport, le plus complet possible, de l’évènement", 'Prestataire'],
+                    ["Transmettre toutes les informations utiles à l’élaboration du retour d’expérience et à l’analyse des causes sur demande de RTE", 'Prestataire']
+                ]]
+            ]},
+
+            { n: '6', off: true, t: 'Incendie, déversement d’hydrocarbures ou d’autres matières dangereuses lié aux activités « offshore »', s: [
+                ['Actions préventives', '(Préparation à une SUE)', [
+                    ["S’assurer de la prise en compte des exigences prévues par le code de l’environnement français (arrêtés de prescription…)"],
+                    ["Identifier et s’assurer de la prise en compte des exigences environnementales prévues par la réglementation maritime (conventions SOLAS, MARPOL…) et les spécifications environnementales issues du pavillon auquel le bateau est rattaché"],
+                    ["Suivre les prescriptions définies au contrat visant à prévenir l’occurrence d’une SUE (inspection du bateau par un MWS, audit régulier selon le référentiel de l’IMCA…)"],
+                    ["S’assurer de la mise à disposition du matériel d’intervention suffisant en cas d’épandage accidentel en tenant compte des quantités embarquées (kit SOPEP, dispersant,…)"],
+                    ["Vérifier l’état des contenants avant transport (état externe), la compatibilité des produits transportés (voir consignes de sécurité et FDS), les moyens de transport adéquats avec moyens d’arrimage efficaces, les bacs de rétention mobiles et d’absorption des produits à disposition"],
+                    ["Avoir à disposition des moyens de communication opérationnels (radios, téléphone satellite, téléphone portable,…)"],
+                    ["S’assurer du bon fonctionnement du séparateur d’hydrocarbures du bateau s’il existe et de tout autre dispositif permettant le relargage en mer de liquide ou de solide selon les seuils en vigueur"],
+                    ["Réaliser les exercices de simulation d’urgence d’évènements accidentels selon les fréquences définies par la réglementation maritime"],
+                    ["Etablir la liste, avec les coordonnées mises à jour (téléphone et adresse e-mail), des personnes à prévenir en cas de SUE avec notamment :"],
+                    ["- Le personnel d’encadrement à bord du bateau"],
+                    ["- Le DPA (Designated Person Ashore)"],
+                    ["- Le responsable de projet côté prestataire"],
+                    ["- Le responsable HSE du projet côté prestataire"],
+                    ["- Le représentant RTE du projet (à terre et/ou en mer)"],
+                    ["- Les instances externes : DDT-M, préfecture maritime, DREAL, OFB, ARS,…"],
+                    ["- Le producteur pour les travaux de raccordement de champs d’éoliennes"],
+                    ["- Les exploitants pouvant être impactés par la survenance de la SUE"],
+                    ["Vérifier dans le cadre d’une sous-traitance par un attributaire, que les exigences environnementales (Cf. CCTG, CCTP ou autres) posées par RTE, les facteurs aggravants liés à la prestation ainsi que les interlocuteurs à prévenir en cas de SUE, ont été intégrés au contrat de sous-traitance"]
+                ]],
+                ['Actions préventives supplémentaires', '(Liées aux facteurs aggravants de SUE identifiés)', [
+                    ["Transmettre à RTE le plan d’urgence prévu au contrat qui décrit les mesures préventives à mettre en œuvre pour éviter toute pollution marine"],
+                    ["Réaliser l’évaluation des risques pour identifier d’éventuelles autres SUE pouvant survenir lors de la prestation et indiquer les moyens de maîtrise"]
+                ]],
+                ['Actions curatives immédiates', '(Réponse à une SUE)', [
+                    ["Mettre en œuvre les moyens de maîtrise prévus pour traiter l’évènement", 'Prestataire / RTE'],
+                    ["Prévenir l’ingénieur d’astreinte", 'CEX'],
+                    ["Prévenir la permanence de direction", 'IA'],
+                    ["Faire appel à une entreprise agréée pour le traitement des déchets souillés", 'Prestataire / RTE'],
+                    ["= En cas d’escalade de l’évènement, dès lors que les moyens à bord ne permettent plus de contrôler l’évènement et d’assurer la sécurité des biens, des personnes ou de l’environnement :"],
+                    ["Solliciter le CROSS (Centre régional opérationnel de surveillance et sauvetage)", 'Capitaine'],
+                    ["Informer le partenaire (par exemple le producteur pour les projets de raccordements) des potentiels impacts et des synergies de réactions possibles", 'Capitaine']
+                ]],
+                ['Actions curatives supplémentaires', '(Liées aux facteurs aggravants de SUE identifiés)', [
+                    ["= Dans tous les cas suivants, prévenir les services de l’Etat compétents : préfecture maritime, DREAL, DRIEE, direction départementale des territoires et de la mer, OFB, ARS,…"],
+                    ["» Proximité de tiers (pêcheurs, plaisanciers, etc.)"],
+                    ["Gérer la communication auprès des parties prenantes (notamment auprès des autorités portuaires locales, capitaineries, comité des pêches) en relation avec la permanence de direction", 'Permanence de direction'],
+                    ["» Zone environnementale protégée"],
+                    ["Informer le gestionnaire de la zone environnementale protégée", 'Permanence de direction'],
+                    ["» Proximité d’un ouvrage en exploitation"],
+                    ["Prévenir l’exploitant potentiellement impacté (exploitation de granulats marins, centrale nucléaire, gazoduc,…)", 'Permanence de direction']
+                ]],
+                ['Actions curatives complémentaires', '(Réponse à une SUE)', [
+                    ["Déclaration de la SUE au rapport journalier d’exploitation (RJE)", 'GdP'],
+                    ["= Actions de communication et de gestion de crise"],
+                    ["Si impact significatif sur l’environnement, émettre un message d’information interne, conformément à la stratégie et aux outils de communication définis dans le dispositif ORTEC", 'Permanence de direction'],
+                    ["Si nécessaire, mettre en place une cellule de crise conformément au dispositif ORTEC", 'Permanence de direction'],
+                    ["= Actions postérieures à la SUE"],
+                    ["Mettre en œuvre les dispositions nécessaires à limiter la pollution de l’environnement et conserver les éléments nécessaires à une éventuelle expertise", 'GMR'],
+                    ["Traiter les déchets selon les dispositions locales (organisation GMR) et le guide RTE sur les déchets", 'GMR'],
+                    ["Recueillir sur place les informations utiles à l’élaboration du REX et à l’analyse des causes", 'GMR'],
+                    ["Prévoir, après l’enlèvement des terres souillées à l’atterrage, une vérification de la qualité de l’intervention par une analyse des sols et des eaux le cas échéant", 'GMR']
+                ]]
+            ]},
+
+            { n: '7', off: true, t: 'Emanation de légionnelles des tours aéro-réfrigérantes', s: [
+                ['Accès en terrasse', 'Dépassement du seuil légionella', [
+                    ["= Port obligatoire d’un masque de protection des voies respiratoires contre le risque de légionellose :"],
+                    ["- FFP3SL (usage unique) pour les interventions d’une durée de 5 à 10 minutes"],
+                    ["- P3SL pour les interventions d’une durée supérieure à 10 minutes"]
+                ]],
+                ['Concentration légionella supérieure ou égale à 10⁵ UFC/l', 'Conduite à tenir', [
+                    ["Arrêt immédiat de la tour"],
+                    ["Interdire l’accès en terrasse à toute personne étrangère à l’exploitation"],
+                    ["Informer la DIL, qui informe la permanence de direction, la médecine du travail et le chef d’établissement"],
+                    ["Informer la préfecture — inspection des installations classées (modèle de courrier en fin de fiche)"],
+                    ["Réviser l’analyse méthodique des risques", 'Exploitant']
+                ]],
+                ['Concentration légionella entre 10³ et 10⁵ UFC/l ou flore interférente', 'Conduite à tenir', [
+                    ["Arrêt immédiat de la tour"],
+                    ["Interdire l’accès en terrasse à toute personne étrangère à l’exploitation"],
+                    ["Prévenir la DIL et le chef d’établissement"],
+                    ["En cas de 3 dépassements successifs : réviser l’analyse méthodique des risques", 'Exploitant']
+                ]],
+                ['Découverte d’un cas de légionellose aux environs', '', [
+                    ["La DIL demande au laboratoire d’expédier les résultats d’analyse du prélèvement au Centre national de référence des légionelles — Institut de microbiologie, Centre de biologie Est, 59 boulevard Pinel, 69677 BRON Cedex"],
+                    ["La DIL vérifie que le prestataire a enregistré dans le carnet de suivi : incident, actions correctives planifiées, méthodologie d’analyse incident, rapport global d’incident, actualisation de l’analyse de risques"]
+                ]],
+                ['Fiche réflexe', 'Procédure en cas de contamination légionelle supérieure à 100 000 UFC/l', [
+                    ["= 1) Dès réception des résultats, interdire tous les accès en terrasse."],
+                    ["= 2) Mise à l’arrêt immédiat de l’aéroréfrigérant (tour)."],
+                    ["= 3) Port des EPI obligatoire (masque FFP3SL, gants pour produit corrosif, écran facial)."],
+                    ["= 4) Identification de la tour à désinfecter."],
+                    ["= 5) Consignation par ouverture du sectionneur (élec.) de la tour."],
+                    ["= 6) Consignation de l’appoint eau de ville (fermeture vanne manuelle)."],
+                    ["= 7) Consignation de la déconcentration (fermeture vanne manuelle)."],
+                    ["= 8) Désinfection de l’eau du bassin avant la mise à l’égout (produit, quantité à préciser)."],
+                    ["= 9) Vidange à l’égout de l’aéroréfrigérant concerné."],
+                    ["= 10) Evacuation des lieux pendant la vidange."],
+                    ["= 11) Après vidange complète, ouverture de l’aéroréfrigérant, rinçage, passage des parties accessibles au jet d’eau et/ou brossage (bassin, packing inférieur et supérieur, pare-gouttelettes)."],
+                    ["= 12) Récupération des boues et rejet à la déchèterie (DND) après désinfection de celle-ci (pastille de chlore dans le sac poubelle)."],
+                    ["= 13) Communication des résultats, dans les plus brefs délais, à l’inspection des installations classées."],
+                    ["= 14) Fermeture de la vanne de vidange."],
+                    ["= 15) Remise en eau et adjonction du produit de décontamination (produit, quantité à préciser)."],
+                    ["= 16) Mise en fonctionnement de l’aéroréfrigérant pendant 3 heures."],
+                    ["= 17) Pas nécessaire de vidanger l’aéroréfrigérant après traitement."],
+                    ["= 18) Remise en position normale des vannes (ouverture de la déconcentration)."],
+                    ["= 19) Vérification de l’autorisation de l’inspection des installations classées de remise en service."],
+                    ["= 20) Information de la DIL du déclenchement d’analyse par le laboratoire."],
+                    ["= 21) Analyses 48 heures après nettoyage et tous les 15 jours pendant 3 mois. Si résultat conforme : nouvelle analyse tous les 15 jours pendant 3 mois. Si résultat en dépassement supérieur à 10 000 UFC/l : arrêt de l’installation et renouvellement de l’ensemble des actions."],
+                    ["= 22) Si résultat conforme : prévenir la DIL du retour à la normale."],
+                    ["= 23) Enregistrement de l’évènement sur le carnet de suivi de l’installation. Révision de l’analyse méthodique des risques (AMR) et mise en place des actions correctives."],
+                    ["= 24) Dès réception des résultats, transmission d’un rapport global sur l’incident à l’inspection des installations classées. L’analyse des risques est jointe au rapport d’incident. Le rapport précise l’ensemble des mesures de vidange, nettoyage et désinfection mises en œuvre, ainsi que les actions correctives définies et leur calendrier de mise en œuvre."]
+                ]],
+                ['Fiche réflexe', 'Procédure en cas de contamination légionelles entre 1 000 et 100 000 UFC/l ou flore interférente', [
+                    ["= 1) Dès réception des résultats, interdire tous les accès en terrasse."],
+                    ["= 2) Mise à l’arrêt de l’aéroréfrigérant."],
+                    ["= 3) Port des EPI obligatoire (masque FFP3SL, gants pour produit corrosif, écran facial)."],
+                    ["= 4) Identification de la tour à désinfecter."],
+                    ["= 5) Consignation par ouverture du sectionneur (élec.)."],
+                    ["= 6) Consignation appoint eau de ville (fermeture vanne manuelle)."],
+                    ["= 7) Consignation de la déconcentration (fermeture vanne manuelle)."],
+                    ["= 8) Désinfection de l’eau du bassin avant la mise à l’égout (produit, quantité à préciser)."],
+                    ["= 9) Vidange à l’égout de l’aéroréfrigérant (tour) concerné."],
+                    ["= 10) Evacuation des lieux pendant la vidange."],
+                    ["= 11) Après vidange complète, ouverture de l’aéroréfrigérant, rinçage, passage des parties accessibles au jet d’eau et/ou brossage (bassin, packing inférieur et supérieur, pare-gouttelettes). Récupération des boues et rejet à la déchèterie (DND) après désinfection de celle-ci (pastille de chlore dans le sac poubelle)."],
+                    ["= 12) Fermeture de la vanne de vidange."],
+                    ["= 13) Remise en eau et adjonction du produit de décontamination (produit, quantité à préciser)."],
+                    ["= 14) Remise en fonctionnement de l’aéroréfrigérant pendant 3 heures."],
+                    ["= 15) Pas nécessaire de vidanger l’aéroréfrigérant après traitement."],
+                    ["= 16) Remise en position normale des vannes (ouverture de la déconcentration)."],
+                    ["= 17) Analyse 15 jours après remise en service."],
+                    ["= 18) Renouvellement de la procédure tant que les résultats sont supérieurs à 1 000 UFC/l."],
+                    ["= 19) Si résultat conforme : prévenir la DIL du retour à la normale."],
+                    ["= 20) Enregistrement de l’évènement sur le carnet de suivi de l’installation."],
+                    ["= 21) En cas de 3 dépassements successifs : révision de l’analyse méthodique des risques (AMR) et mise en place des actions correctives."]
+                ]],
+                ['Vérifications périodiques', '', [
+                    ["Mensuellement, lors de la réception des analyses, vérifier le respect des paramètres concernant la qualité de l’eau (résultats d’analyses du laboratoire et carnet de suivi)"],
+                    ["Si écart : l’identifier dans le carnet de suivi et mettre en place des actions correctives en accord avec le traiteur d’eau"],
+                    ["Pour toute intervention sur les tours : vérification des dispositifs de traitement d’eau (antitartre, anticorrosion, biocides et déconcentration)"]
+                ]],
+                ['Annexe', 'Information de la préfecture — inspection des installations classées', [
+                    ["= Objet : tour aéroréfrigérante — dépassement du seuil de 100 000 UFC/l. Urgent et important."],
+                    ["= Lors de la dernière analyse de l’eau de la tour aéroréfrigérante de notre installation à l’adresse indiquée ci-après, les résultats montrent une concentration de légionella supérieure à 100 000 unités formant colonies par litre d’eau."],
+                    ["Coordonnées de l’installation (adresse, immeuble,…)"],
+                    ["Date du prélèvement"],
+                    ["Concentration en légionelles mesurée"],
+                    ["Actions correctives prévues et échéances de réalisation"],
+                    ["= Nous ne manquerons pas de vous tenir informés dès le rétablissement d’une situation normale et de vous joindre un rapport global sur cet incident, incluant l’actualisation de l’analyse méthodique des risques, l’ensemble des mesures de vidange, nettoyage et désinfection mises en œuvre, et les actions correctives mises en œuvre avec leur calendrier."]
+                ]]
+            ]}
+        ];
+
+        // Les sigles qui reviennent dans les fiches.
+        const SUE_SIGLES = [
+            ['SUE', 'Situation d’urgence environnementale'], ['GdP', 'Groupement de postes'],
+            ['GMR', 'Groupe maintenance réseau'], ['CEX', 'Chargé d’exploitation'],
+            ['CDT', 'Chargé de travaux'], ['IA', 'Ingénieur d’astreinte'],
+            ['DREAL', 'Direction régionale de l’environnement, de l’aménagement et du logement'],
+            ['DRIEE', 'Direction régionale et interdépartementale de l’environnement et de l’énergie'],
+            ['DDT-M', 'Direction départementale des territoires et de la mer'],
+            ['ARS', 'Agence régionale de santé'], ['OFB', 'Office français de la biodiversité'],
+            ['ICPE', 'Installation classée pour la protection de l’environnement'],
+            ['BRGM', 'Bureau de recherches géologiques et minières'],
+            ['FLT', 'Fiche locale de traitement'], ['FDS', 'Fiche de données sécurité'],
+            ['PCB', 'Polychlorobiphényle'], ['EPI', 'Équipement de protection individuel'],
+            ['RJE', 'Rapport journalier d’exploitation'], ['REX', 'Retour d’expérience'],
+            ['ORTEC', 'Organisation de RTE en situation de crise'],
+            ['VNF', 'Voies navigables de France'], ['PAQE', 'Plan assurance qualité environnement'],
+            ['TMD', 'Transport de matières dangereuses'],
+            ['CROSS', 'Centre régional opérationnel de surveillance et sauvetage'],
+            ['DPA', 'Designated person ashore'], ['MWS', 'Marine warranty surveyor'],
+            ['TAR', 'Tour aéro-réfrigérante'], ['DIL', 'Direction de l’immobilier et de la logistique'],
+            ['AMR', 'Analyse méthodique des risques'], ['UFC', 'Unité formant colonie']
+        ];
+
+        // Une fiche masquee ne sort pas a l'impression. Les fiches offshore
+        // et les tours aero-refrigerantes le sont d'office.
+        function sueCle(f) { return 'su-m' + String(f.n).replace(/[^A-Za-z0-9]/g, ''); }
+        function sueMasquee(f) {
+            const v = prepa.v[sueCle(f)];
+            return v === undefined ? !!f.off : !!v;
+        }
+        function fichesSue(v) {
+            SUE_FICHES.forEach(f => { prepa.v[sueCle(f)] = !v; });
+            majPrepaEtat();
+            renderPrepa();
+        }
+
+        // » un facteur aggravant, = un intertitre ou une etape, - une
+        // sous-puce, rien du tout une action.
+        function sueLigne(r) {
+            const t = String(r[0]).trim(), qui = r[1] || '';
+            if(t[0] === '»') return `<tr class="su-fact"><td colspan="2">${esc(t.slice(1).trim())}</td></tr>`;
+            if(t[0] === '=') return `<tr><td class="su-plat" colspan="2">${esc(t.slice(1).trim())}</td></tr>`;
+            const sous = t[0] === '-';
+            return `<tr><td class="su-a${sous ? ' su-sous' : ''}">${esc(sous ? t.slice(1).trim() : t)}</td>
+                        <td class="su-qui">${esc(qui)}</td></tr>`;
+        }
+
+        function sueFiches() {
+            const vues = SUE_FICHES.filter(f => !sueMasquee(f)).length;
+            let h = `<div class="pd-l pd-aide pd-grp-barre">
+                    <span>${vues} fiche(s) sur ${SUE_FICHES.length} à l'impression.</span>
+                    <button class="btn-pd" onclick="fichesSue(true)">Tout afficher</button>
+                    <button class="btn-pd" onclick="fichesSue(false)">Tout masquer</button>
+                 </div>
+                 <div class="pd-note pd-ecran">Fiche générique de traitement des SUE, version d'octobre 2019.
+                 Ne gardez que les fiches que le chantier peut rencontrer : les autres se décochent et ne
+                 sortent pas à l'impression. Liste de recommandations non exhaustive, à compléter
+                 en fonction du contexte local.</div>`;
+            SUE_FICHES.forEach(f => {
+                const vu = !sueMasquee(f);
+                h += `<div class="pd-grp${vu ? '' : ' masque'}">
+                      <label class="pd-sous pd-grp-tete">
+                        <input type="checkbox" ${vu ? 'checked' : ''}
+                               onchange="setPC('${sueCle(f)}', !this.checked); renderPrepa()"
+                               title="Sortir cette fiche à l'impression">
+                        <span>SUE n° ${esc(f.n)} — ${esc(f.t)}</span></label>`;
+                if(vu) {
+                    h += `<table class="pd-tab pd-sue"><tbody>`;
+                    f.s.forEach(sec => {
+                        h += `<tr class="pd-sect"><td colspan="2">${esc(sec[0])}${
+                              sec[1] ? ` <span class="su-leg">${esc(sec[1])}</span>` : ''}</td></tr>`;
+                        sec[2].forEach(r => { h += sueLigne(r); });
+                    });
+                    h += `</tbody></table>`;
+                }
+                h += `</div>`;
+            });
+            h += `<div class="pd-note su-sigles">${SUE_SIGLES.map(
+                    x => `<b>${esc(x[0])}</b> ${esc(x[1])}`).join(' · ')}</div>`;
+            return h;
+        }
+
         // Les onze familles d'outillage du classeur, dans son ordre.
         const OUTILLAGE = [
                 ['1 — Tension', ['Perche VAT', 'Perche de mise à la terre', 'Mise à la terre', 'Terre shunt', 'Terre à rouleau', 'MALT LEC verte']],
@@ -5109,6 +5782,9 @@
             });
             return h;
         }},
+
+        { id:'sue', titre:'Situations d’urgence environnementale', defaut:false,
+          corps: () => sueFiches() },
 
         { id:'synoptique', titre:'Synoptique de déroulage', defaut:false, paysage:true,
           corps: () => synoptique() },
