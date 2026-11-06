@@ -173,7 +173,11 @@
         .opt-cat { background: #e2e8f0; padding: 8px 20px; font-weight: 800; color: var(--primary); font-size: 0.85rem; border-top: 1px solid #ccc; }
         .opt-row { display: flex; align-items: center; gap: 14px; padding: 9px 20px; border-bottom: 1px solid #e2e8f0; }
         .opt-row:hover { background: #f8fafc; }
+        .opt-row.opt-edit { background: #fffdf3; box-shadow: inset 3px 0 0 var(--rte-jaune); }
         .opt-id { flex: 0 0 60px; font-weight: 800; color: var(--primary); }
+        .opt-lit { font-size: .78rem; font-weight: 700; color: #2e7f74; background: #eef7f5;
+                   border: 1px solid #bfdcd6; border-radius: 6px; padding: 1px 7px;
+                   letter-spacing: .02em; white-space: nowrap; }
         .opt-n { flex: 1; font-size: 0.95rem; }
         .opt-used { font-size: 0.75rem; color: #64748b; background: #f1f5f9; border-radius: 10px; padding: 2px 8px; white-space: nowrap; }
 
@@ -1283,7 +1287,14 @@
                     <label class="form-label">Nom de la ligne</label>
                     <input id="opt-n" class="form-input" placeholder="ex : Chatelus - Maureix" onkeypress="if(event.key==='Enter') addLigne()">
                 </div>
-                <button class="btn-add-ligne" onclick="addLigne()">+ Ajouter</button>
+                <div class="form-group">
+                    <label class="form-label">Code LIT</label>
+                    <input id="opt-c" class="form-input" placeholder="ex : CLERAL71PLAUD"
+                           onkeypress="if(event.key==='Enter') addLigne()">
+                </div>
+                <button class="btn-add-ligne" id="btn-ligne" onclick="addLigne()">+ Ajouter</button>
+                <button class="btn-del-ligne" id="btn-ligne-annuler" style="display:none"
+                        onclick="annulerLigne()">Annuler</button>
             </div>
         </div>
 
@@ -2596,10 +2607,13 @@
                     dernierT = l.t;
                 }
                 const nb = projects.filter(p => p.lid === l.id).length;
-                html += `<div class="opt-row">
+                const lit = litDeLigne(l.id);
+                html += `<div class="opt-row${ligneEnEdition === l.id ? ' opt-edit' : ''}">
                     <span class="opt-id">${esc(l.id)}</span>
                     <span class="opt-n">${esc(l.n)}</span>
+                    ${lit ? `<span class="opt-lit">${esc(lit)}</span>` : ''}
                     ${nb ? `<span class="opt-used">${nb} chantier${nb > 1 ? 's' : ''}</span>` : ''}
+                    <button class="btn-del-ligne" onclick="editLigne('${esc(l.id)}')">✎ Modifier</button>
                     <button class="btn-del-ligne" onclick="deleteLigne('${esc(l.id)}')">🗑 Supprimer</button>
                 </div>`;
             });
@@ -2831,21 +2845,65 @@
                 }).join('');
         }
 
+        // Modifier une ligne, c'est la reecrire sous la meme cle : le code
+        // reste fige, puisque c'est lui qui relie les chantiers a leur ligne.
+        let ligneEnEdition = null;
+
+        function majFormLigne() {
+            const b = document.getElementById('btn-ligne');
+            const a = document.getElementById('btn-ligne-annuler');
+            const i = document.getElementById('opt-id');
+            if(b) b.textContent = ligneEnEdition ? '✔ Enregistrer' : '+ Ajouter';
+            if(a) a.style.display = ligneEnEdition ? '' : 'none';
+            if(i) i.readOnly = !!ligneEnEdition;
+        }
+
+        function editLigne(id) {
+            const l = dbLignes.find(x => x.id === id);
+            if(!l) return;
+            ligneEnEdition = id;
+            document.getElementById('opt-t').value  = l.t || '';
+            document.getElementById('opt-id').value = l.id;
+            document.getElementById('opt-n').value  = l.n || '';
+            document.getElementById('opt-c').value  = litDeLigne(l.id);
+            majFormLigne();
+            renderLignes();
+            const n = document.getElementById('opt-n');
+            n.focus();
+            n.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function annulerLigne() {
+            ligneEnEdition = null;
+            ['opt-id', 'opt-n', 'opt-c'].forEach(k => { document.getElementById(k).value = ''; });
+            majFormLigne();
+            renderLignes();
+        }
+
         function addLigne() {
             const t  = document.getElementById('opt-t').value;
             const id = document.getElementById('opt-id').value.trim();
             const n  = document.getElementById('opt-n').value.trim();
+            const c  = document.getElementById('opt-c').value.trim().toUpperCase();
 
             if(!t || !id || !n) { alert("Domaine de tension, code et nom sont tous les trois obligatoires."); return; }
             // Le code sert de clé dans Firebase : jeu de caractères restreint
             if(!/^[A-Za-z0-9_-]+$/.test(id)) { alert("Le code ne peut contenir que des lettres, des chiffres, - et _"); return; }
             const doublon = dbLignes.find(x => x.id === id);
-            if(doublon) { alert(`Le code ${id} est déjà utilisé par : ${doublon.n}`); return; }
+            if(doublon && id !== ligneEnEdition) { alert(`Le code ${id} est déjà utilisé par : ${doublon.n}`); return; }
+            // Un code de LIT ressemble a CLERAL71PLAUD : on previent sans
+            // bloquer, le referentiel reserve parfois des surprises.
+            if(c && !/^[A-Z0-9 .]{3,16}$/.test(c)
+               && !confirm(`« ${c} » ne ressemble pas à un code de LIT.\n\nL'enregistrer quand même ?`))
+                return;
 
-            db.ref('referentiel/' + equipeActive + '/' + id).set({ id: id, t: t, n: n })
+            const o = { id: id, t: t, n: n };
+            if(c) o.c = c;
+            db.ref('referentiel/' + equipeActive + '/' + id).set(o)
               .then(() => {
-                  document.getElementById('opt-id').value = '';
-                  document.getElementById('opt-n').value = '';
+                  ligneEnEdition = null;
+                  ['opt-id', 'opt-n', 'opt-c'].forEach(k => { document.getElementById(k).value = ''; });
+                  majFormLigne();
                   document.getElementById('opt-id').focus();
               })
               .catch(e => alert("Erreur d'enregistrement : " + e.message));
@@ -2861,6 +2919,7 @@
                      + `\nmais la ligne ne sera plus proposée pour les nouveaux chantiers.`;
             }
             if(!confirm(msg)) return;
+            if(ligneEnEdition === id) annulerLigne();
             db.ref('referentiel/' + equipeActive + '/' + id).remove().catch(e => alert("Erreur de suppression : " + e.message));
         }
 
@@ -3118,13 +3177,20 @@
 
         // Code liaison par numero de ligne, repris du referentiel du classeur.
         // C'est lui qui permet de retrouver les coordonnees des pylones.
+        // Le code de LIT d'une ligne : celui que l'equipe a saisi dans les
+        // options, sinon celui du referentiel livre avec l'application.
+        function litDeLigne(id) {
+            const l = dbLignes.find(x => x.id === id);
+            return (l && l.c) || CODES_LIAISON[id] || '';
+        }
+
         const CODES_LIAISON = {"3027":"FEROUL32SARLA","3037":"FEROUL31SOUIL","3080":"BORIEL31NOAIL","3081":"GIGNAL31NOAIL","3082":"FEROUL31GIGNA","3083":"GOURDZ31SOUIL","3084":"FEROUZ31GOURD","3085":"DEGAGL31GOURD","3086":"DEGAGL31SSCAT","4005":"EGLETZ41NAVES","4006":"BORIEL41PUYPE","4007":"DONZEL41GAUCH","4008":"BORIEL41DONZE","4016":"BORIEL42DONZE","4018":"BORIEL41ZBXRE","4023":"BXREGZ41DONZE","4029":"DONZEL41SAILL","4030":"DONZEL41P.ELL","4031":"DONZEL42P.ELL","4033":"PUYPEL41TULLE","4040":"NAVESL41TULLE","4046":"LUBERL41SAILL","4047":"LUBERL41TRAVE","4048":"BRADAL41ZESTI","4060":"AURENL41BXBRE","4061":"AURENL41ZMAGR","4062":"AURENL41SSVI6","4063":"BXBREL41CASSE","4064":"BXBREL41MAURE","4065":"BELLAL41I.JOU","4066":"BELLAL41MAURE","4067":"BONNAL41GUERE","4068":"BRADAL41ZROUV","4069":"BREJOL41MAGRE","4070":"BREJOL41ZFARG","4071":"BUEIXL41VEYTI","4072":"CASSEZ41MAURE","4073":"CASSEL41PALAI","4074":"CASSEL41TRAVE","4075":"CGEP L41PALAI","4076":"CHABAL41PLAUD","4077":"CPNACL41SSJUN","4078":"CPNACL41SSVI6","4079":"CTLUSL41GUERE","4080":"CTLUSZ41MAURE","4081":"CONF6L41SSJUN","4082":"D.PALL41EGUZO","4083":"EGUZOL41VNES","4084":"EGUZOL42VNES","4085":"GUEREL41LAVAU","4086":"GUEREL41SSFEY","4087":"GUEREL42SSFEY","4088":"JUNIAL41MAURE","4089":"JUNIAL41PEYR7","4090":"COTE L41SOUTE","4091":"COTE L41VNES","4092":"COTE Z42VNES","4093":"COTE Z42V.GRA","4094":"SOUTEL41V.GRA","4095":"LAVAUL41MANSA","4096":"PEYR7L41SSJUN","4097":"MAGN5L41SOUTE","4098":"MANSAL41P.CHA","4099":"MAUREL41PALAI","4100":"MAUREZ41P.CHA","4101":"MAUREL41SSNOB","4102":"MAUREL41SSMC","4103":"MAUREL41V.GRA","4104":"MAUREL42V.GRA","4105":"M.VIRL41P.CHA","4106":"M.VIRL41TREIG","4107":"M.VIRL42TREIG","4108":"M.VIRL41VEYTI","4109":"P.CHAZ41SSSET","4110":"PLAUDL41SSJUN","4111":"PLAUDL42SSJUN","4112":"PLAUDZ41TANNI","4113":"REPAIL41TUQUE","4114":"SSJUNZ41TANNI","4115":"SSNOBL41VEYTI","4116":"SSYRIL41TRAVE","6001":"MOLE L61SSFEY","6011":"AUBUSL61MOLE","6016":"EGUZOL63MOLE","6024":"BREUIL61ZDONZ","6038":"FEROUL61TALAM","6039":"DONZEL61FEROU","6050":"AUBUSL61EGUZO","6051":"EGUZOL61MAURE","6052":"EGUZOL61MTLUC","6053":"EGUZOL61SSFEY","6054":"MAUREL61P.CHA","6059":"AUBUSL61SSFEY","7001":"BREUIL71MARMA","7004":"EGUZOL71RUEYR","7007":"CLERAL71PLAUD","7008":"EGUZOL71PLAUD"};
 
         // Saisie du code liaison : rempli d'office depuis le referentiel de la
         // ligne, modifiable, et revenant a l'automatique si on vide la case.
         function champLiaison() {
             const sel = document.getElementById('inp-line');
-            const refer = CODES_LIAISON[sel ? sel.value : ''] || '';
+            const refer = litDeLigne(sel ? sel.value : '');
             const saisi = String(pv('tv-liaison')).trim();
             return `<input class="pd-in" value="${esc(saisi || refer)}"
                            placeholder="ex : EGUZOL71PLAUD" onchange="setPV('tv-liaison', this.value)">
@@ -3139,7 +3205,7 @@
             const saisi = String(pv('tv-liaison')).trim();
             if(saisi) return saisi;
             const sel = document.getElementById('inp-line');
-            return CODES_LIAISON[sel ? sel.value : ''] || '';
+            return litDeLigne(sel ? sel.value : '');
         }
 
         // Le retrait tel que la NIP le decrit : numero, puis creneau.
@@ -6159,7 +6225,7 @@
         // des qu'on ouvre la case — une seule lecture, gardee pour la suite.
         function litEquipe() {
             const vus = new Set();
-            dbLignes.forEach(l => { const c = CODES_LIAISON[l.id]; if(c) vus.add(c); });
+            dbLignes.forEach(l => { const c = litDeLigne(l.id); if(c) vus.add(c); });
             Object.values(CODES_LIAISON).forEach(c => vus.add(c));
             return [...vus].sort();
         }

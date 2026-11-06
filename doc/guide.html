@@ -49,6 +49,10 @@
         font-size: 12pt; color: var(--vert); margin: 7mm 0 2mm;
         page-break-after: avoid;
     }
+    h4 {
+        font-size: 10.5pt; color: var(--primary); margin: 5mm 0 1.5mm;
+        page-break-after: avoid;
+    }
     section { page-break-before: always; }
     section.suite { page-break-before: auto; }
     p { margin: 0 0 3mm; }
@@ -1185,8 +1189,31 @@
     <h3>Gérer les lignes</h3>
 
     <p>La liste affiche les lignes de l'équipe affichée, groupées par niveau de tension, avec
-    un filtre par code ou par nom. Pour ajouter une ligne : domaine de tension, code, nom.
-    Les doublons de code sont refusés.</p>
+    un filtre par code ou par nom. Pour ajouter une ligne : domaine de tension, code, nom, et
+    son <b>code de LIT</b>. Les doublons de code sont refusés.</p>
+
+    <h4>Le code de LIT</h4>
+
+    <p>Chaque ligne porte son <b>code de LIT</b> — <i>Clerac&nbsp;–&nbsp;Plaud</i> s'écrit
+    <b>CLERAL71PLAUD</b> — affiché en pastille verte à côté de son nom. Il remplit tout seul le
+    champ <i>Code liaison</i> de la préparation, celui de la fiche de secours, et il alimente la
+    liste déroulante du calcul de section des MALT&nbsp;/&nbsp;CC.</p>
+
+    <p>Les lignes livrées avec l'application ont déjà le leur. Ce que vous saisissez ici
+    <b>prime</b> dessus : c'est ainsi qu'on corrige un code ou qu'on en donne un à une ligne
+    ajoutée à la main. Il est mis en majuscules à l'enregistrement, et l'application prévient
+    — sans refuser — si la forme ne ressemble pas à un code de LIT. Videz la case pour revenir
+    au code livré.</p>
+
+    <h4>Modifier une ligne</h4>
+
+    <p>Le bouton <b>✎ Modifier</b> ramène la ligne dans le formulaire du haut : tension, nom et
+    code de LIT se corrigent, puis <b>✔ Enregistrer</b>. La ligne en cours de modification est
+    surlignée dans la liste, et <b>Annuler</b> rend la main sans rien changer.</p>
+
+    <p>Le <b>code reste figé</b> pendant la modification : c'est lui qui relie les chantiers à
+    leur ligne, et le changer les détacherait tous. Pour changer un numéro, créez la nouvelle
+    ligne et supprimez l'ancienne.</p>
 
     <p>Supprimer une ligne utilisée par des chantiers est possible — un avertissement indique
     combien — et ces chantiers restent lisibles : la ligne y est signalée
