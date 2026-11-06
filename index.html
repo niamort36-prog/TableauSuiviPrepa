@@ -505,6 +505,24 @@
         .pd-sue .su-sous { padding-left: 36px; }
         .pd-sue .su-sous::before { content: '\2013'; left: 23px; }
         .su-sigles { font-size: .68rem; line-height: 1.55; }
+        .pd-dg-titre { text-align: center; font-weight: 800; font-size: 1rem; letter-spacing: .06em;
+                       color: var(--primary); margin: 14px 0 10px; }
+        .pd-dg-phrase { margin: 8px 0 6px; font-size: .84rem; line-height: 1.6; }
+        .pd-dg-m { text-align: right; }
+        .pd-dg-tot td { background: #f1f5f9; }
+        .pd-dg-aide { background: #fbfdff; border-left: 3px solid var(--primary); }
+        .pd-dg-calc { margin-top: 8px; }
+        .pd-dg-pied { margin-top: 12px; font-size: .72rem; color: #64748b; }
+        .pd-dg-pied .pd-zone { font-size: .72rem; color: #64748b; }
+        .pd-dg-quittance { padding: 7px 2px; font-size: .84rem; }
+        .pd-dg-vide { display: block; min-height: 1.2em; }
+        /* Le pied est l'adresse de l'agence : au papier, du texte, pas une case. */
+        body.prepa-impression #pd-pages .pd-dg-pied .pd-fige,
+        body.prepa-impression #pd-pages .pd-dg-pied .pd-zone {
+            border: none; padding: 0; background: transparent; }
+        body.prepa-impression #pd-pages .pd-dg .pd-actions { display: none !important; }
+        .pd-coches { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 6px 0; }
+        .pd-sig { height: 46px; }
         .pd-grp-tete { display: flex; align-items: center; gap: 8px; cursor: pointer; }
         .pd-grp-tete input { width: 15px; height: 15px; flex: 0 0 15px; cursor: pointer; }
         .pd-grp.masque .pd-grp-tete { opacity: .45; }
@@ -5313,6 +5331,474 @@
             return h;
         }
 
+        // ==================================================================
+        //  DEGATS INSTANTANES
+        //  Le formulaire d'indemnite que signe le proprietaire du terrain,
+        //  et les baremes des chambres d'agriculture qui donnent le
+        //  montant a l'hectare. On choisit le secteur, la zone et la
+        //  culture, on porte la surface, le formulaire se remplit.
+        //  Un chantier peut en avoir plusieurs : chacun part sur sa feuille.
+        // ==================================================================
+
+        // --- Region Centre, barème 2015 -------------------------------------
+        // Les valeurs de perte de recolte sont celles de la ZONE : elles sont
+        // les memes d'un departement a l'autre. Seul le DPU moyen change.
+        // Chaque ligne : [base, avec drainage, avec irrigation, les deux].
+        const DG_CENTRE_FIXE = [
+            ['Betterave',                        [2025, 2430, 2420, 2633]],
+            ['Fourrage annuel et maïs ensilage',  [1774, 2129, 2218, 2306]],
+            ['Prairie artificielle',             [1437, 1724, 1796, 1868]],
+            ['Prairie temporaire',               [1204, 1445, 1505, 1565]],
+            ['Surface toujours en herbe',        [830,  996,  1038, 1079]]
+        ];
+        const DG_CENTRE_VAR = {
+            '1': [[1426,1711,1782,1853],[1745,2094,2181,2268],[1269,1523,1587,1650],
+                  [1851,2221,2314,2407],[1447,1736,1809,1881],[1222,1467,1528,1589],
+                  [1068,1282,1335,1389]],
+            '2': [[1338,1605,1672,1739],[1625,1950,2032,2113],[1186,1423,1482,1541],
+                  [1762,2115,2203,2291],[1336,1603,1670,1736],[1146,1375,1433,1490],
+                  [981,1177,1226,1275]],
+            '3': [[1250,1500,1562,1624],[1506,1807,1882,1957],[1102,1323,1378,1433],
+                  [1673,2008,2092,2175],[1224,1469,1530,1592],[1070,1284,1337,1390],
+                  [894,1073,1117,1162]],
+            '4': [[1162,1394,1452,1510],[1386,1663,1733,1802],[1019,1222,1273,1324],
+                  [1584,1901,1980,2059],[1113,1336,1391,1447],[993,1192,1242,1291],
+                  [807,968,1008,1049]],
+            '5': [[1074,1288,1342,1396],[1267,1520,1583,1647],[935,1122,1169,1216],
+                  [1495,1794,1869,1944],[1002,1202,1252,1302],[917,1100,1146,1192],
+                  [719,863,899,935]]
+        };
+        const DG_CENTRE_MOY = { '1': [1442,1730,1802,1874], '2': [1387,1664,1734,1803],
+                                '3': [1332,1599,1665,1732], '4': [1278,1533,1597,1661],
+                                '5': [1223,1468,1529,1590] };
+        const DG_CENTRE_NOMS = ['Blé tendre', 'Blé dur', 'Orges', 'Maïs grain', 'Colza',
+                                'Tournesol', 'Pois protéagineux'];
+
+        function dgCentreCultures(z) {
+            const l = DG_CENTRE_NOMS.map((n, i) => [n, DG_CENTRE_VAR[z][i]])
+                      .concat(DG_CENTRE_FIXE, [['Récolte moyenne', DG_CENTRE_MOY[z]]]);
+            // Les deux dernieres lignes du barème : la reconstitution du
+            // couvert, sans majoration ni DPU.
+            return l.concat([['Jachère — perte de couvert', [357, 357, 357, 357], true],
+                             ['Prairie — perte de couvert', [564, 564, 564, 564], true]]);
+        }
+
+        // Un departement du Centre devient un secteur de barème a lui seul.
+        function dgSecteurCentre(id, nom, dpu, zones) {
+            return {
+                id: id, nom: nom + ' — région Centre, barème 2015',
+                ref: 'Chambres d\'agriculture du Centre, FRSEA Centre, RTE Ouest, ERDF Centre et '
+                   + 'SERCE Centre — barème « dommages instantanés pour travaux sur lignes '
+                   + 'électriques », année 2015 (avenant du 07/11/2013).',
+                zones: zones,
+                opts: [['dr', 'Avec drainage'], ['ir', 'Avec irrigation'],
+                       ['pac', 'Avec aides PAC (DPU ' + dpu + ' €/ha)']],
+                cultures: z => dgCentreCultures(z).map(c => c[0]),
+                perte: (z, c, o) => {
+                    const l = dgCentreCultures(z).find(x => x[0] === c);
+                    if(!l) return 0;
+                    const k = (o.dr ? 1 : 0) + (o.ir ? 2 : 0);
+                    const v = l[1][k === 3 ? 3 : k];
+                    if(l[2] || !o.pac) return v;      // perte de couvert : ni DPU ni majoration
+                    return v + dpu + (c === 'Pois protéagineux' ? 175 : 0);
+                },
+                postes: [],
+                note: 'En conduite biologique, ajouter 100 €/ha pour les grandes cultures et les '
+                    + 'prairies temporaires de moins de 5 ans, 80 €/ha pour les prairies '
+                    + 'permanentes et les prairies temporaires de plus de 5 ans.'
+            };
+        }
+
+        const DG_COR_CULT = [
+            ['Blé tendre',                    1550, 1460, 0],
+            ['Orge de printemps',             1290, 1210, 0],
+            ['Orge d\'hiver',                 1380, 1210, 0],
+            ['Avoine',                        1370, 1050, 0],
+            ['Maïs non irrigué',              1960, 1700, 0],
+            ['Maïs irrigué',                  2730, 2220, 0],
+            ['Colza',                         1960, 1700, 0],
+            ['Pacages, parcours',              960,  880, 1],
+            ['Prairies naturelles — avant 1re récolte', 1360, 1260, 1],
+            ['Prairies naturelles — après 1re récolte',  900,  730, 1],
+            ['Prairies temporaires — avant 1re récolte', 1560, 1490, 0],
+            ['Prairies temporaires — après 1re récolte', 1100,  930, 0],
+            ['Autres cultures fourragères, choux, betteraves, navets', 1800, 1595, 0]
+        ];
+
+        const DG_VIE_CULT = [
+            ['Blé tendre',                   1068, 0], ['Blé dur',       1275, 0],
+            ['Seigle',                        697, 0], ['Escourgeons et orges d\'hiver', 791, 0],
+            ['Orges de printemps',            903, 0], ['Avoine',         716, 0],
+            ['Maïs grain',                   1451, 0], ['Colza',         1150, 0],
+            ['Tournesol',                     996, 0], ['Pois',           657, 0],
+            ['Maïs fourrager',               1226, 0], ['Prairies temporaires', 1103, 0],
+            ['Prairies naturelles et prés',   895, 1], ['Jachères',       720, 0]
+        ];
+
+        const DG_SECTEURS = [
+            {
+                id: 'cor10', nom: 'Corrèze — barème 2010',
+                ref: 'Chambre d\'agriculture de la Corrèze — indemnisation des préjudices '
+                   + 'agricoles pour tous travaux de surface, barème 2010.',
+                zones: [['b', 'Vallée et Pays de Brive'], ['a', 'Autres régions']],
+                opts: [],
+                cultures: () => DG_COR_CULT.map(c => c[0]),
+                perte: (z, c) => {
+                    const l = DG_COR_CULT.find(x => x[0] === c);
+                    return l ? (z === 'b' ? l[1] : l[2]) : 0;
+                },
+                postes: [
+                    { k: 'def', n: 'Déficit sur récolte suivante (50 %)',
+                      f: (perte) => perte * 0.5 },
+                    { k: 'rec', n: 'Reconstitution physique et chimique du sol',
+                      f: (perte, c) => {
+                          const l = DG_COR_CULT.find(x => x[0] === c);
+                          return (l && l[3]) ? 385 : 535;
+                      } },
+                    { k: 'gen', n: 'Gênes et troubles divers (1/3 de la récolte, 50 € au moins)',
+                      f: (perte) => perte / 3, mini: 50 }
+                ],
+                note: 'Pour les cultures spéciales absentes du barème (tabac, vergers, productions '
+                    + 'fruitières, légumières, plantations forestières…), l\'indemnité s\'évalue au '
+                    + 'cas par cas, à l\'amiable ou à dire d\'expert avec l\'arbitrage de la chambre '
+                    + 'd\'agriculture ; la reconstitution du sol vaut alors 40 % de la valeur de la '
+                    + 'récolte détruite.'
+            },
+            {
+                id: 'vie13', nom: 'Vienne (86) — barème 2013-2014',
+                ref: 'Chambre d\'agriculture de la Vienne — barème des indemnités de perte de '
+                   + 'récolte 2013-2014, protocole APCA-FNSEA-FNPA-Opérateurs du 21/12/1999 '
+                   + '(mise à jour du 3 mars 2014).',
+                zones: [],
+                opts: [['ir', 'Irrigation (+ 35 %)'], ['dr', 'Drainage (+ 25 %)'],
+                       ['sem', 'Production de semences (× 2)'],
+                       ['pac', 'Avec DPU moyen (297 €/ha)']],
+                cultures: () => DG_VIE_CULT.map(c => c[0]),
+                perte: (z, c, o) => {
+                    const l = DG_VIE_CULT.find(x => x[0] === c);
+                    if(!l) return 0;
+                    // La majoration porte sur l'indemnite de perte de recolte ;
+                    // le DPU moyen s'ajoute ensuite, sans majoration.
+                    let v = l[1] * (o.ir ? 1.35 : 1) * (o.dr ? 1.25 : 1) * (o.sem ? 2 : 1);
+                    if(o.pac) v += 297 + (c === 'Pois' ? 205 : 0);
+                    return v;
+                },
+                postes: [
+                    { k: 'def', n: 'Déficit sur les récoltes suivantes',
+                      f: (perte, c) => dgViePrairie(c) ? 1192 : 1410 },
+                    { k: 'rec', n: 'Reconstitution du sol (zone de circulation et tranchée)',
+                      f: (perte, c) => dgViePrairie(c) ? 1192 : 705 },
+                    { k: 'gen', n: 'Gênes et troubles divers (1/3 de récolte)',
+                      f: (perte, c) => dgViePrairie(c) ? 397 : 470 }
+                ],
+                mini: 46,
+                note: 'Indemnités forfaitaires du même barème, à porter à la main : tranchée '
+                    + '(trancheuse à roue ou à chaîne) 0,28 €/m linéaire en polyculture et '
+                    + 'prairies temporaires, 0,30 €/m en prairies permanentes ; ornières de 15 à '
+                    + '30 cm 0,07 et 0,12 €/m² ; ornières de plus de 30 cm 0,14 et 0,24 €/m². '
+                    + 'Aide couplée protéagineux : 205 €/ha.'
+            },
+            dgSecteurCentre('c18', 'Cher (18)', 221, [
+                ['2', 'Zone 2 — Champagne Berrichonne, Vallée de Germigny'],
+                ['3', 'Zone 3 — Pays Fort et Sancerrois, Val de Loire'],
+                ['4', 'Zone 4 — Boischaut, Marche'],
+                ['5', 'Zone 5 — Sologne']]),
+            dgSecteurCentre('c28', 'Eure-et-Loir (28)', 272, [
+                ['1', 'Zone 1 — intégralité du département']]),
+            dgSecteurCentre('c36', 'Indre (36)', 209, [
+                ['2', 'Zone 2 — Champagne Berrichonne'],
+                ['4', 'Zone 4 — Boischaut nord, Boischaut sud'],
+                ['5', 'Zone 5 — Brenne']]),
+            dgSecteurCentre('c37', 'Indre-et-Loire (37)', 236, [
+                ['3', 'Zone 3 — intégralité du département']]),
+            dgSecteurCentre('c41', 'Loir-et-Cher (41)', 247, [
+                ['1', 'Zone 1 — Beauce'],
+                ['3', 'Zone 3 — Perche, Perche vendômois, vallée et coteaux du Loir, Gâtine '
+                    + 'tourangelle, vallée et coteaux de Loire, Sologne viticole, plateau de '
+                    + 'Touraine méridionale, Champagne Berrichonne'],
+                ['5', 'Zone 5 — Grande Sologne']]),
+            dgSecteurCentre('c45', 'Loiret (45)', 272, [
+                ['1', 'Zone 1 — Grande Beauce, Beauce de Patay, Gâtinais ouest'],
+                ['2', 'Zone 2 — Gâtinais est'],
+                ['3', 'Zone 3 — Puisaye, Berry, Val de Loire'],
+                ['5', 'Zone 5 — Sologne, Orléanais']])
+        ];
+
+        function dgViePrairie(c) { return c === 'Prairies naturelles et prés'; }
+        function dgSecteur(id) { return DG_SECTEURS.find(x => x.id === id); }
+
+        // Combien de formulaires. Un chantier peut abimer plusieurs parcelles,
+        // et chaque proprietaire signe le sien.
+        function dgNb() { return Math.max(1, Math.min(12, parseInt(pv('dg-n'), 10) || 1)); }
+        function dgAjouter()  { setPV('dg-n', dgNb() + 1); renderPrepa(); }
+        function dgEnlever(i) {
+            const n = dgNb();
+            if(n < 2) { alert('Il faut au moins un formulaire.'); return; }
+            if(!confirm('Supprimer le formulaire n\u00b0 ' + i + ' ?\n\nLes formulaires suivants '
+                      + 'remontent d\'un rang.')) return;
+            // On decale tout ce qui suit, cases et lignes, puis on libere le dernier.
+            for(let k = i; k < n; k++) {
+                Object.keys(prepa.v).forEach(c => {
+                    if(c.indexOf('dg' + (k + 1) + '-') === 0)
+                        prepa.v['dg' + k + '-' + c.slice(('dg' + (k + 1) + '-').length)] = prepa.v[c];
+                });
+                prepa.l['dg' + k + '-l'] = prepa.l['dg' + (k + 1) + '-l'];
+            }
+            Object.keys(prepa.v).forEach(c => { if(c.indexOf('dg' + n + '-') === 0) delete prepa.v[c]; });
+            delete prepa.l['dg' + n + '-l'];
+            setPV('dg-n', n - 1);
+            renderPrepa();
+        }
+
+        // --- Le calcul du barème ---------------------------------------------
+        // Rend les postes retenus, en euros par hectare, et le total.
+        function dgDetail(i) {
+            const sec = dgSecteur(pv('dg' + i + '-bar'));
+            if(!sec) return null;
+            const z = String(pv('dg' + i + '-zone') || (sec.zones[0] ? sec.zones[0][0] : ''));
+            const c = String(pv('dg' + i + '-cult'));
+            if(sec.zones.length && !z) return null;
+            if(!c) return null;
+            const o = {};
+            (sec.opts || []).forEach(x => { o[x[0]] = !!pv('dg' + i + '-' + x[0]); });
+            const perte = sec.perte(z, c, o);
+            const surf = num(pv('dg' + i + '-surf'));
+            const lignes = [];
+            if(pv('dg' + i + '-p-perte') !== false)
+                lignes.push({ n: 'Perte de récolte', ha: perte });
+            (sec.postes || []).forEach(p => {
+                if(!pv('dg' + i + '-p-' + p.k)) return;
+                let m = p.f(perte, c, z);
+                lignes.push({ n: p.n, ha: m, mini: p.mini });
+            });
+            let total = 0;
+            lignes.forEach(l => {
+                l.montant = l.ha * surf / 10000;
+                if(l.mini && surf && l.montant < l.mini) l.montant = l.mini;
+                total += l.montant;
+            });
+            if(sec.mini && surf && total < sec.mini) total = sec.mini;
+            const euroM2 = surf ? total / surf : lignes.reduce((a, l) => a + l.ha, 0) / 10000;
+            return { sec: sec, zone: z, cult: c, opts: o, surf: surf,
+                     lignes: lignes, total: total, m2: euroM2 };
+        }
+
+        function dgLibelle(d) {
+            const z = d.sec.zones.find(x => x[0] === d.zone);
+            const bouts = [d.cult];
+            if(z) bouts.push(z[1]);
+            (d.sec.opts || []).forEach(x => { if(d.opts[x[0]]) bouts.push(x[1].toLowerCase()); });
+            const postes = d.lignes.map(l => l.n.replace(/ *\(.*\)/, '')).join(', ');
+            return bouts.join(' — ') + '\n' + postes + ' (' + d.sec.nom + ')';
+        }
+
+        function dgPorter(i) {
+            const d = dgDetail(i);
+            if(!d) { alert('Choisissez le secteur, la zone et la culture.'); return; }
+            if(!d.surf) { alert('Portez la surface endommagée, en m².'); return; }
+            // Le formulaire porte des lignes vierges, comme le papier : on
+            // remplit la premiere qui l'est encore plutot que d'en ajouter une.
+            const ligne = { n: dgLibelle(d), s: String(d.surf),
+                            p: d.m2.toFixed(4).replace('.', ',') };
+            const rows = lst('dg' + i + '-l');
+            const vide = rows.findIndex(r => !String(r.n || '').trim()
+                                          && !String(r.s || '').trim()
+                                          && !String(r.p || '').trim());
+            if(vide < 0) rows.push(ligne); else rows[vide] = ligne;
+            renderPrepa();
+        }
+
+        // Les montants se recalculent sans redessiner la page : une somme
+        // par ligne, et le total que reprend la phrase du formulaire.
+        function dgMaj(i) {
+            const rows = lst('dg' + i + '-l');
+            let t = 0;
+            rows.forEach((r, j) => {
+                const m = num(r.s) * num(r.p);
+                t += m;
+                const e = document.getElementById('dg' + i + '-m' + j);
+                if(e) {
+                    const plein = num(r.s) && num(r.p);
+                    e.textContent = plein ? eur(m) : '';
+                    e.className = plein ? 'pd-auto' : 'pd-dg-vide';
+                }
+            });
+            ['dg' + i + '-tot', 'dg' + i + '-som'].forEach(id => {
+                const e = document.getElementById(id);
+                if(e) e.textContent = t ? eur(t) : '\u2014';
+            });
+        }
+
+        function dgTotal(i) {
+            return lst('dg' + i + '-l').reduce((a, r) => a + num(r.s) * num(r.p), 0);
+        }
+
+        function dgCell(i, j, k) {
+            const cle = 'dg' + i + '-l';
+            const v = prepa.l[cle][j][k];
+            return `<input class="pd-in" value="${esc(v === undefined ? '' : v)}"
+                           onchange="setL('${cle}',${j},'${k}',this.value); dgMaj(${i})">`;
+        }
+
+        // --- L'assistant de barème -------------------------------------------
+        function dgAssistant(i) {
+            const sec = dgSecteur(pv('dg' + i + '-bar'));
+            const raz = `renderPrepa()`;
+            let h = `<div class="pd-note pd-ecran pd-dg-aide">
+                <div class="pd-sous">Barème — calcul de l'indemnité</div>
+                ${grille('pd-g2',
+                    champ('Secteur', `<select class="pd-in" onchange="setPV('dg${i}-bar', this.value);
+                            setPV('dg${i}-zone',''); setPV('dg${i}-cult',''); ${raz}">
+                        <option value=""></option>
+                        ${DG_SECTEURS.map(x => `<option value="${x.id}" ${pv('dg' + i + '-bar') === x.id
+                            ? 'selected' : ''}>${esc(x.nom)}</option>`).join('')}
+                    </select>`)
+                  + champ('Zone', sec && sec.zones.length
+                        ? `<select class="pd-in" onchange="setPV('dg${i}-zone', this.value);
+                                   setPV('dg${i}-cult',''); ${raz}">
+                            <option value=""></option>
+                            ${sec.zones.map(z => `<option value="${z[0]}" ${pv('dg' + i + '-zone') === z[0]
+                                ? 'selected' : ''}>${esc(z[1])}</option>`).join('')}
+                           </select>`
+                        : auto(sec ? 'Tout le département' : '')))}`;
+            if(!sec) {
+                h += `<div class="pd-aide">Choisissez un secteur : le barème donne alors les cultures,
+                      les zones et les postes d'indemnisation.</div></div>`;
+                return h;
+            }
+            const z = String(pv('dg' + i + '-zone') || (sec.zones[0] ? sec.zones[0][0] : ''));
+            const cults = (sec.zones.length && !pv('dg' + i + '-zone')) ? [] : sec.cultures(z);
+            h += grille('pd-g2',
+                    champ('Culture', `<select class="pd-in"
+                            onchange="setPV('dg${i}-cult', this.value); ${raz}">
+                        <option value=""></option>
+                        ${cults.map(c => `<option value="${esc(c)}" ${pv('dg' + i + '-cult') === c
+                            ? 'selected' : ''}>${esc(c)}</option>`).join('')}
+                      </select>`)
+                  + champ('Surface endommagée (m²)',
+                        `<input class="pd-in" value="${esc(pv('dg' + i + '-surf'))}" placeholder="ex : 850"
+                                onchange="setPV('dg${i}-surf', this.value); ${raz}">`));
+            if((sec.opts || []).length)
+                h += `<div class="pd-coches">${sec.opts.map(x =>
+                        `<label class="pd-coche"><input type="checkbox" ${pv('dg' + i + '-' + x[0])
+                            ? 'checked' : ''} onchange="setPC('dg${i}-${x[0]}', this.checked); ${raz}">
+                         <span>${esc(x[1])}</span></label>`).join('')}</div>`;
+            const postes = [['perte', 'Perte de récolte', true]]
+                .concat((sec.postes || []).map(p => [p.k, p.n, false]));
+            h += `<div class="pd-coches">${postes.map(p => {
+                    const cle = 'dg' + i + '-p-' + p[0];
+                    const coche = p[2] ? (pv(cle) !== false) : !!pv(cle);
+                    return `<label class="pd-coche"><input type="checkbox" ${coche ? 'checked' : ''}
+                             onchange="setPV('dg${i}-p-${p[0]}', this.checked); ${raz}">
+                            <span>${esc(p[1])}</span></label>`;
+                 }).join('')}</div>`;
+            const d = dgDetail(i);
+            if(d && d.lignes.length) {
+                h += `<table class="pd-tab pd-dg-calc"><thead><tr><th>Poste</th>
+                        <th style="width:110px">€/ha</th><th style="width:120px">Montant</th></tr></thead>
+                      <tbody>${d.lignes.map(l => `<tr><td>${esc(l.n)}</td>
+                        <td style="text-align:right">${eur(l.ha)}</td>
+                        <td style="text-align:right">${d.surf ? eur(l.montant) : '—'}</td></tr>`).join('')}
+                        <tr class="pd-dg-tot"><td><b>Total</b></td>
+                        <td style="text-align:right"><b>${eur(d.lignes.reduce((a, l) => a + l.ha, 0))}</b></td>
+                        <td style="text-align:right"><b>${d.surf ? eur(d.total) : '—'}</b></td></tr>
+                        <tr><td>Somme en €/m²</td><td></td>
+                        <td style="text-align:right"><b>${d.m2.toFixed(4).replace('.', ',')} €</b></td></tr>
+                      </tbody></table>
+                      <button class="btn-pd pre" onclick="dgPorter(${i})">\u2728 Porter au tableau</button>`;
+            }
+            h += `<div class="pd-aide">${esc(sec.ref)}${sec.note ? ' ' + esc(sec.note) : ''}</div></div>`;
+            return h;
+        }
+
+        // --- Un formulaire ----------------------------------------------------
+        function dgFormulaire(i, n) {
+            const c = pdChantier();
+            const cle = 'dg' + i + '-l';
+            const rows = lst(cle, vides(3, { n: '', s: '', p: '' }));
+            const tot = dgTotal(i);
+            let h = `<div class="pd-l pd-aide pd-grp-barre pd-ecran">
+                    <span>Formulaire ${i} sur ${n}.</span>
+                    <button class="btn-pd" onclick="dgAjouter()">+ Ajouter un formulaire</button>
+                    ${n > 1 ? `<button class="pd-sup" onclick="dgEnlever(${i})">\u00d7 Supprimer
+                               celui-ci</button>` : ''}
+                 </div>`;
+            h += dgAssistant(i);
+            h += `<div class="pd-dg-titre">INDEMNITÉ POUR DÉGÂTS INSTANTANÉS</div>`;
+            h += grille('pd-g2', champ('Je soussigné', chp('dg' + i + '-sous'))
+                               + champ('demeurant à', chp('dg' + i + '-dem')));
+            h += `<div class="pd-dg-phrase">déclare accepter la somme de
+                  <span class="pd-auto" id="dg${i}-som">${tot ? eur(tot) : '—'}</span>
+                  correspondant à l'indemnité évaluée en réparation des dégâts occasionnés lors des
+                  travaux de</div>`;
+            h += grille('pd-g2', champ('Nature des travaux', chp('dg' + i + '-trav'))
+                               + champ('effectués par', chp('dg' + i + '-par')));
+            h += grille('pd-g3', champ('RTE sur la ligne', chpLie('dg' + i + '-ligne', c.nomLigne))
+                               + champ('kV', chpLie('dg' + i + '-kv', c.tension))
+                               + champ('Portée ou pylône n°', chp('dg' + i + '-pyl')));
+            h += `<div class="pd-dg-phrase">Cette indemnité est déterminée comme suit :</div>`;
+            h += `<table class="pd-tab pd-dg"><thead><tr>
+                    <th>Nature des dégâts</th>
+                    <th style="width:120px">Surface endommagée en m²</th>
+                    <th style="width:110px">Somme en €/m²</th>
+                    <th style="width:120px">Montant total à verser en €</th>
+                    <th class="pd-actions"></th></tr></thead><tbody>`;
+            rows.forEach((r, j) => {
+                const m = num(r.s) * num(r.p);
+                h += `<tr><td>${clm(cle, j, 'n', 'Nature des dégâts')}</td>
+                          <td>${dgCell(i, j, 's')}</td>
+                          <td>${dgCell(i, j, 'p')}</td>
+                          <td class="pd-dg-m">${(num(r.s) && num(r.p))
+                              ? `<span class="pd-auto" id="dg${i}-m${j}">${eur(m)}</span>`
+                              : `<span class="pd-dg-vide" id="dg${i}-m${j}"></span>`}</td>
+                          <td class="pd-actions">${actionsLigne(cle, j, { n: '', s: '', p: '' })}</td></tr>`;
+            });
+            h += `<tr class="pd-dg-tot"><td colspan="3" style="text-align:right"><b>Total</b></td>
+                  <td class="pd-dg-m"><span class="pd-auto" id="dg${i}-tot">${
+                      tot ? eur(tot) : '\u2014'}</span></td><td class="pd-actions"></td></tr>
+                  </tbody></table>
+                  <div class="pd-tab-actions pd-ecran">
+                    <button class="btn-pd" onclick="addL('${cle}', {&#34;n&#34;:&#34;&#34;,&#34;s&#34;:&#34;&#34;,&#34;p&#34;:&#34;&#34;}); dgMaj(${i})">+ Ligne</button>
+                  </div>`;
+            h += `<div class="pd-dg-phrase">RTE s'engage à verser l'indemnité précitée par chèque
+                  bancaire ou postal — joindre un relevé d'identité bancaire ou postal.</div>`;
+            h += grille('pd-g2', champ('En contrepartie, M', chp('dg' + i + '-m'))
+                               + champ('\u00a0', `<div class="pd-dg-quittance">donne quittance
+                                      définitive à RTE pour ces dégâts.</div>`));
+            h += grille('pd-g2', champ('Fait en deux exemplaires à', chp('dg' + i + '-lieu'))
+                               + champ('Le', chp('dg' + i + '-date', '', 'date')));
+            h += `<table class="pd-tab pd-tab-sig"><thead><tr>
+                    <th>Le représentant RTE</th>
+                    <th>Le bénéficiaire — signature précédée de la mention « Lu et approuvé »</th>
+                  </tr></thead><tbody><tr>
+                    <td>${chp('dg' + i + '-rte', 'Nom et prénom')}</td>
+                    <td>${chp('dg' + i + '-ben', 'Nom et prénom')}</td>
+                  </tr><tr class="pd-sig-main">
+                    <td>${caseSignature('dg' + i + '-visa-rte')}</td>
+                    <td>${caseSignature('dg' + i + '-visa-ben')}</td>
+                  </tr></tbody></table>`;
+            h += `<div class="pd-dg-pied">${zoneLiee('dg' + i + '-pied', 3, DG_PIED, 'du modèle')}</div>`;
+            return h;
+        }
+
+        const DG_PIED = 'Centre Maintenance Toulouse — GMR Massif central Ouest\n'
+                      + '5 rue Lavoisier, ZAC de Baradel, CS 60401, 15004 AURILLAC CEDEX\n'
+                      + 'Tél. 04 71 63 99 00 — Fax 04 71 63 99 90 — www.rte-france.com';
+
+        function degats() {
+            const n = dgNb();
+            let h = `<div class="pd-note pd-ecran">Le formulaire que signe le propriétaire du terrain.
+                     L'assistant de barème donne la somme au m² : choisissez le secteur, la zone et la
+                     culture, portez la surface, puis <b>Porter au tableau</b>. Les barèmes et les
+                     rappels de calcul ne s'impriment pas — seul le formulaire sort au papier, un par
+                     feuille.</div>`;
+            for(let i = 1; i <= n; i++) {
+                h += dgFormulaire(i, n);
+                if(i < n) h += `<div class="pd-saut"></div>`;
+            }
+            return h;
+        }
+
         // Les onze familles d'outillage du classeur, dans son ordre.
         const OUTILLAGE = [
                 ['1 — Tension', ['Perche VAT', 'Perche de mise à la terre', 'Mise à la terre', 'Terre shunt', 'Terre à rouleau', 'MALT LEC verte']],
@@ -5918,6 +6404,9 @@
             <tbody>${mes.map((m, i) => `<tr><td>${m}</td><td>${chp('pa-m' + i + '-1')}</td><td>${chp('pa-m' + i + '-2')}</td></tr>`).join('')}</tbody></table>
             <div class="pd-note">Tolérance : 0,5 % maxi entre les paramètres.</div>`;
         }},
+
+        { id:'degats', titre:'Formulaire de dégât instantané', defaut:false,
+          corps: () => degats() },
 
         { id:'materiel', titre:'Matériel ligne', defaut:false, corps: () => {
             const c = pdChantier();

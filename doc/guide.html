@@ -792,6 +792,66 @@
     deux ou trois lignes que sur une seule écrasée. Comme pour le schéma de l'ouvrage, les
     boutons et les réglages ne s'impriment pas — seul le dessin sort.</p>
 
+    <h3>Le formulaire de dégât instantané</h3>
+
+    <p>Quand un chantier abîme un champ, une clôture ou un chemin, le propriétaire est
+    indemnisé et signe une <b>quittance</b>. La page <b>Formulaire de dégât instantané</b>,
+    placée après la méthode PAPOTO, reprend le formulaire RTE « <b>Indemnité pour dégâts
+    instantanés</b> » : le soussigné et son adresse, la somme acceptée, la nature des travaux
+    et qui les a faits, la ligne, la tension et la portée ou le pylône, le tableau des dégâts,
+    la quittance, le lieu, la date et les deux signatures.</p>
+
+    <p>Un chantier peut abîmer <b>plusieurs parcelles</b>, et chaque propriétaire signe la
+    sienne : le bouton <b>+ Ajouter un formulaire</b> en crée un second, un troisième,
+    jusqu'à douze. Chacun part sur <b>sa propre feuille</b> à l'impression.
+    <b>Supprimer celui-ci</b> retire un formulaire et fait remonter les suivants.</p>
+
+    <img src="captures/22-degats.png" alt="Formulaire de dégât instantané">
+
+    <h4>Le barème calcule la somme au m²</h4>
+
+    <p>Au-dessus du formulaire, un <b>assistant de barème</b> — qui ne s'imprime pas — donne le
+    montant sans calculette. Choisissez le <b>secteur</b>, la <b>zone</b> et la <b>culture</b>,
+    portez la <b>surface endommagée en m²</b>, cochez les postes à indemniser : le détail
+    s'affiche en euros par hectare et en montant, avec la <b>somme en €/m²</b>. Le bouton
+    <b>Porter au tableau</b> écrit la ligne dans le formulaire, avec son libellé complet —
+    culture, zone, postes retenus et barème d'origine — pour que le propriétaire voie d'où
+    vient le chiffre.</p>
+
+    <p>Trois jeux de barèmes sont chargés :</p>
+
+    <ul>
+        <li><b>Corrèze — barème 2010</b> (chambre d'agriculture de la Corrèze) : treize
+        cultures, deux zones — vallée et pays de Brive, autres régions. Les quatre postes du
+        barème se cumulent : perte de récolte, déficit sur la récolte suivante (50 %),
+        reconstitution physique et chimique du sol (385 € pour les prairies naturelles et
+        pacages, 535 € ailleurs), gênes et troubles divers (un tiers de la récolte, 50 € au
+        moins).</li>
+        <li><b>Vienne (86) — barème 2013-2014</b> (protocole APCA-FNSEA-FNPA-Opérateurs) :
+        quatorze cultures, les majorations irrigation (+ 35 %), drainage (+ 25 %) et production
+        de semences (× 2), le DPU moyen à 297 €/ha, puis le déficit sur les récoltes suivantes,
+        la reconstitution du sol et les gênes, chiffrés à part en polyculture et en prairies
+        permanentes. L'indemnité minimale de 46 € est appliquée au total.</li>
+        <li><b>Région Centre — barème 2015</b> : les six départements, <b>Cher</b>,
+        <b>Eure-et-Loir</b>, <b>Indre</b>, <b>Indre-et-Loire</b>, <b>Loir-et-Cher</b> et
+        <b>Loiret</b>, chacun avec ses zones. Quinze lignes par zone, les variantes
+        <b>drainage</b>, <b>irrigation</b> et les deux, et les <b>aides PAC</b> qui ajoutent le
+        DPU moyen du département — 221 € dans le Cher, 272 € en Eure-et-Loir et dans le Loiret,
+        209 € dans l'Indre, 236 € en Indre-et-Loire, 247 € en Loir-et-Cher — plus 175 € d'aide
+        spécifique sur les pois protéagineux. Les deux dernières lignes, jachère et prairie,
+        sont la reconstitution du couvert : 357 et 564 €/ha, sans DPU ni majoration.</li>
+    </ul>
+
+    <p>La référence du barème et ses réserves s'affichent sous le calcul : conduite biologique,
+    cultures spéciales absentes du barème, indemnités forfaitaires de tranchée et d'ornières.
+    <b>Le barème n'est qu'une aide au chiffrage</b> : les trois colonnes du tableau restent
+    libres, et une ligne peut toujours s'écrire à la main.</p>
+
+    <p>Le <b>total</b> du tableau remonte de lui-même dans la phrase « déclare accepter la
+    somme de », et chaque ligne affiche son montant dès que la surface et la somme au m² sont
+    portées. Le <b>pied de page</b> — l'adresse de l'agence — est modifiable : videz la case
+    pour revenir au modèle.</p>
+
     <h3>Le sommaire</h3>
 
     <p>La deuxième page est un <b>sommaire</b> à la charte RTE : chaque page affichée y figure
@@ -805,12 +865,12 @@
 
     <h3>Choisir les pages</h3>
 
-    <p>Le sommaire liste les 25 pages avec, pour chacune, une case d'affichage et son taux de
-    remplissage. Quinze pages sont affichées d'emblée ; les dix autres — mode opératoire
+    <p>Le sommaire liste les 26 pages avec, pour chacune, une case d'affichage et son taux de
+    remplissage. Quinze pages sont affichées d'emblée ; les onze autres — mode opératoire
     nacelle, constat d'adéquation, situations d'urgence environnementale, synoptique de
-    déroulage, planification, liste d'outillage, métrologie, manchonnage, PAPOTO, matériel
-    ligne — restent masquées jusqu'à ce que vous les cochiez, exactement comme les feuilles
-    masquées du classeur.</p>
+    déroulage, planification, liste d'outillage, métrologie, manchonnage, PAPOTO, formulaire de
+    dégât instantané, matériel ligne — restent masquées jusqu'à ce que vous les cochiez,
+    exactement comme les feuilles masquées du classeur.</p>
 
     <p>Trois boutons en bas du sommaire permettent de tout afficher, tout masquer, ou revenir à
     la sélection par défaut. Un clic sur un titre fait défiler jusqu'à la page.</p>
