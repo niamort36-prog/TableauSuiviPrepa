@@ -523,6 +523,31 @@
         body.prepa-impression #pd-pages .pd-dg .pd-actions { display: none !important; }
         .pd-coches { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 6px 0; }
         .pd-sig { height: 46px; }
+        .pd-pf-titre { text-align: center; font-weight: 800; font-size: 1rem; letter-spacing: .06em;
+                       color: var(--primary); margin: 12px 0 2px; }
+        .pd-pf-sous { text-align: center; font-size: .78rem; color: #64748b; margin-bottom: 10px; }
+        .pd-pf-etape { font-weight: 800; font-size: .84rem; color: #b03a2e; text-transform: uppercase;
+                       letter-spacing: .05em; margin: 12px 0 4px; }
+        .pd-pf-bloc { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+        .pd-pf-pied { font-size: .74rem; color: #475569; margin-top: 8px; font-style: italic; }
+        .pd-coches-col { flex-direction: column; gap: 5px; align-items: flex-start; }
+        .pd-coches-col .pd-coche { align-items: flex-start; }
+        .pd-coches-col .pd-coche input { margin-top: 2px; flex: 0 0 15px; }
+        .pd-coche-l span { font-weight: 400; line-height: 1.4; }
+        .pd-coche-prec { margin: 2px 0 6px 23px; align-self: stretch;
+                         width: auto; max-width: calc(100% - 23px); }
+        /* Au papier, la precision d'un « Autre » est une ligne a ecrire. */
+        body.prepa-impression #pd-pages .pd-coches-col .pd-fige {
+            align-self: stretch; margin-left: 23px; }
+        .pd-bulle { display: inline-flex; align-items: center; justify-content: center;
+                    width: 15px; height: 15px; margin-left: 5px; border-radius: 50%;
+                    background: #e8f0fb; border: 1px solid #b7cdf0; color: var(--primary);
+                    font-size: .64rem; font-weight: 800; cursor: help; vertical-align: middle; }
+        .pd-bulle:hover, .pd-bulle.ouverte { background: #b7cdf0; }
+        .pd-bulle-texte { white-space: pre-line; font-size: .78rem; line-height: 1.45;
+                          color: #1e3a5f; background: #f3f8ff; border: 1px solid #b7cdf0;
+                          border-left: 4px solid var(--primary); border-radius: 6px;
+                          padding: 9px 12px; margin: 6px 0; font-weight: 400; }
         .pd-grp-tete { display: flex; align-items: center; gap: 8px; cursor: pointer; }
         .pd-grp-tete input { width: 15px; height: 15px; flex: 0 0 15px; cursor: pointer; }
         .pd-grp.masque .pd-grp-tete { opacity: .45; }
@@ -5799,6 +5824,218 @@
             return h;
         }
 
+        // ==================================================================
+        //  PERMIS DE FEU
+        //  Le modele de l'annexe 1 de la note RTE NA-SST-DSSQVT-12-00053.
+        //  Deux pages : le permis, puis les consignes de securite
+        //  imperatives. Les infobulles disent qui delivre, quand le permis
+        //  est obligatoire et ce que chaque case attend ; elles ne
+        //  s'impriment pas.
+        // ==================================================================
+
+        // Une infobulle : le point d'interrogation ouvre le texte sous le champ.
+        function bulle(t) {
+            return `<span class="pd-bulle pd-ecran" tabindex="0" title="${esc(t)}"
+                          onclick="montrerBulle(this)">?</span>`;
+        }
+        function montrerBulle(el) {
+            const hote = el.closest('.pd-champ, .pd-coche, .pd-sous, .pd-pf-etape, .pd-l') || el;
+            const ouverte = hote.nextElementSibling
+                         && hote.nextElementSibling.classList.contains('pd-bulle-texte');
+            document.querySelectorAll('.pd-bulle-texte').forEach(e => e.remove());
+            document.querySelectorAll('.pd-bulle.ouverte').forEach(e => e.classList.remove('ouverte'));
+            if(ouverte) return;
+            const d = document.createElement('div');
+            d.className = 'pd-bulle-texte pd-ecran';
+            d.textContent = el.getAttribute('title');
+            hote.insertAdjacentElement('afterend', d);
+            el.classList.add('ouverte');
+        }
+
+        // Une case a cocher suivie, s'il le faut, de sa precision.
+        function cocheLibre(cle, lab, clePrec, ph) {
+            return `<label class="pd-coche"><input type="checkbox" ${pv(cle) ? 'checked' : ''}
+                           onchange="setPC('${cle}', this.checked)"><span>${lab}</span></label>
+                    <input class="pd-in pd-coche-prec" value="${esc(pv(clePrec))}"
+                           placeholder="${esc(ph || 'à préciser')}"
+                           onchange="setPV('${clePrec}', this.value)">`;
+        }
+
+        const PF_TYPES = [['pf-t1', 'Soudage - brasage'], ['pf-t2', 'Tronçonnage'],
+                          ['pf-t3', 'Oxycoupage'], ['pf-t4', 'Meulage']];
+        const PF_MATOS = [['pf-m1', 'Poste à souder à arc'], ['pf-m2', 'Tronçonneuse'],
+                          ['pf-m3', 'Poste à souder oxyacéthylénique'], ['pf-m4', 'Meuleuse']];
+        const PF_DOCS  = [['pf-d1', 'Plan de prévention'], ['pf-d2', 'Autorisation de travail']];
+
+        const PF_AVANT = [
+            ['pf-a1', 'Vérifier l\'état du matériel utilisé (rechercher notamment les traces '
+                    + 'apparentes d\'usure ou de détérioration sur les matériels électriques)'],
+            ['pf-a2', 'Vérification du contrôle annuel réglementaire du matériel.'],
+            ['pf-a3', 'Éloigner, couvrir ou protéger à l\'aide de bâches ignifugées les installations '
+                    + 'et matériaux combustibles ou inflammables (en particulier ceux placés derrière '
+                    + 'les cloisons à proximité des travaux).'],
+            ['pf-a4', 'Si les travaux doivent être effectués sur un volume creux (cuve, réservoir, '
+                    + 'tuyauterie), assurez-vous que celui-ci a bien fait l\'objet d\'un dégazage.'],
+            ['pf-a5', 'Prendre soin de couvrir toutes les ouvertures, interstices, fissures, etc., '
+                    + 'à l\'aide de sable, bâches, plaques métalliques.'],
+            ['pf-a6', 'Éloigner tout produit ou matériel combustible ou inflammable des conduites et '
+                    + 'tuyauteries traitées.'],
+            ['pf-a7', 'Disposer à proximité immédiate des moyens d\'alarme et de lutte contre '
+                    + 'l\'incendie (au moins deux extincteurs appropriés à l\'extinction d\'un feu '
+                    + 'naissant à proximité des travaux).'],
+            ['pf-a8', 'Prendre les dispositions nécessaires pour éviter le déclenchement intempestif '
+                    + 'du système de détection ou d\'extinction automatique.'],
+            ['pf-a9', 'Désigner une personne connaissant parfaitement les mesures de sécurité.']
+        ];
+        const PF_PENDANT = [
+            ['pf-p1', 'Surveiller ou faire surveiller attentivement les projections incandescentes '
+                    + 'et leurs points de chute.'],
+            ['pf-p2', 'Ne poser au sol les objets chauffés que sur des supports résistant à la '
+                    + 'chaleur, sans risque de la propager.']
+        ];
+        const PF_APRES = [
+            ['pf-r1', 'Ne pas oublier de remettre en service le système de détection ou d\'extinction '
+                    + 'automatique qui avait été neutralisé du fait des travaux.'],
+            ['pf-r2', 'Procéder à une inspection minutieuse du lieu de travail, des locaux adjacents '
+                    + 'et des environs (projection d\'étincelles ou transfert de chaleur).'],
+            ['pf-r3', 'Maintenir une surveillance rigoureuse pendant au moins deux heures après '
+                    + 'l\'arrêt des travaux. En cas d\'impossibilité, faire cesser le travail par '
+                    + 'point chaud deux heures avant l\'arrêt des activités de l\'établissement et '
+                    + 'faire effectuer une ronde de surveillance (prévention des feux couvants).']
+        ];
+
+        function pfListe(l) {
+            return l.map(x => `<label class="pd-coche pd-coche-l"><input type="checkbox"
+                        ${pv(x[0]) ? 'checked' : ''} onchange="setPC('${x[0]}', this.checked)">
+                        <span>${esc(x[1])}</span></label>`).join('');
+        }
+
+        function permisFeu() {
+            const c = pdChantier();
+            return `
+            <div class="pd-note pd-ecran">Modèle de l'annexe n° 1 de la note RTE
+            <b>NA-SST-DSSQVT-12-00053</b>, « Le permis de feu à RTE ». Il est
+            <b>obligatoire</b> pour les travaux de soudage oxyacéthylénique confiés à une entreprise
+            extérieure (arrêté du 19/03/1993) et pour les interventions sur un site classé ICPE dont
+            l'arrêté préfectoral l'impose. Hors de ces cas, les risques liés aux points chauds
+            s'intègrent à la préparation de travail. Les <b>?</b> expliquent chaque case — ils ne
+            s'impriment pas. Le permis se joint à la préparation de travail ; il est archivé à la fin
+            des travaux.</div>
+
+            ${grille('pd-g2',
+                champ('Chef de l\'entité accueillant les travaux ' + bulle(
+                    'Sur un site exploité par RTE, c\'est lui qui délivre le permis de feu. Sur un '
+                  + 'site exploité par un tiers, c\'est l\'exploitant du site qui le délivre '
+                  + '(annexes 2 et 3 de la note).'), chp('pf-acc'))
+              + champ('Chef de l\'entité donnant l\'ordre de travail ' + bulle(
+                    'Sur un site hors exploitation, c\'est l\'entité donneuse d\'ordre qui délivre '
+                  + 'le permis de feu.'), chp('pf-ordo')))}
+            ${grille('pd-g2',
+                champ('Ordre de travail n° ' + bulle(
+                    'Le numéro de l\'OT qui porte les travaux : celui de la préparation.'),
+                    chp('pf-ot'))
+              + champ('Équipe ou entreprise réalisant les travaux ' + bulle(
+                    'L\'équipe RTE ou le prestataire qui exécute le point chaud. Le permis est à '
+                  + 'renouveler si cet exécutant change.'), chpLie('pf-equipe', equipeActive || '')))}
+            ${champ('Lieu et description du travail à effectuer ' + bulle(
+                'Dire où et quoi, précisément : poste ou pylône, repère, et l\'opération par point '
+              + 'chaud elle-même. Le permis est à renouveler si le lieu ou l\'opération change.'),
+                zone('pf-lieu', 2, 'Poste, pylône, repère, nature exacte de l\'opération…'))}
+
+            ${sous('Validité ' + bulle(
+                'Le permis doit être renouvelé à chaque fois que l\'exécutant du travail, le lieu '
+              + 'indiqué ou l\'opération à effectuer change (exigence E/RTE/02 de la note).'))}
+            ${grille('pd-g4',
+                champ('Autorisation valable du', chp('pf-du', '', 'date'))
+              + champ('à', chp('pf-duh', '', 'time'))
+              + champ('au', chp('pf-au', '', 'date'))
+              + champ('à', chp('pf-auh', '', 'time')))}
+
+            ${grille('pd-g2',
+                `<div class="pd-pf-bloc">${sous('Type de travaux par point chaud ' + bulle(
+                    'Travaux par points chauds : tout travail générateur d\'étincelles ou de surfaces '
+                  + 'chaudes.'))}
+                 <div class="pd-coches pd-coches-col">${pfListe(PF_TYPES)}
+                 ${cocheLibre('pf-t5', 'Autre', 'pf-tautre')}</div></div>`
+              + `<div class="pd-pf-bloc">${sous('Matériel utilisé')}
+                 <div class="pd-coches pd-coches-col">${pfListe(PF_MATOS)}
+                 ${cocheLibre('pf-m5', 'Autre', 'pf-mautre')}</div></div>`)}
+
+            ${champ('Consignes impératives de sécurité ' + bulle(
+                'Cochez, à la page suivante, les cases correspondant aux mesures prises avant, '
+              + 'pendant et après le travail. Portez ici ce que cette liste ne couvre pas.'),
+                zone('pf-consignes', 2, 'Consignes propres au chantier…'))}
+            ${champ('Risques particuliers (liés aux produits, au procédé, au stockage…) ' + bulle(
+                'Produits inflammables à proximité, gaz, poussières, huile, SF6, stockage, volume '
+              + 'creux non dégazé, végétation sèche, vent, zone environnementale protégée…'),
+                zone('pf-risques', 2))}
+            ${champ('Moyens de protection à prendre ' + bulle(
+                'Bâches ignifugées, écrans, obturation des ouvertures, éloignement des matériaux '
+              + 'combustibles, neutralisation maîtrisée de la détection automatique…'),
+                zone('pf-protection', 2))}
+
+            ${grille('pd-g2',
+                `<div class="pd-pf-bloc">${sous('Document associé ' + bulle(
+                    'Plan de prévention pour les travaux régis par le décret de 1992 ; pour ceux '
+                  + 'régis par le décret de 1994, le permis est porté par le plan général de '
+                  + 'coordination, le PPSPS et les modes opératoires (exigence E/RTE/01).'))}
+                 <div class="pd-coches pd-coches-col">${pfListe(PF_DOCS)}
+                 ${cocheLibre('pf-d3', 'Autre', 'pf-dautre')}</div></div>`
+              + `<div class="pd-pf-bloc">${sous('Moyens d\'alerte et d\'intervention ' + bulle(
+                    'Au moins deux extincteurs appropriés à l\'extinction d\'un feu naissant, à '
+                  + 'proximité immédiate des travaux, et le moyen de donner l\'alerte depuis le '
+                  + 'chantier.'))}
+                 ${zone('pf-alerte', 2, 'Extincteurs, point d\'eau, moyen d\'alerte…')}
+                 ${sous('Numéros d\'urgence en cas d\'incendie ou d\'accident')}
+                 ${grille('pd-g2', champ('Chargé d\'exploitation', chp('pf-cex'))
+                                 + champ('Pompiers', auto('18')))}</div>`)}
+
+            ${sous('Personnes ou entités concernées ' + bulle(
+                'Chacun des signataires reçoit un exemplaire du permis de feu, complété et revêtu de '
+              + 'toutes les signatures.'))}
+            <table class="pd-tab pd-tab-sig">
+                <thead><tr><th style="width:38%"></th><th>Nom</th><th style="width:28%">Visa</th></tr></thead>
+                <tbody>
+                    <tr><td>Chargé de travaux</td>
+                        <td>${chpLie('pf-s1-nom', c.cdt || '')}</td>
+                        <td>${caseSignature('pf-s1-visa')}</td></tr>
+                    <tr><td>Agent veillant à la sécurité de l'opération</td>
+                        <td>${chp('pf-s2-nom')}</td>
+                        <td>${caseSignature('pf-s2-visa')}</td></tr>
+                    <tr><td>Chef de l'entité qui accueille les travaux ou de l'entité donneuse d'ordre</td>
+                        <td>${chp('pf-s3-nom')}</td>
+                        <td>${caseSignature('pf-s3-visa')}</td></tr>
+                </tbody>
+            </table>
+            <div class="pd-pf-pied">Chacun des signataires reçoit un exemplaire du PERMIS DE FEU,
+            complété et revêtu de toutes les signatures.</div>
+
+            <div class="pd-saut"></div>
+
+            <div class="pd-pf-titre">CONSIGNES DE SÉCURITÉ IMPÉRATIVES</div>
+            <div class="pd-pf-sous">(cochez les cases correspondant aux mesures prises)</div>
+
+            <div class="pd-pf-etape">Avant le travail ${bulle(
+                'Ces mesures se prennent et se vérifient avant d\'allumer quoi que ce soit. La case '
+              + 'cochée engage celui qui signe le permis : ne cochez que ce qui est réellement fait.')}</div>
+            <div class="pd-coches pd-coches-col">${pfListe(PF_AVANT)}
+            ${cocheLibre('pf-a0', 'Autre', 'pf-atxt')}</div>
+
+            <div class="pd-pf-etape">Pendant le travail ${bulle(
+                'La surveillance des projections incandescentes est tenue pendant toute la durée du '
+              + 'point chaud, par l\'agent veillant à la sécurité de l\'opération désigné au permis.')}</div>
+            <div class="pd-coches pd-coches-col">${pfListe(PF_PENDANT)}
+            ${cocheLibre('pf-p0', 'Autre', 'pf-ptxt')}</div>
+
+            <div class="pd-pf-etape">Après le travail ${bulle(
+                'Le point le plus souvent oublié : la surveillance tenue au moins deux heures après '
+              + 'l\'arrêt des travaux, contre les feux couvants. Si elle est impossible, arrêtez les '
+              + 'points chauds deux heures avant la fin des activités et faites une ronde. La note RTE '
+              + 'insiste sur ce point.')}</div>
+            <div class="pd-coches pd-coches-col">${pfListe(PF_APRES)}
+            ${cocheLibre('pf-r0', 'Autre', 'pf-rtxt')}</div>`;
+        }
+
         // Les onze familles d'outillage du classeur, dans son ordre.
         const OUTILLAGE = [
                 ['1 — Tension', ['Perche VAT', 'Perche de mise à la terre', 'Mise à la terre', 'Terre shunt', 'Terre à rouleau', 'MALT LEC verte']],
@@ -6109,6 +6346,8 @@
             ${tableau('mo2-l', [{k:'t', t:'Tâches à réaliser', l:'26%', m:true, o:'taches'}, {k:'r', t:'Analyse de risques', l:'24%', m:true, o:'risques'}, {k:'a', t:'Actions préventives', l:'24%', m:true, o:'actions'}, {k:'pa', t:'Point d\'arrêt', c:true}, {k:'cc', t:'Contrôle croisé', c:true, b:true}, {k:'e', t:'État réalisé', c:true}, {k:'al', t:'Aléa n°', c:true}], {t:'', r:'', a:'', cc:false, e:'', al:''}, null,
                       {etapes:true, arret:'pa', defaut: vides(12, {t:'', r:'', a:'', cc:false, e:'', al:''})})}
         `},
+
+        { id:'permisfeu', titre:'Permis de feu', defaut:false, corps: () => permisFeu() },
 
         { id:'nacelle', titre:'Mode opératoire nacelle', rang:2, defaut:false, corps: () => {
             const etapes = ["Établir le certificat d'adéquation",
