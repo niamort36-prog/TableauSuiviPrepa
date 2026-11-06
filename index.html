@@ -5199,6 +5199,10 @@
             const sec = [['Détection situation dangereuse', 'dsd'], ['Sécurité des tiers', 'st']];
             return `
             ${grille('pd-g3', champ('Ligne', auto(c.ligne)) + champ('Du', auto(c.debut)) + champ('Au', auto(c.fin)))}
+            <div class="pd-note">Le REX se saisit aussi sous forme de <b>questionnaire</b> sur Kizeo :
+            <a href="https://forms.kizeo.com/forms" target="_blank" rel="noopener">forms.kizeo.com/forms</a>
+            — code entreprise <b>RTE</b>. Cette page reste le REX du dossier : c'est elle qui s'imprime,
+            se signe et s'archive.</div>
             ${sous('Déroulement ' + exig('Exigences 18 et 20'))}
             <table class="pd-tab"><thead><tr><th style="width:30%"></th><th style="width:90px">Correct</th><th style="width:90px">Incorrect</th><th>Analyse</th></tr></thead>
             <tbody>${rub.map(r => `<tr>
