@@ -546,6 +546,12 @@
         .pd-dg-pied { margin-top: 12px; font-size: .72rem; color: #64748b; }
         .pd-dg-pied .pd-zone { font-size: .72rem; color: #64748b; }
         .pd-dg-quittance { padding: 7px 2px; font-size: .84rem; }
+        .pd-dg-mail { flex-wrap: wrap; align-items: center; }
+        .pd-dg-mail label { display: flex; align-items: center; gap: 6px; font-weight: 700;
+                            color: #475569; }
+        .pd-dg-mail label .pd-in { width: 230px; }
+        .pd-dg-mail-note { flex: 1 1 260px; font-weight: 400; color: #64748b;
+                           line-height: 1.45; }
         .pd-dg-vide { display: block; min-height: 1.2em; }
         /* Le pied est l'adresse de l'agence : au papier, du texte, pas une case. */
         body.prepa-impression #pd-pages .pd-dg-pied .pd-fige,
@@ -5666,6 +5672,97 @@
             return bouts.join(' — ') + '\n' + postes + ' (' + d.sec.nom + ')';
         }
 
+        // Le formulaire part au propriétaire : le courriel reprend le detail
+        // chiffre et la quittance, en clair, pour qu'il sache ce qu'il signe
+        // avant meme d'ouvrir la piece jointe.
+        function dgMail(i) {
+            const c = pdChantier();
+            const v = k => String(pv('dg' + i + '-' + k)).trim();
+            const adr = v('mail');
+            if(adr && !/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(adr)
+               && !confirm('\u00ab ' + adr + ' \u00bb ne ressemble pas \u00e0 une adresse de '
+                         + 'courriel.\n\nPr\u00e9parer le message quand m\u00eame ?')) return;
+
+            const ligne = v('ligne') || c.nomLigne || '';
+            const kv    = v('kv') || c.tension || '';
+            const rows  = lst('dg' + i + '-l').filter(r => String(r.n || '').trim()
+                                                        || num(r.s) || num(r.p));
+            const tot   = dgTotal(i);
+            const jour  = v('date') ? fmtDatePrint(v('date')) : fmtDatePrint(new Date().toISOString().slice(0, 10));
+
+            const sujet = 'Indemnit\u00e9 pour d\u00e9g\u00e2ts instantan\u00e9s'
+                        + (ligne ? ' \u2014 ligne ' + ligne : '')
+                        + (v('pyl') ? ' \u2014 ' + v('pyl') : '');
+
+            const L = [];
+            L.push('Madame, Monsieur,');
+            L.push('');
+            L.push('\u00c0 la suite des d\u00e9g\u00e2ts occasionn\u00e9s sur votre terrain lors des travaux'
+                 + (v('trav') ? ' de ' + v('trav') : '')
+                 + (v('par') ? ', effectu\u00e9s par ' + v('par') : '')
+                 + (ligne ? ', sur la ligne RTE ' + ligne + (kv ? ' ' + kv + ' kV' : '') : '')
+                 + (v('pyl') ? ' (' + v('pyl') + ')' : '')
+                 + ', voici le d\u00e9tail de l\u2019indemnit\u00e9 propos\u00e9e.');
+            L.push('');
+            if(v('sous')) L.push('B\u00e9n\u00e9ficiaire : ' + v('sous')
+                               + (v('dem') ? ', demeurant \u00e0 ' + v('dem') : ''));
+            L.push('');
+            L.push('D\u00e9tail :');
+            if(rows.length) {
+                rows.forEach(r => {
+                    // Le libelle complet (postes retenus, bareme) est sur le
+                    // formulaire joint : le courriel n'en garde que la culture.
+                    const nat = String(r.n || '').split('\n')[0].trim();
+                    const m = num(r.s) * num(r.p);
+                    L.push('  \u2022 ' + (nat || 'D\u00e9g\u00e2ts')
+                         + (num(r.s) ? ' : ' + r.s + ' m\u00b2' : '')
+                         + (num(r.p) ? ' \u00d7 ' + r.p + ' \u20ac/m\u00b2' : '')
+                         + (m ? ' = ' + eur(m) : ''));
+                });
+            } else {
+                L.push('  (tableau \u00e0 compl\u00e9ter)');
+            }
+            L.push('');
+            L.push('Montant total \u00e0 verser : ' + (tot ? eur(tot) : '\u2014'));
+            L.push('');
+            L.push('RTE s\u2019engage \u00e0 verser cette indemnit\u00e9 par ch\u00e8que bancaire ou postal. '
+                 + 'Merci de nous retourner le formulaire ci-joint, sign\u00e9 en deux exemplaires avec '
+                 + 'la mention \u00ab Lu et approuv\u00e9 \u00bb, accompagn\u00e9 d\u2019un relev\u00e9 '
+                 + 'd\u2019identit\u00e9 bancaire ou postal. En contrepartie, vous donnerez quittance '
+                 + 'd\u00e9finitive \u00e0 RTE pour ces d\u00e9g\u00e2ts.');
+            L.push('');
+            L.push('Fait le ' + jour + (v('lieu') ? ' \u00e0 ' + v('lieu') : '') + '.');
+            L.push('');
+            if(v('rte')) L.push(v('rte'));
+            L.push('Le repr\u00e9sentant RTE');
+            const pied = String(pv('dg' + i + '-pied')).trim() || DG_PIED;
+            L.push(pied);
+
+            // Certains clients de messagerie coupent un mailto au-dela de
+            // 2048 caracteres : plutot que de perdre la signature, on replie
+            // le detail et on renvoie a la piece jointe.
+            const adresse = corps => 'mailto:' + encodeURIComponent(adr)
+                          + '?subject=' + encodeURIComponent(sujet)
+                          + '&body=' + encodeURIComponent(corps);
+            let corps = L.join('\n');
+            if(adresse(corps).length > 2000 && rows.length) {
+                const i1 = L.indexOf('D\u00e9tail :');
+                const i2 = L.findIndex(x => x.indexOf('Montant total \u00e0 verser') === 0);
+                if(i1 >= 0 && i2 > i1) {
+                    L.splice(i1, i2 - i1, 'Le d\u00e9tail des ' + rows.length
+                           + ' ligne(s) de d\u00e9g\u00e2ts figure sur le formulaire joint.', '');
+                    corps = L.join('\n');
+                }
+            }
+            const lien = document.createElement('a');
+            lien.href = adresse(corps);
+            lien.style.display = 'none';
+            document.body.appendChild(lien);
+            lien.click();
+            lien.remove();
+            souffler('Courriel pr\u00e9par\u00e9');
+        }
+
         function dgPorter(i) {
             const d = dgDetail(i);
             if(!d) { alert('Choisissez le secteur, la zone et la culture.'); return; }
@@ -5806,6 +5903,17 @@
                     <button class="btn-pd" onclick="dgAjouter()">+ Ajouter un formulaire</button>
                     ${n > 1 ? `<button class="pd-sup" onclick="dgEnlever(${i})">\u00d7 Supprimer
                                celui-ci</button>` : ''}
+                 </div>
+                 <div class="pd-l pd-aide pd-grp-barre pd-ecran pd-dg-mail">
+                    <label>Courriel du bénéficiaire
+                      <input class="pd-in" type="email" value="${esc(pv('dg' + i + '-mail'))}"
+                             placeholder="nom@exemple.fr" autocomplete="email"
+                             onchange="setPV('dg${i}-mail', this.value)"></label>
+                    <button class="btn-pd" onclick="dgMail(${i})">\u2709 Envoyer par mail</button>
+                    <span class="pd-dg-mail-note">Le message emporte le détail chiffré et le
+                      texte de la quittance. Pour y joindre le formulaire lui-même,
+                      <b>Enregistrer en PDF</b> d'abord, puis glissez le fichier dans le
+                      courriel.</span>
                  </div>`;
             h += dgAssistant(i);
             // La mise en page du modele : un texte courant ou les cases se
