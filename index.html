@@ -3218,8 +3218,23 @@
         // Ce qu'un collegue venu par le lien peut remplir. On ecrit alors la
         // seule case concernee, et non toute la preparation : il ne doit pas
         // pouvoir ecraser le travail du preparateur.
-        const CHAMPS_PARTAGES = ['tv-remarques'];
+        // Signer sans pouvoir ecrire son nom n'avance a rien : chaque ligne
+        // de signature ouvre donc aussi son nom et sa date. Le constat
+        // d'adequation se remplit avec le loueur : son bloc signataire
+        // s'ouvre en entier.
+        const PREFIXES_SIGNATURE = ['sig-prep', 'sig-cdt', 'sig-sup', 'sig-chg', 'sig-tech',
+                                    'sig-mgmt', 'sig-cr-cdt', 'sig-cr-mdp'];
+        const CHAMPS_PARTAGES = ['tv-remarques']
+            .concat(PREFIXES_SIGNATURE.map(x => x + '-nom'),
+                    PREFIXES_SIGNATURE.map(x => x + '-date'),
+                    ['ad-ent-cdt', 'ad-ent-lou', 'ad-sig-cdt', 'ad-sig-lou',
+                     'ad-hab-cdt', 'ad-hab-lou', 'ad-lieu', 'ad-le']);
         function champPartageable(c) { return PARTAGE_PREPA && CHAMPS_PARTAGES.includes(c); }
+        // Le marquage que porte une case ouverte au partage : la feuille de
+        // style lui rend le clic, et la mise a jour en direct la retrouve.
+        function marquePartage(c) {
+            return champPartageable(c) ? ` data-cle="${c}" data-partageable` : '';
+        }
 
         function setPV(c, val) {
             prepa.v[c] = val;
@@ -3227,7 +3242,7 @@
             if(champPartageable(c)) {
                 db.ref('chantiers/' + PREPA_ID + '/prepa/v/' + c)
                   .set(String(val).trim() === '' ? null : val)
-                  .then(() => souffler('Remarque enregistr\u00e9e'))
+                  .then(() => souffler('Enregistr\u00e9'))
                   .catch(e => alert("Enregistrement impossible : " + e.message));
             }
         }
@@ -3235,7 +3250,8 @@
 
         function chp(c, ph, type) {
             return `<input class="pd-in" type="${type || 'text'}" value="${esc(pv(c))}"
-                           placeholder="${esc(ph || '')}" onchange="setPV('${c}', this.value)">`;
+                           placeholder="${esc(ph || '')}"${marquePartage(c)}
+                           onchange="setPV('${c}', this.value)">`;
         }
         // Variante multiligne, pour les valeurs qui debordent d'une ligne.
         function chpLieZone(c, source, ph) {
@@ -3248,7 +3264,8 @@
         function chpLie(c, source, ph, type) {
             const saisi = String(pv(c)).trim();
             return `<input class="pd-in" type="${type || 'text'}" value="${esc(saisi || source || '')}"
-                           placeholder="${esc(ph || '')}" onchange="setPV('${c}', this.value)">`;
+                           placeholder="${esc(ph || '')}"${marquePartage(c)}
+                           onchange="setPV('${c}', this.value)">`;
         }
 
         // Zone reprise de la fiche : on y retrouve ce qui a deja ete saisi
@@ -8397,8 +8414,9 @@
             const b = document.createElement('div');
             b.className = 'pd-bandeau';
             b.innerHTML = 'Pr\u00e9paration de travail partag\u00e9e'
-                        + '<small>Vous pouvez signer et porter une remarque ; le reste est en lecture. '
-                        + 'Choisissez les pages, puis Imprimer pour l\u2019\u00e9diter en PDF.</small>';
+                        + '<small>Vous pouvez signer, porter votre nom et la date sur votre ligne, '
+                        + 'et laisser une remarque \u2014 les cases jaunes ; le reste est en lecture. '
+                        + 'Choisissez les pages, puis Enregistrer en PDF.</small>';
             corps.insertBefore(b, corps.firstChild);
         })();
 
