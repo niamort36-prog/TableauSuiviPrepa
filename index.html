@@ -5461,11 +5461,12 @@
                 const a = accroche(a0), b = accroche(b0);
                 const dx = b.x - a.x, dy = b.y - a.y;
                 const long = Math.hypot(dx, dy) || 1;
-                // La fleche est toujours celle d'une portee : une courbure
-                // reglee du temps ou le curseur existait est ignoree.
+                // La fleche est toujours celle d'une portee, et toujours vers
+                // le bas : un cable pend. Portee la perpendiculaire, elle
+                // basculait vers le haut des que l'arrivee etait a gauche.
                 const f = SCH_ARC * long;
-                const mx = (a.x + b.x) / 2 - dy / long * f;
-                const my = (a.y + b.y) / 2 + dx / long * f;
+                const mx = (a.x + b.x) / 2;
+                const my = (a.y + b.y) / 2 + f;
                 return `<path d="M${a.x} ${a.y} Q ${mx} ${my} ${b.x} ${b.y}" fill="none"
                               stroke="${schCoul(li)}" stroke-width="${li.e === undefined ? SCH_TRAIT : li.e}"
                               stroke-linecap="round"/>`;
