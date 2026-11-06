@@ -505,8 +505,39 @@
         .pd-sue .su-sous { padding-left: 36px; }
         .pd-sue .su-sous::before { content: '\2013'; left: 23px; }
         .su-sigles { font-size: .68rem; line-height: 1.55; }
-        .pd-dg-titre { text-align: center; font-weight: 800; font-size: 1rem; letter-spacing: .06em;
-                       color: var(--primary); margin: 14px 0 10px; }
+        /* Le formulaire reprend la mise en page du modele papier : un texte
+           courant, les cases au fil de la phrase, le logo RTE en tete. */
+        .pd-dg-doc { margin-top: 10px; }
+        .pd-dg-entete { display: flex; align-items: center; gap: 16px; padding-bottom: 8px;
+                        border-bottom: 2px solid var(--primary); margin-bottom: 14px; }
+        .pd-dg-logo { width: 62px; height: auto; flex: 0 0 auto; }
+        .pd-dg-titre { flex: 1; text-align: center; font-weight: 800; font-size: 1.02rem;
+                       letter-spacing: .06em; color: var(--primary); padding-right: 62px; }
+        .pd-dg-p { margin: 0 0 11px; font-size: .86rem; line-height: 2.1; }
+        .pd-dg-i { display: inline-block; width: 210px; vertical-align: baseline;
+                   border: none; border-bottom: 1px dotted #94a3b8; border-radius: 0;
+                   background: transparent; padding: 0 5px; height: 1.5em; }
+        .pd-dg-i:focus { border-bottom: 1px solid var(--primary); background: #f3f8ff;
+                         box-shadow: none; }
+        .pd-dg-i-large { width: 72%; }
+        .pd-dg-i-court { width: 112px; }
+        .pd-dg-somme { display: inline-block; min-width: 118px; text-align: center;
+                       font-weight: 800; color: var(--primary);
+                       border-bottom: 1px dotted #94a3b8; }
+        .pd-dg-sig th { font-weight: 800; text-align: center; }
+        .pd-dg-sous { font-weight: 500; text-transform: none; letter-spacing: 0; color: #475569; }
+        .pd-dg-note1 { font-size: .7rem; color: #64748b; margin-top: 10px;
+                       border-top: 1px solid var(--border); padding-top: 5px; }
+        /* Figees a l'impression, les cases restent dans la phrase. */
+        body.prepa-impression #pd-pages .pd-dg-doc .pd-dg-i + .pd-fige {
+            display: inline-block !important; width: 210px; vertical-align: baseline;
+            min-height: 0 !important; white-space: nowrap; overflow: hidden;
+            border: none; border-bottom: 1px dotted #94a3b8;
+            border-radius: 0; background: transparent; padding: 0 5px; }
+        body.prepa-impression #pd-pages .pd-dg-doc .pd-dg-i-large + .pd-fige { width: 72%; }
+        body.prepa-impression #pd-pages .pd-dg-doc .pd-dg-i-court + .pd-fige { width: 112px; }
+        body.prepa-impression #pd-pages .pd-dg-doc .pd-dg-i + .pd-fige:empty::before {
+            content: '\00a0'; }
         .pd-dg-phrase { margin: 8px 0 6px; font-size: .84rem; line-height: 1.6; }
         .pd-dg-m { text-align: right; }
         .pd-dg-tot td { background: #f1f5f9; }
@@ -5648,14 +5679,24 @@
                     e.className = plein ? 'pd-auto' : 'pd-dg-vide';
                 }
             });
-            ['dg' + i + '-tot', 'dg' + i + '-som'].forEach(id => {
-                const e = document.getElementById(id);
-                if(e) e.textContent = t ? eur(t) : '\u2014';
-            });
+            const tt = document.getElementById('dg' + i + '-tot');
+            if(tt) tt.textContent = t ? eur(t) : '\u2014';
+            const so = document.getElementById('dg' + i + '-som');
+            if(so) so.textContent = t ? eur(t) : '';
         }
 
         function dgTotal(i) {
             return lst('dg' + i + '-l').reduce((a, r) => a + num(r.s) * num(r.p), 0);
+        }
+
+        // Une case qui se glisse dans la phrase, comme les pointilles du
+        // modele papier. Elle garde la valeur deja saisie du chantier.
+        function dgIn(i, cle, taille, source, type) {
+            const c = 'dg' + i + '-' + cle;
+            const saisi = String(pv(c)).trim();
+            return `<input class="pd-in pd-dg-i${taille ? ' pd-dg-i-' + taille : ''}"
+                           type="${type || 'text'}" value="${esc(saisi || source || '')}"
+                           onchange="setPV('${c}', this.value)">`;
         }
 
         function dgCell(i, j, k) {
@@ -5749,19 +5790,23 @@
                                celui-ci</button>` : ''}
                  </div>`;
             h += dgAssistant(i);
-            h += `<div class="pd-dg-titre">INDEMNITÉ POUR DÉGÂTS INSTANTANÉS</div>`;
-            h += grille('pd-g2', champ('Je soussigné', chp('dg' + i + '-sous'))
-                               + champ('demeurant à', chp('dg' + i + '-dem')));
-            h += `<div class="pd-dg-phrase">déclare accepter la somme de
-                  <span class="pd-auto" id="dg${i}-som">${tot ? eur(tot) : '—'}</span>
-                  correspondant à l'indemnité évaluée en réparation des dégâts occasionnés lors des
-                  travaux de</div>`;
-            h += grille('pd-g2', champ('Nature des travaux', chp('dg' + i + '-trav'))
-                               + champ('effectués par', chp('dg' + i + '-par')));
-            h += grille('pd-g3', champ('RTE sur la ligne', chpLie('dg' + i + '-ligne', c.nomLigne))
-                               + champ('kV', chpLie('dg' + i + '-kv', c.tension))
-                               + champ('Portée ou pylône n°', chp('dg' + i + '-pyl')));
-            h += `<div class="pd-dg-phrase">Cette indemnité est déterminée comme suit :</div>`;
+            // La mise en page du modele : un texte courant ou les cases se
+            // glissent au fil de la phrase, sous le logo RTE.
+            h += `<div class="pd-dg-doc">
+                  <div class="pd-dg-entete">
+                    <img class="pd-dg-logo" src="assets/rte-logo.png" alt="RTE">
+                    <div class="pd-dg-titre">INDEMNITÉ POUR DÉGÂTS INSTANTANÉS</div>
+                  </div>
+                  <p class="pd-dg-p">Je soussigné ${dgIn(i, 'sous', 'large')}</p>
+                  <p class="pd-dg-p">demeurant à ${dgIn(i, 'dem', 'large')}</p>
+                  <p class="pd-dg-p">déclare accepter la somme de
+                    <span class="pd-dg-somme" id="dg${i}-som">${tot ? eur(tot) : ''}</span>
+                    correspondant à l'indemnité évaluée en réparation des dégâts occasionnés lors
+                    des travaux de ${dgIn(i, 'trav')} effectués par ${dgIn(i, 'par')}</p>
+                  <p class="pd-dg-p">RTE sur la ligne ${dgIn(i, 'ligne', '', c.nomLigne)}
+                    ${dgIn(i, 'kv', 'court', c.tension)} kV
+                    &nbsp;&nbsp;Portée ou Pyl n° ${dgIn(i, 'pyl', 'court')}</p>
+                  <p class="pd-dg-p">Cette indemnité est déterminée comme suit :</p>`;
             h += `<table class="pd-tab pd-dg"><thead><tr>
                     <th>Nature des dégâts</th>
                     <th style="width:120px">Surface endommagée en m²</th>
@@ -5785,24 +5830,28 @@
                   <div class="pd-tab-actions pd-ecran">
                     <button class="btn-pd" onclick="addL('${cle}', {&#34;n&#34;:&#34;&#34;,&#34;s&#34;:&#34;&#34;,&#34;p&#34;:&#34;&#34;}); dgMaj(${i})">+ Ligne</button>
                   </div>`;
-            h += `<div class="pd-dg-phrase">RTE s'engage à verser l'indemnité précitée par chèque
-                  bancaire ou postal — joindre un relevé d'identité bancaire ou postal.</div>`;
-            h += grille('pd-g2', champ('En contrepartie, M', chp('dg' + i + '-m'))
-                               + champ('\u00a0', `<div class="pd-dg-quittance">donne quittance
-                                      définitive à RTE pour ces dégâts.</div>`));
-            h += grille('pd-g2', champ('Fait en deux exemplaires à', chp('dg' + i + '-lieu'))
-                               + champ('Le', chp('dg' + i + '-date', '', 'date')));
-            h += `<table class="pd-tab pd-tab-sig"><thead><tr>
-                    <th>Le représentant RTE</th>
-                    <th>Le bénéficiaire — signature précédée de la mention « Lu et approuvé »</th>
-                  </tr></thead><tbody><tr>
-                    <td>${chp('dg' + i + '-rte', 'Nom et prénom')}</td>
-                    <td>${chp('dg' + i + '-ben', 'Nom et prénom')}</td>
-                  </tr><tr class="pd-sig-main">
-                    <td>${caseSignature('dg' + i + '-visa-rte')}</td>
-                    <td>${caseSignature('dg' + i + '-visa-ben')}</td>
-                  </tr></tbody></table>`;
-            h += `<div class="pd-dg-pied">${zoneLiee('dg' + i + '-pied', 3, DG_PIED, 'du modèle')}</div>`;
+            h += `<p class="pd-dg-p">RTE s'engage à verser l'indemnité précitée par chèque
+                    bancaire ou postal <sup>1</sup>.</p>
+                  <p class="pd-dg-p">En contre partie, M ${dgIn(i, 'm')} donne quittance définitive
+                    à RTE pour ces dégâts.</p>
+                  <p class="pd-dg-p">Fait en deux exemplaires à ${dgIn(i, 'lieu')},</p>
+                  <p class="pd-dg-p">Le ${dgIn(i, 'date', 'court', '', 'date')},</p>
+                  <table class="pd-tab pd-tab-sig pd-dg-sig">
+                    <thead><tr>
+                      <th>Le représentant RTE<br><span class="pd-dg-sous">Signature</span></th>
+                      <th>Le bénéficiaire<br><span class="pd-dg-sous">Signature précédée de la
+                          mention « Lu et approuvé »</span></th>
+                    </tr></thead><tbody>
+                      <tr><td>${chp('dg' + i + '-rte', 'Nom et prénom')}</td>
+                          <td>${chp('dg' + i + '-ben', 'Nom et prénom')}</td></tr>
+                      <tr class="pd-sig-main">
+                          <td>${caseSignature('dg' + i + '-visa-rte')}</td>
+                          <td>${caseSignature('dg' + i + '-visa-ben')}</td></tr>
+                    </tbody></table>
+                  <div class="pd-dg-note1"><sup>1</sup> Joindre un Relevé d'Identité Bancaire ou
+                    Postal</div>
+                  <div class="pd-dg-pied">${zoneLiee('dg' + i + '-pied', 3, DG_PIED, 'du modèle')}</div>
+                  </div>`;
             return h;
         }
 
