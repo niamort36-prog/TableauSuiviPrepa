@@ -8815,11 +8815,32 @@
             if(el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
-        function goPrepaDoc() { switchScreen('screen-prepadoc'); renderPrepa();
+        function goPrepaDoc() { switchScreen('screen-prepadoc'); renderPrepa(true);
                                 chargerPhotoCouv(); chargerPieces(); chargerSignatures();
                                 chargerAnnexes(); }
 
-        function renderPrepa() {
+        // Redessiner la preparation vide puis remplit #pd-pages : le temps
+        // d'un souffle le document est court, et le navigateur ramene la vue
+        // en haut. Apres une signature prise sur tablette, on se retrouvait
+        // au sommaire au lieu de la case qu'on venait de viser. On repose
+        // donc la vue ou elle etait, une fois la hauteur revenue.
+        function reposerVue(y) {
+            // Rend vrai quand la page etait assez haute pour y revenir ;
+            // sinon des images manquent encore et il faut la reprendre.
+            const poser = () => {
+                const max = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+                const cible = Math.max(0, Math.min(y, max));
+                window.scrollTo(0, cible);
+                return cible >= y - 1;
+            };
+            if(poser()) { requestAnimationFrame(poser); return; }
+            let essais = 0;
+            const encore = () => { if(poser() || ++essais > 8) return; setTimeout(encore, 60); };
+            requestAnimationFrame(encore);
+        }
+
+        function renderPrepa(enHaut) {
+            const vue = enHaut ? 0 : (window.scrollY || document.documentElement.scrollTop || 0);
             const c = pdChantier();
             const lig = document.getElementById('pd-ligne');
             if(lig) lig.textContent = c.ligne + (c.debut ? '  —  du ' + c.debut + ' au ' + c.fin : '');
@@ -8862,9 +8883,12 @@
             enveloppeTableaux();
             ajusterZones();
             majPrepaEtat();
+            reposerVue(vue);
             // Les numeros du sommaire dependent de la mise en page : on les
-            // recalcule une fois le rendu pose.
-            setTimeout(rafraichirPagination, 0);
+            // recalcule une fois le rendu pose. La mesure decoupe puis
+            // recolle les feuilles : la hauteur bouge, on repose la vue
+            // apres elle aussi.
+            setTimeout(() => { rafraichirPagination(); reposerVue(vue); }, 0);
         }
 
         // Taux de remplissage, page par page, et report sur l'avancement.
