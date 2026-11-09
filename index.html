@@ -812,6 +812,46 @@
         .btn-pd.pre:hover { background: #e8e1f1; color: #5c4a78; }
 
         .pd-img { max-width: 100%; border: 1px solid var(--border); border-radius: 6px; display: block; margin: 8px auto; }
+
+        /* Les solutions de MALT / CC : un bloc par solution, son code en
+           tete, ses conditions, son ou ses schemas. Celle qui est retenue
+           se voit sur le papier, le choix lui-meme reste a l'ecran. */
+        .pd-sol-fam { margin: 18px 0 2px; padding: 6px 10px; border-radius: 5px;
+                      background: var(--primary); color: #fff; font-size: .82rem;
+                      font-weight: 800; text-transform: uppercase; letter-spacing: .03em;
+                      display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
+        .pd-sol-fam-ret { margin-left: auto; font-weight: 600; text-transform: none;
+                          letter-spacing: 0; opacity: .85; }
+        .pd-sol { border: 1px solid var(--border); border-radius: 7px; padding: 8px 11px 10px;
+                  margin-bottom: 9px; }
+        .pd-sol.retenue { border-color: var(--rte-jaune); box-shadow: inset 4px 0 0 var(--rte-jaune);
+                          background: #fffdf5; }
+        .pd-sol-marque { display: none; margin-left: 8px; padding: 1px 7px; border-radius: 9px;
+                         background: var(--rte-jaune); color: #4a3200; font-size: .68rem;
+                         font-weight: 800; letter-spacing: .04em; }
+        .pd-sol.retenue .pd-sol-marque { display: inline-block; }
+        .pd-sol-impr { margin-left: 9px; font-size: .68rem; font-weight: 600; color: #94a3b8;
+                       text-transform: none; letter-spacing: 0; }
+        .pd-sol-nom { font-size: .84rem; line-height: 1.45; margin: 3px 0 5px; }
+        .pd-sol-choix { display: flex; align-items: center; gap: 7px; font-size: .8rem;
+                        font-weight: 700; color: #475569; cursor: pointer; margin-bottom: 6px; }
+        .pd-sol-choix input { width: 15px; height: 15px; flex: 0 0 15px; cursor: pointer; }
+        .pd-sol-cond { font-size: .78rem; line-height: 1.5; color: #475569; }
+        .pd-sol-cond b { color: var(--primary); margin-right: 5px; }
+        .pd-sol-img { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
+                      align-items: flex-end; }
+        .pd-sol-img .pd-img { max-height: 230px; width: auto; margin: 8px 0; }
+        .pd-sol-leg { max-height: 120px; width: auto; }
+        .pd-sol-note { margin-top: 6px; }
+        body.prepa-impression #pd-pages .pd-sol-img .pd-img { max-height: 78mm; }
+        body.prepa-impression #pd-pages .pd-sol-leg { max-height: 26mm; }
+        body.prepa-impression #pd-pages .pd-sol-fam-ret { opacity: 1; }
+        /* La decoupe en feuilles mesure des boites, pas leurs marges : a
+           l'impression on les passe en remplissage, sinon la derniere
+           solution d'une feuille deborde du papier. */
+        body.prepa-impression #pd-pages .pd-sol { margin: 0; padding-bottom: 5mm; }
+        body.prepa-impression #pd-pages .pd-sol-fam { margin: 0; padding: 5mm 10px 2mm; }
+        body.prepa-impression #pd-pages .pd-sol-note { margin-bottom: 0; }
         .pd-img-grille { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .pd-img-grille .pd-img { max-height: 280px; object-fit: contain; width: auto; }
 
@@ -1004,6 +1044,7 @@
         body.partage-prepa #pd-pages .pd-sch-reglage,
         body.partage-prepa #pd-pages .pd-sch-liens,
         body.partage-prepa #pd-pages .pd-grp-barre,
+        body.partage-prepa #pd-pages .pd-sol-choix,
         body.partage-prepa #pd-pages .pd-grp-tete input { display: none !important; }
         body.partage-prepa #pd-pages input,
         body.partage-prepa #pd-pages select,
@@ -4734,20 +4775,200 @@
             renderPrepa();
         }
 
-        // Les cinq planches du document operatoire. Un chantier n'en
-        // concerne qu'une ou deux : on decoche les autres, elles ne sortent
-        // pas a l'impression.
-        const PLANCHES_OP = [
-            'Autres dispositions symboliques \u2014 l\u00e9gende des figures',
-            '5.3.1 \u2014 Solutions de pose de MALT / CC sur un support',
-            '5.3.2 \u2014 Solutions de pose lors de travaux \u00e9lectriques au sol sur un conducteur',
-            '5.3.3 \u2014 Solutions de pose lors de l\u2019utilisation PEMP',
-            'Solution 5C \u2014 MALT / CC en triphas\u00e9 au droit de la PEMP'
+        // --- Les solutions de pose de MALT / CC -----------------------------
+        // Schemas de la note d'application RTE « Protection contre le risque
+        // electrique — Lignes aeriennes » (RTE_2025_0724201_2), §3.4.1 a
+        // §3.4.3. Les codes de solution (1A, 2B, 10C...) sont ceux du document
+        // operatoire : on les garde pour que le choix se dise avec les mots du
+        // chantier. Un chantier ne retient qu'une solution par famille ; les
+        // autres se masquent et ne sortent pas a l'impression.
+        const RPE_OUI  = 'Applicable qu\u2019il y ait risque ou non de r\u00e9alimentation '
+                       + 'par un ouvrage voisin (RPE).';
+        const RPE_NON  = 'Applicable seulement s\u2019il n\u2019y a aucun risque de '
+                       + 'r\u00e9alimentation par un ouvrage voisin. Interdit si ouvrage voisin en RPE.';
+        const RGT_OUI  = 'La ligne est reli\u00e9e \u00e9lectriquement au RGT d\u2019au moins un poste.';
+        const RGT_NON  = 'La ligne est sans continuit\u00e9 \u00e9lectrique garantie avec le RGT '
+                       + 'd\u2019au moins un poste.';
+        const PRO_TRIM = 'Prot\u00e8ge contre un retour intempestif de tension triphas\u00e9e et '
+                       + 'monophas\u00e9e.';
+        const PRO_TRI  = 'Prot\u00e8ge contre un retour intempestif de tension triphas\u00e9e, mais ne '
+                       + 'garantit pas la d\u00e9tection d\u2019un retour intempestif monophas\u00e9.';
+        const PRO_SANS = 'Prot\u00e8ge contre un retour intempestif de tension triphas\u00e9e et '
+                       + 'monophas\u00e9e, sans liaison avec un RGT de poste.';
+        const SOL_NIP  = 'La pose de MALT / CC ou la fermeture de ST doit \u00eatre identifi\u00e9e '
+                       + '\u00e0 la r\u00e9union de planning et formalis\u00e9e dans la NIP. Le CDC '
+                       + 'pr\u00e9cisera la disposition appliqu\u00e9e au pav\u00e9 11 du DAOE. '
+                       + 'Attention : ici ce n\u2019est pas l\u2019att\u00e9nuation des '
+                       + 'ph\u00e9nom\u00e8nes induits qui est recherch\u00e9e (SFPT) mais '
+                       + 'l\u2019\u00e9limination d\u2019un d\u00e9faut : les mises \u00e0 la terre '
+                       + 'doivent \u00eatre dimensionn\u00e9es \u00e0 l\u2019Icc.';
+        const SOL_CDG  = 'La pr\u00e9sence d\u2019un c\u00e2ble de garde reli\u00e9 \u00e0 au moins '
+                       + 'un RGT doit \u00eatre formalis\u00e9e dans la pr\u00e9paration de travail.';
+        const SOL_PART = 'Solution particuli\u00e8rement adapt\u00e9e aux chantiers ne concernant '
+                       + 'qu\u2019une phase, sous condition de respect de la DLVR, pour des ouvrages '
+                       + 'dont la mise \u00e0 la terre au niveau du pyl\u00f4ne est contraignante '
+                       + '(NCLA, liaison \u00e0 faisceaux\u2026).';
+        const SOL_PASS = 'Cette solution s\u2019applique \u00e0 tous les cas de chantier et '
+                       + 'pr\u00e9sente le moins de contraintes de mise en \u0153uvre.';
+
+        const SOL_MALT = [
+            { g:'a', ref:'\u00a73.4.1', titre:'Pose de MALT / CC sur un support', sols: [
+                { c:'1A', i:['1a'],
+                  t:'MALT / CC en triphas\u00e9 sur le support et MALT / CC en triphas\u00e9 dans '
+                  + 'les postes encadrants',
+                  rpe:RPE_OUI, rgt:RGT_NON, pro:PRO_SANS, n:SOL_NIP },
+                { c:'2A', i:['2a-1', '2a-2'],
+                  t:'MALT / CC de la ou des phases objets des travaux et de celles dont '
+                  + 'l\u2019op\u00e9rateur ou les objets qu\u2019il manipule peuvent se trouver '
+                  + '\u00e0 une distance inf\u00e9rieure \u00e0 la DLVR',
+                  rpe:RPE_OUI, rgt:RGT_OUI, pro:PRO_TRIM,
+                  n:SOL_CDG + ' ' + SOL_PASS + ' ' + SOL_PART },
+                { c:'3A', i:['3a'],
+                  t:'MALT / CC en triphas\u00e9 sur le support',
+                  rpe:RPE_NON, rgt:RGT_NON, pro:PRO_TRI,
+                  n:'S\u2019applique \u00e0 tous les chantiers sans risque de r\u00e9alimentation '
+                  + 'par un ouvrage voisin.' },
+                { c:'4A', i:['4a'],
+                  t:'MALT / CC de la ou des phases objets des travaux et de celles dans la DLVR, '
+                  + 'et MALT / CC en triphas\u00e9 dans les postes encadrants',
+                  rpe:RPE_NON, rgt:RGT_NON, pro:PRO_TRI, n:SOL_NIP }
+            ]},
+            { g:'b', ref:'\u00a73.4.2', titre:'Travaux \u00e9lectriques au sol sur un conducteur',
+              sols: [
+                { c:'1B', i:['1b'],
+                  t:'MALT / CC en triphas\u00e9 sur les deux pyl\u00f4nes encadrants et MALT / CC '
+                  + 'en triphas\u00e9 dans les postes encadrants',
+                  rpe:RPE_OUI, rgt:RGT_NON, pro:PRO_SANS, n:SOL_NIP },
+                { c:'2B', i:['2b'],
+                  t:'MALT / CC en triphas\u00e9 sur les deux pyl\u00f4nes encadrants',
+                  rpe:RPE_NON, rgt:RGT_NON, pro:PRO_TRI,
+                  n:'S\u2019applique \u00e0 tous les chantiers sans risque de r\u00e9alimentation '
+                  + 'par un ouvrage voisin.' },
+                { c:'3B', i:['3b'],
+                  t:'MALT / CC sur les deux pyl\u00f4nes encadrant la ou les phases objets des '
+                  + 'travaux et celles dont l\u2019op\u00e9rateur ou les objets qu\u2019il '
+                  + 'manipule peuvent se trouver \u00e0 une distance inf\u00e9rieure \u00e0 la DLVR',
+                  rpe:RPE_OUI, rgt:RGT_OUI, pro:PRO_TRIM,
+                  n:SOL_CDG + ' ' + SOL_PASS + ' ' + SOL_PART }
+            ]},
+            { g:'c', ref:'\u00a73.4.3', titre:'Pleine port\u00e9e avec une PEMP', sols: [
+                { c:'1C', i:['1c'],
+                  t:'MALT / CC en triphas\u00e9 au droit de la PEMP et MALT / CC en triphas\u00e9 '
+                  + 'dans les postes encadrants',
+                  rpe:RPE_OUI, rgt:RGT_NON, pro:PRO_SANS, n:SOL_NIP },
+                { c:'2C', i:['2c'],
+                  t:'MALT / CC en triphas\u00e9 sur un des deux pyl\u00f4nes encadrants et '
+                  + 'MALT / CC en triphas\u00e9 dans les postes encadrants',
+                  rpe:RPE_OUI, rgt:RGT_NON, pro:PRO_SANS, n:SOL_NIP },
+                { c:'5C', i:['5c'],
+                  t:'MALT / CC en triphas\u00e9 au droit de la PEMP',
+                  rpe:RPE_NON, rgt:RGT_NON, pro:PRO_TRI, n:SOL_NIP },
+                { c:'6C', i:['6c'],
+                  t:'MALT / CC au droit de la PEMP sur la ou les phases objets des travaux et '
+                  + 'celles dans la DLVR, et MALT / CC en triphas\u00e9 dans les postes encadrants',
+                  rpe:RPE_NON, rgt:RGT_NON, pro:PRO_TRI, n:SOL_NIP },
+                { c:'7C', i:['7c'],
+                  t:'MALT / CC en triphas\u00e9 sur un des deux pyl\u00f4nes encadrants',
+                  rpe:RPE_NON, rgt:RGT_NON, pro:PRO_TRI, n:SOL_NIP },
+                { c:'8C', i:['8c-1', '8c-2'],
+                  t:'Sur un des deux pyl\u00f4nes encadrants, MALT / CC de la ou des phases objets '
+                  + 'des travaux et de celles dans la DLVR',
+                  rpe:RPE_OUI, rgt:RGT_OUI, pro:PRO_TRIM,
+                  n:SOL_CDG + ' ' + SOL_PART },
+                { c:'10C', i:['10c'],
+                  t:'MALT / CC au droit de la PEMP sur la ou les phases objets des travaux et de '
+                  + 'celles dans la DLVR, et sur le c\u00e2ble de garde',
+                  rpe:RPE_OUI, rgt:RGT_OUI, pro:PRO_TRIM,
+                  n:SOL_CDG + ' Attention : en pleine port\u00e9e il faut poser une MALT / CC sur '
+                  + 'le CdG ; sinon consid\u00e9rer le chantier comme \u00e9tant sans CdG et '
+                  + 'appliquer la solution correspondante.' }
+            ]}
         ];
-        function planchesOp(v) {
-            PLANCHES_OP.forEach((x, i) => { prepa.v['so-m' + i] = !v; });
+
+        function solCle(c)  { return 'so-' + String(c).toLowerCase(); }
+        // La legende sort par defaut, les schemas non : c'est le choix du
+        // chantier qui les appelle, pas l'inverse.
+        function solVue(c) {
+            const v = prepa.v[solCle(c)];
+            return v === undefined ? c === 'legende' : !v;
+        }
+        function solRetenue(g) { return String(pv('so-ret-' + g)); }
+        function solToutes(v) {
+            prepa.v[solCle('legende')] = !v;
+            SOL_MALT.forEach(f => f.sols.forEach(x => { prepa.v[solCle(x.c)] = !v; }));
             majPrepaEtat();
             renderPrepa();
+        }
+        // Retenir une solution la fait sortir à l'impression : c'est elle
+        // qu'on montre au briefing, la masquer n'aurait pas de sens.
+        function solRetenir(g, c) {
+            prepa.v['so-ret-' + g] = c;
+            if(c) prepa.v[solCle(c)] = false;
+            majPrepaEtat();
+            renderPrepa();
+        }
+
+        function solBloc(f, x) {
+            const vu = solVue(x.c), ret = solRetenue(f.g) === x.c;
+            return `<div class="pd-grp pd-sol${vu ? '' : ' masque'}${ret ? ' retenue' : ''}">
+                <label class="pd-sous pd-grp-tete">
+                    <input type="checkbox" ${vu ? 'checked' : ''}
+                           onchange="setPC('${solCle(x.c)}', !this.checked); renderPrepa()"
+                           title="Sortir ce sch\u00e9ma \u00e0 l'impression">
+                    <span>Solution ${esc(x.c)}<span class="pd-sol-marque">retenue</span><span
+                          class="pd-sol-impr pd-ecran">cochez pour l'imprimer</span></span>
+                </label>
+                <div class="pd-sol-nom">${esc(x.t)}</div>
+                <label class="pd-sol-choix pd-ecran">
+                    <input type="checkbox" ${ret ? 'checked' : ''}
+                           onchange="solRetenir('${f.g}', this.checked ? '${x.c}' : '')">
+                    <span>Retenir cette solution pour le chantier</span></label>
+                <div class="pd-sol-cond">
+                    <div><b>RPE</b> ${esc(x.rpe)}</div>
+                    <div><b>RGT</b> ${esc(x.rgt)}</div>
+                    <div><b>Protection</b> ${esc(x.pro)}</div>
+                </div>
+                <div class="pd-sol-img">${x.i.map(n =>
+                    `<img class="pd-img" src="${IMG}malt-sol-${n}.png"
+                          alt="Solution ${esc(x.c)}">`).join('')}</div>
+                <div class="pd-note pd-sol-note">${esc(x.n)}</div>
+            </div>`;
+        }
+
+        function solutionsMalt() {
+            const tous = SOL_MALT.reduce((n, f) => n + f.sols.length, 0) + 1;
+            const vus = (solVue('legende') ? 1 : 0)
+                      + SOL_MALT.reduce((n, f) => n + f.sols.filter(x => solVue(x.c)).length, 0);
+            const legVue = solVue('legende');
+            let h = `<div class="pd-l pd-aide pd-grp-barre">
+                    <span>${vus} sch\u00e9ma(s) sur ${tous} \u00e0 l'impression.</span>
+                    <button class="btn-pd" onclick="solToutes(true)">Tout afficher</button>
+                    <button class="btn-pd" onclick="solToutes(false)">Tout masquer</button>
+                 </div>
+                 <div class="pd-grp${legVue ? '' : ' masque'}">
+                    <label class="pd-sous pd-grp-tete">
+                      <input type="checkbox" ${legVue ? 'checked' : ''}
+                             onchange="setPC('${solCle('legende')}', !this.checked); renderPrepa()"
+                             title="Sortir la l\u00e9gende \u00e0 l'impression">
+                      <span>L\u00e9gende des sch\u00e9mas</span></label>
+                    ${legVue ? `<img class="pd-img pd-sol-leg" src="${IMG}malt-sol-legende.png"
+                                     alt="L\u00e9gende des sch\u00e9mas">` : ''}
+                 </div>`;
+            SOL_MALT.forEach(f => {
+                const r = solRetenue(f.g);
+                const choisie = f.sols.find(x => x.c === r);
+                h += `<div class="pd-sol-fam">${esc(f.ref)} \u2014 ${esc(f.titre)}
+                        <span class="pd-sol-fam-ret">${choisie
+                            ? 'Solution retenue : ' + esc(choisie.c)
+                            : 'Aucune solution retenue'}</span></div>`;
+                f.sols.forEach(x => { h += solBloc(f, x); });
+            });
+            h += `<div class="pd-note">Les solutions-type ne sont que des sch\u00e9mas de principe
+                  \u00e9lectrique : elles ne sont pas toutes r\u00e9alisables sur tous les ouvrages,
+                  mais il existe au moins une solution r\u00e9alisable pour chaque type d\u2019ouvrage.
+                  En cas d\u2019ouverture de conducteur ou de pont, appliquer les r\u00e8gles du DO
+                  \u00e9lectrique D1 G\u00e9n\u00e9ralit\u00e9s RTE_2020_0000030.</div>`;
+            return h;
         }
 
         // --- Les fiches SUE -------------------------------------------------
@@ -6312,10 +6533,15 @@
               + 'Le quadrillage reste imprimé sous le dessin : ce qui n\'a pas été placé à '
               + 'l\'écran se finit à la main sur le chantier.',
             schemaop:
-                'Un chantier ne concerne qu\'une ou deux planches : décochez les autres, elles '
-              + 'ne partent pas à l\'impression.\n'
-              + 'Gardez celle qui correspond vraiment au mode opératoire retenu — c\'est elle '
-              + 'qu\'on montrera au briefing.',
+                'Lisez la ligne RPE et la ligne RGT avant de regarder le dessin : c\'est la '
+              + 'présence d\'un câble de garde relié au RGT d\'un poste, et le risque de '
+              + 'réalimentation par un ouvrage voisin, qui ouvrent ou ferment chaque solution.\n'
+              + 'Cochez « Retenir cette solution » dans chacune des trois familles que le '
+              + 'chantier concerne : la solution choisie se marque et part à l\'impression.\n'
+              + 'Seule la légende sort par défaut : les autres schémas n\'apparaissent que si '
+              + 'vous les cochez, pour ne pas imprimer tout le catalogue.\n'
+              + 'Les codes (1A, 2B, 10C…) sont ceux du document opératoire : c\'est sous ce nom '
+              + 'qu\'on en parle au briefing.',
             sue:
                 'Ne gardez que les fiches que le chantier peut rencontrer.\n'
               + 'Ce n\'est pas une formalité : les actions préventives de la fiche se '
@@ -6849,26 +7075,8 @@
             paveSchema() + paveMalt()
         },
 
-        { id:'schemaop', titre:'Schémas du document opératoire', defaut:true, images:true, corps: () => {
-            const vus = PLANCHES_OP.filter((x, i) => !pv('so-m' + i)).length;
-            let h = `<div class="pd-l pd-aide pd-grp-barre">
-                    <span>${vus} planche(s) sur ${PLANCHES_OP.length} \u00e0 l'impression.</span>
-                    <button class="btn-pd" onclick="planchesOp(true)">Tout afficher</button>
-                    <button class="btn-pd" onclick="planchesOp(false)">Tout masquer</button>
-                 </div>`;
-            PLANCHES_OP.forEach((lib, i) => {
-                const vu = !pv('so-m' + i);
-                h += `<div class="pd-grp${vu ? '' : ' masque'}">
-                      <label class="pd-sous pd-grp-tete">
-                        <input type="checkbox" ${vu ? 'checked' : ''}
-                               onchange="setPC('so-m${i}', !this.checked); renderPrepa()"
-                               title="Sortir cette planche \u00e0 l'impression">
-                        <span>${lib}</span></label>
-                      ${vu ? `<img class="pd-img" src="${IMG}schema-doc-op-0${i + 1}.png" alt="${esc(lib)}">` : ''}
-                      </div>`;
-            });
-            return h;
-        }},
+        { id:'schemaop', titre:'Schémas du document opératoire', defaut:true,
+          corps: () => solutionsMalt() },
 
         { id:'sue', titre:'Situations d’urgence environnementale', defaut:false,
           corps: () => sueFiches() },

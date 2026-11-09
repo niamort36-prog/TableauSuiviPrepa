@@ -660,14 +660,41 @@
         la base doit l'être aussi.
     </div>
 
-    <h3>Ne garder que les solutions de mise à la terre utiles</h3>
+    <h3>Choisir sa solution de mise à la terre</h3>
 
-    <p>La page <b>Schémas du document opératoire</b> porte les cinq planches du document :
-    la légende des figures, puis les solutions de pose de MALT / CC <b>sur un support</b>
-    (5.3.1), <b>lors de travaux au sol sur un conducteur</b> (5.3.2), <b>lors de l'utilisation
-    d'une PEMP</b> (5.3.3) et la <b>solution 5C</b>. Un chantier n'en concerne qu'une ou deux :
-    décochez les autres, elles ne sortent pas à l'impression. Chaque planche porte désormais
-    son titre, pour savoir laquelle on garde sans avoir à l'ouvrir.</p>
+    <p>La page <b>Schémas du document opératoire</b> reprend les schémas de la note
+    d'application RTE <i>Protection contre le risque électrique — Lignes aériennes</i>, de sa
+    légende aux trois tableaux de solutions. Ils ne sont plus livrés en planches entières :
+    chaque solution a son propre bloc, sous le <b>nom qu'on lui donne sur le chantier</b> —
+    1A, 2A, 3A, 4A pour la pose sur un support (§3.4.1), 1B, 2B, 3B pour les travaux au sol
+    sur un conducteur (§3.4.2), 1C, 2C, 5C, 6C, 7C, 8C et 10C pour la pleine portée avec une
+    PEMP (§3.4.3).</p>
+
+    <p>Chaque bloc dit, avant de montrer le dessin, les deux choses qui décident :
+    la ligne <b>RPE</b> — la solution tient-elle s'il y a risque de réalimentation par un
+    ouvrage voisin — et la ligne <b>RGT</b> — faut-il une continuité électrique avec le réseau
+    de terre d'un poste, c'est-à-dire un câble de garde. La ligne <b>Protection</b> dit contre
+    quoi elle protège : le retour intempestif triphasé seul, ou triphasé et monophasé. La note
+    du bas reprend les compléments du document : ce qu'il faut formaliser dans la préparation,
+    ce qui doit passer en réunion de planning et dans la NIP, et le rappel que les mises à la
+    terre se dimensionnent à l'Icc.</p>
+
+    <img src="captures/25-solutions.png" alt="Les solutions de pose de MALT / CC">
+
+    <h3>Retenir une solution, et n'imprimer qu'elle</h3>
+
+    <p>Dans chacune des trois familles, cochez <b>Retenir cette solution pour le chantier</b>
+    sur celle que vous appliquez. Elle se marque en jaune, porte l'étiquette <b>retenue</b>, le
+    bandeau de la famille affiche son code, et elle part à l'impression même si vous n'aviez
+    rien coché d'autre. Une seule solution par famille : en cocher une autre libère la
+    première. Décochez pour revenir à <i>aucune solution retenue</i>.</p>
+
+    <p>Au départ, <b>seule la légende sort à l'impression</b> : les quatorze schémas sont là
+    pour être consultés à l'écran, pas pour remplir le classeur. La case à gauche du titre
+    de chaque solution décide de ce qui s'imprime, et deux boutons en tête de page affichent
+    ou masquent tout d'un coup, avec un compteur qui dit combien de schémas partiront. Le
+    choix de la solution, lui, ne s'imprime pas sous forme de case à cocher : sur le papier
+    il ne reste que l'étiquette <b>retenue</b> et le code dans le bandeau de la famille.</p>
 
     <h3>Ne garder que les familles d'outillage utiles</h3>
 
@@ -1212,9 +1239,10 @@
     dessus, pas de tableau coupé n'importe où, et chaque feuille — pas seulement la première
     — porte ses marges, reliure comprise.</p>
 
-    <p>Les pages faites de planches — règles qui sauvent, schémas du document opératoire —
-    ne se réduisent qu'un peu : leurs schémas doivent rester lisibles, quitte à prendre une
-    feuille de plus.</p>
+    <p>Les pages faites de planches — règles qui sauvent, pièces jointes — ne se réduisent
+    qu'un peu : leurs images doivent rester lisibles, quitte à prendre une feuille de plus.
+    Les schémas du document opératoire, eux, se suivent par blocs : une solution n'est jamais
+    coupée en deux feuilles.</p>
 
     <p>Chaque feuille porte son <b>numéro en bas à droite</b>, sous la forme
     <i>7 / 33</i> : le rang de la feuille et le total du document. La couverture n'en porte
@@ -1711,9 +1739,12 @@
             l'Icc et la durée d'élimination.</td></tr>
         <tr><td><b>↻ Importer le panier</b></td><td>Lit un panier Invent'RTE et en dresse la
             liste imprimable.</td></tr>
-        <tr><td><b>Tout afficher</b> / <b>Tout masquer</b></td><td>Sur les planches du document
+        <tr><td><b>Tout afficher</b> / <b>Tout masquer</b></td><td>Sur les schémas du document
             opératoire, les familles d'outillage et les fiches SUE : choisissent ce qui part à
             l'impression.</td></tr>
+        <tr><td><b>Retenir cette solution pour le chantier</b></td><td>Schémas du document
+            opératoire : marque la solution de MALT / CC choisie et la fait sortir à
+            l'impression. Une par famille.</td></tr>
         <tr><td><b>+ Pylône</b>, <b>+ Poste</b>, <b>+ Mise à la terre</b>, <b>🗑 Tout
             effacer</b></td><td>Pavé 17 : le schéma de l'ouvrage.</td></tr>
         <tr><td><b>⚡ Monter le canton</b>, <b>+ Pylône</b>…, <b>◀ ▶</b>, <b>→← ←→</b>,
