@@ -553,6 +553,7 @@
         .pd-dg-mail-note { flex: 1 1 100%; font-weight: 400; color: #64748b;
                            line-height: 1.45; }
         .pd-dg-mail .btn-pd small { font-weight: 600; opacity: .75; margin-left: 4px; }
+        a.btn-pd { text-decoration: none; display: inline-flex; align-items: center; }
         .pd-dg-vide { display: block; min-height: 1.2em; }
         /* Le pied est l'adresse de l'agence : au papier, du texte, pas une case. */
         body.prepa-impression #pd-pages .pd-dg-pied .pd-fige,
@@ -4282,8 +4283,13 @@
             h += `<div class="pd-l pd-aide">
                     ${chp(pre + '-panier-lien', 'Collez ici le lien de partage du panier')}
                     <button class="btn-pd pre" onclick="importerPanier('${pre}')">\u21bb Importer le panier</button>
+                    <a class="btn-pd" href="${INVENTAIRE_URL}#" target="_blank"
+                       rel="noopener">\ud83d\udce6 Ouvrir Invent\u2019RTE</a>
                     <span id="${pre}-panier-etat"></span>
-                 </div>`;
+                 </div>
+                 <div class="pd-aide">Le panier se pr\u00e9pare dans Invent\u2019RTE : ouvrez-le,
+                 copiez le lien de partage du panier avec l\u2019ic\u00f4ne \ud83d\udd17, puis collez-le
+                 ci-dessus et importez.</div>`;
             if(lst(pre + '-inv').length) {
                 h += `<div class="pd-aide">Repris de l\u2019inventaire le ${esc(pv(pre + '-panier-maj'))}.
                       Les lignes restent modifiables ici.</div>`;
@@ -4887,24 +4893,36 @@
         ];
 
         function solCle(c)  { return 'so-' + String(c).toLowerCase(); }
+        function solFamille(c) {
+            const f = SOL_MALT.find(f => f.sols.some(x => x.c === c));
+            return f ? f.g : '';
+        }
         // La legende sort par defaut, les schemas non : c'est le choix du
-        // chantier qui les appelle, pas l'inverse.
+        // chantier qui les appelle, pas l'inverse. La solution retenue fait
+        // exception : c'est elle qu'on montre au briefing.
+        //
+        // L'etat se garde en '1' / '0', pas en vrai / faux : la base ne
+        // reecrit pas les valeurs fausses (voir prepaPropre), et un schema
+        // affiche se retrouvait donc masque des qu'on rouvrait le chantier.
         function solVue(c) {
             const v = prepa.v[solCle(c)];
-            return v === undefined ? c === 'legende' : !v;
+            if(v === '1' || v === true)  return true;
+            if(v === '0' || v === false) return false;
+            const g = solFamille(c);
+            return c === 'legende' || (!!g && solRetenue(g) === c);
         }
+        function solVoir(c, vu) { prepa.v[solCle(c)] = vu ? '1' : '0'; majPrepaEtat(); }
         function solRetenue(g) { return String(pv('so-ret-' + g)); }
         function solToutes(v) {
-            prepa.v[solCle('legende')] = !v;
-            SOL_MALT.forEach(f => f.sols.forEach(x => { prepa.v[solCle(x.c)] = !v; }));
-            majPrepaEtat();
+            solVoir('legende', v);
+            SOL_MALT.forEach(f => f.sols.forEach(x => { solVoir(x.c, v); }));
             renderPrepa();
         }
         // Retenir une solution la fait sortir à l'impression : c'est elle
         // qu'on montre au briefing, la masquer n'aurait pas de sens.
         function solRetenir(g, c) {
             prepa.v['so-ret-' + g] = c;
-            if(c) prepa.v[solCle(c)] = false;
+            if(c) solVoir(c, true);
             majPrepaEtat();
             renderPrepa();
         }
@@ -4914,7 +4932,7 @@
             return `<div class="pd-grp pd-sol${vu ? '' : ' masque'}${ret ? ' retenue' : ''}">
                 <label class="pd-sous pd-grp-tete">
                     <input type="checkbox" ${vu ? 'checked' : ''}
-                           onchange="setPC('${solCle(x.c)}', !this.checked); renderPrepa()"
+                           onchange="solVoir('${x.c}', this.checked); renderPrepa()"
                            title="Sortir ce sch\u00e9ma \u00e0 l'impression">
                     <span>Solution ${esc(x.c)}<span class="pd-sol-marque">retenue</span><span
                           class="pd-sol-impr pd-ecran">cochez pour l'imprimer</span></span>
@@ -4949,7 +4967,7 @@
                  <div class="pd-grp${legVue ? '' : ' masque'}">
                     <label class="pd-sous pd-grp-tete">
                       <input type="checkbox" ${legVue ? 'checked' : ''}
-                             onchange="setPC('${solCle('legende')}', !this.checked); renderPrepa()"
+                             onchange="solVoir('legende', this.checked); renderPrepa()"
                              title="Sortir la l\u00e9gende \u00e0 l'impression">
                       <span>L\u00e9gende des sch\u00e9mas</span></label>
                     ${legVue ? `<img class="pd-img pd-sol-leg" src="${IMG}malt-sol-legende.png"
@@ -5579,13 +5597,18 @@
         // Une fiche masquee ne sort pas a l'impression. Les fiches offshore
         // et les tours aero-refrigerantes le sont d'office.
         function sueCle(f) { return 'su-m' + String(f.n).replace(/[^A-Za-z0-9]/g, ''); }
+        // Meme precaution que pour les solutions de MALT : '1' / '0' et non
+        // vrai / faux, sans quoi une fiche masquee d'office puis ouverte se
+        // refermait a la relecture du chantier.
         function sueMasquee(f) {
             const v = prepa.v[sueCle(f)];
-            return v === undefined ? !!f.off : !!v;
+            if(v === '1' || v === true)  return true;
+            if(v === '0' || v === false) return false;
+            return !!f.off;
         }
+        function sueVoir(cle, vu) { prepa.v[cle] = vu ? '0' : '1'; majPrepaEtat(); }
         function fichesSue(v) {
-            SUE_FICHES.forEach(f => { prepa.v[sueCle(f)] = !v; });
-            majPrepaEtat();
+            SUE_FICHES.forEach(f => { sueVoir(sueCle(f), v); });
             renderPrepa();
         }
 
@@ -5616,7 +5639,7 @@
                 h += `<div class="pd-grp${vu ? '' : ' masque'}">
                       <label class="pd-sous pd-grp-tete">
                         <input type="checkbox" ${vu ? 'checked' : ''}
-                               onchange="setPC('${sueCle(f)}', !this.checked); renderPrepa()"
+                               onchange="sueVoir('${sueCle(f)}', this.checked); renderPrepa()"
                                title="Sortir cette fiche à l'impression">
                         <span>SUE n° ${esc(f.n)} — ${esc(f.t)}</span></label>`;
                 if(vu) {
