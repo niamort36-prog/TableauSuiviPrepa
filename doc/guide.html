@@ -947,34 +947,44 @@
 
     <img src="captures/26-degats-pdf.png" alt="Les boutons PDF et courriel du formulaire">
 
-    <h4>Envoyer le formulaire au propriétaire</h4>
+    <h4>Envoyer le formulaire au propriétaire, pièce jointe comprise</h4>
 
     <p>Au-dessus de chaque formulaire, une ligne <b>Courriel du bénéficiaire</b> et un bouton
-    <b>✉ Envoyer par mail</b>. Portez l'adresse, cliquez : le formulaire est d'abord
-    <b>enregistré en PDF</b>, puis votre logiciel de messagerie s'ouvre sur un message déjà
-    écrit — l'objet porte la ligne et la portée, le corps reprend le bénéficiaire et son
-    adresse, le <b>détail chiffré</b> ligne par ligne, le <b>montant total</b>, l'engagement de
-    RTE à payer par chèque, la demande de retour signé en deux exemplaires avec la mention
-    « Lu et approuvé » et le relevé d'identité bancaire, puis le nom du représentant RTE et le
-    pied de l'agence. Il ne reste qu'à <b>glisser le PDF dans le message</b> avant de
-    l'envoyer. Ni l'adresse ni les boutons ne s'impriment.</p>
+    <b>✉ Envoyer par mail</b>. Portez l'adresse, cliquez : l'application écrit le
+    <b>message entier</b> — destinataire, objet, texte, et <b>le formulaire PDF en pièce
+    jointe</b> — et le remet à votre messagerie. L'objet porte la ligne et la portée ; le corps
+    reprend le bénéficiaire et son adresse, le <b>détail chiffré</b> ligne par ligne, le
+    <b>montant total</b>, l'engagement de RTE à payer par chèque, la demande de retour signé en
+    deux exemplaires avec la mention « Lu et approuvé » et le relevé d'identité bancaire, puis
+    le nom du représentant RTE et le pied de l'agence. Ni l'adresse ni les boutons ne
+    s'impriment.</p>
+
+    <p><b>Sur ordinateur</b>, le message arrive sous la forme d'un fichier <code>.eml</code>
+    que le navigateur télécharge : ouvrez-le. Outlook l'ouvre comme un <b>message prêt à
+    partir</b>, destinataire, texte et pièce jointe en place — il ne reste qu'à cliquer
+    <i>Envoyer</i>. Une autre messagerie l'ouvrira plutôt en lecture : utilisez alors
+    <i>Transférer</i>, la pièce jointe suit.</p>
+
+    <p><b>Sur téléphone ou tablette</b>, aucun logiciel n'ouvre un fichier <code>.eml</code> :
+    le bouton passe par le <b>partage de l'appareil</b>. Le PDF part réellement attaché, le
+    texte est déjà écrit, et c'est dans l'application de messagerie que se choisit le
+    destinataire.</p>
+
+    <img src="captures/26-degats-pdf.png" alt="Les boutons PDF et courriel du formulaire">
 
     <div class="note">
-        Un courriel ouvert depuis une page web <b>ne peut pas emporter sa pièce jointe tout
-        seul</b> : c'est une limite des liens <code>mailto:</code>, pas de l'application. C'est
-        pourquoi le PDF est enregistré juste avant : il vous attend dans vos téléchargements.
-        Sur un téléphone, et sur les ordinateurs dont le navigateur sait partager un fichier,
-        un troisième bouton <b>📎 Envoyer avec la pièce jointe</b> apparaît : il passe par le
-        partage de l'appareil et le PDF part vraiment attaché, mais c'est alors dans
-        l'application de messagerie que se choisit le destinataire. Quand le tableau compte
-        beaucoup de lignes, le détail se replie en une phrase qui renvoie au formulaire joint,
-        pour que le message ne soit pas tronqué par la messagerie.
+        Si vous écrivez depuis un <b>webmail</b> — Gmail, Outlook en ligne — le fichier
+        <code>.eml</code> ne vous sert à rien : le bouton <b>✉ Webmail</b> ouvre le message
+        seul, sans pièce jointe, et vous y joignez le PDF à la main après l'avoir obtenu par
+        <b>📄 Enregistrer ce formulaire en PDF</b>. C'est l'ancien comportement, gardé pour
+        ce cas-là.
     </div>
 
     <div class="note">
         Le modèle qui fabrique le PDF se télécharge au premier usage : il faut une connexion
-        la première fois, ensuite il reste en mémoire pour la session. Sans réseau,
-        <b>Envoyer par mail</b> ouvre quand même le message, en le disant.
+        la première fois, ensuite il reste en mémoire pour la session. Si le PDF ne peut pas
+        être produit, <b>Envoyer par mail</b> ouvre quand même le message, sans pièce jointe,
+        et le dit.
     </div>
 
     <h3>Le sommaire</h3>
@@ -1764,9 +1774,10 @@
             liste imprimable.</td></tr>
         <tr><td><b>📄 Enregistrer ce formulaire en PDF</b></td><td>Dégâts instantanés : sort ce
             seul formulaire en PDF, signatures comprises.</td></tr>
-        <tr><td><b>✉ Envoyer par mail</b> / <b>📎 Envoyer avec la pièce jointe</b></td><td>Dégâts
-            instantanés : enregistre le PDF et ouvre le message au bénéficiaire ; le second
-            bouton, quand l'appareil sait le faire, joint vraiment le fichier.</td></tr>
+        <tr><td><b>✉ Envoyer par mail</b></td><td>Dégâts instantanés : prépare le message au
+            bénéficiaire avec le formulaire PDF en pièce jointe.</td></tr>
+        <tr><td><b>✉ Webmail</b></td><td>Dégâts instantanés : ouvre le même message sans pièce
+            jointe, pour Gmail ou Outlook en ligne.</td></tr>
         <tr><td><b>Tout afficher</b> / <b>Tout masquer</b></td><td>Sur les schémas du document
             opératoire, les familles d'outillage et les fiches SUE : choisissent ce qui part à
             l'impression.</td></tr>

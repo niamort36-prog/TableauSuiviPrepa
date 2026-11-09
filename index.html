@@ -552,6 +552,7 @@
         .pd-dg-mail label .pd-in { width: 230px; }
         .pd-dg-mail-note { flex: 1 1 100%; font-weight: 400; color: #64748b;
                            line-height: 1.45; }
+        .pd-dg-mail .btn-pd small { font-weight: 600; opacity: .75; margin-left: 4px; }
         .pd-dg-vide { display: block; min-height: 1.2em; }
         /* Le pied est l'adresse de l'agence : au papier, du texte, pas une case. */
         body.prepa-impression #pd-pages .pd-dg-pied .pd-fige,
@@ -5898,7 +5899,7 @@
         // Le formulaire part au propriétaire : le courriel reprend le detail
         // chiffre et la quittance, en clair, pour qu'il sache ce qu'il signe
         // avant meme d'ouvrir la piece jointe.
-        function dgCourriel(i) {
+        function dgCourriel(i, sansLimite) {
             const c = pdChantier();
             const v = k => String(pv('dg' + i + '-' + k)).trim();
             const adr = v('mail');
@@ -5965,7 +5966,7 @@
                           + '?subject=' + encodeURIComponent(sujet)
                           + '&body=' + encodeURIComponent(corps);
             let corps = L.join('\n');
-            if(adresse(corps).length > 2000 && rows.length) {
+            if(!sansLimite && adresse(corps).length > 2000 && rows.length) {
                 const i1 = L.indexOf('D\u00e9tail :');
                 const i2 = L.findIndex(x => x.indexOf('Montant total \u00e0 verser') === 0);
                 if(i1 >= 0 && i2 > i1) {
@@ -5983,24 +5984,113 @@
                          + 'courriel.\n\nPr\u00e9parer le message quand m\u00eame ?');
         }
 
-        // Un courriel ne sait pas emporter de piece jointe tout seul : on
-        // enregistre d'abord le PDF, puis on ouvre le message. Il ne reste
-        // qu'a glisser le fichier dedans.
+        // ------------------------------------------------------------------
+        //  Le message tout fait, piece jointe comprise
+        //  Un lien mailto: ne sait pas porter de fichier. On ecrit donc le
+        //  message entier \u2014 destinataire, objet, texte et formulaire PDF
+        //  attache \u2014 dans un fichier .eml, que la messagerie ouvre comme
+        //  un message pret a partir (X-Unsent le dit a Outlook).
+        // ------------------------------------------------------------------
+        function b64Octets(u8) {
+            let t = '';
+            const pas = 0x8000;
+            for(let k = 0; k < u8.length; k += pas)
+                t += String.fromCharCode.apply(null, u8.subarray(k, k + pas));
+            return btoa(t);
+        }
+        function b64Texte(t)  { return b64Octets(new TextEncoder().encode(t)); }
+        // Les lignes d'un message se coupent a 76 caracteres : au-dela,
+        // certains serveurs reecrivent le corps et cassent la piece jointe.
+        function b64Coupe(b)  { return b.replace(/(.{76})/g, '$1\r\n'); }
+        function emlEntete(t) {
+            return /^[\x20-\x7e]*$/.test(t) ? t : '=?UTF-8?B?' + b64Texte(t) + '?=';
+        }
+        function emlNomAscii(t) {
+            return t.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                    .replace(/[^\x20-\x7e]/g, '_').replace(/["\\]/g, '_');
+        }
+
+        async function dgMessage(i) {
+            const m = dgCourriel(i, true);
+            const doc = await dgDocument(i);
+            const pdf = new Uint8Array(await doc.output('blob').arrayBuffer());
+            const nom = dgNomPdf(i);
+            const sep = '----=_RTE_' + Date.now().toString(36);
+            const L = [];
+            if(m.adr) L.push('To: ' + m.adr);
+            L.push('Subject: ' + emlEntete(m.sujet));
+            L.push('X-Unsent: 1');
+            L.push('MIME-Version: 1.0');
+            L.push('Content-Type: multipart/mixed; boundary="' + sep + '"');
+            L.push('');
+            L.push('--' + sep);
+            L.push('Content-Type: text/plain; charset="UTF-8"');
+            L.push('Content-Transfer-Encoding: base64');
+            L.push('');
+            L.push(b64Coupe(b64Texte(m.corps)));
+            L.push('--' + sep);
+            L.push('Content-Type: application/pdf; name="' + emlNomAscii(nom) + '"');
+            L.push('Content-Transfer-Encoding: base64');
+            L.push('Content-Disposition: attachment; filename="' + emlNomAscii(nom) + '";');
+            L.push(' filename*=UTF-8\'\'' + encodeURIComponent(nom));
+            L.push('');
+            L.push(b64Coupe(b64Octets(pdf)));
+            L.push('--' + sep + '--');
+            L.push('');
+            return { blob: new Blob([L.join('\r\n')], { type: 'message/rfc822' }),
+                     nom: nom.replace(/\.pdf$/, '') + '.eml' };
+        }
+
+        function dgTelecharger(blob, nom) {
+            const u = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = u; a.download = nom; a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(u), 20000);
+        }
+
+        // Sur un telephone ou une tablette, aucune messagerie n'ouvre un
+        // fichier .eml : c'est le partage de l'appareil qui joint le PDF.
+        function dgSurTactile() {
+            try { return window.matchMedia('(pointer: coarse)').matches; }
+            catch(e) { return false; }
+        }
+
         async function dgMail(i) {
             const m = dgCourriel(i);
             if(!dgAdresseValide(m.adr)) return;
-            let joint = false;
-            try { await dgPdf(i, true); joint = true; }
-            catch(e) { console.warn('PDF du formulaire :', e); }
+            if(dgPeutPartager() && dgSurTactile()) { await dgPartager(i); return; }
+            try {
+                const msg = await dgMessage(i);
+                dgTelecharger(msg.blob, msg.nom);
+                souffler('Message pr\u00e9par\u00e9 avec le formulaire joint \u2014 '
+                       + 'ouvrez le fichier t\u00e9l\u00e9charg\u00e9');
+                return;
+            } catch(e) { console.warn('Message du formulaire :', e); }
+            // Sans le mod\u00e8le PDF, il reste le courriel seul.
             const lien = document.createElement('a');
             lien.href = m.lien;
             lien.style.display = 'none';
             document.body.appendChild(lien);
             lien.click();
             lien.remove();
-            souffler(joint
-                ? 'Courriel pr\u00e9par\u00e9, PDF enregistr\u00e9 \u2014 glissez-le dans le message'
-                : 'Courriel pr\u00e9par\u00e9 (le PDF n\u2019a pas pu \u00eatre produit)');
+            souffler('Courriel pr\u00e9par\u00e9 (sans pi\u00e8ce jointe : PDF indisponible)');
+        }
+
+        // La messagerie en ligne ne lit pas de fichier .eml : on lui ouvre
+        // le message seul, et le PDF se joint a la main.
+        function dgMailSimple(i) {
+            const m = dgCourriel(i);
+            if(!dgAdresseValide(m.adr)) return;
+            const lien = document.createElement('a');
+            lien.href = m.lien;
+            lien.style.display = 'none';
+            document.body.appendChild(lien);
+            lien.click();
+            lien.remove();
+            souffler('Courriel pr\u00e9par\u00e9, sans pi\u00e8ce jointe');
         }
 
         // La ou l'appareil sait partager un fichier, la piece jointe part
@@ -6442,18 +6532,22 @@
                       <input class="pd-in" type="email" value="${esc(pv('dg' + i + '-mail'))}"
                              placeholder="nom@exemple.fr" autocomplete="email"
                              onchange="setPV('dg${i}-mail', this.value)"></label>
-                    <button class="btn-pd" onclick="dgMail(${i})">\u2709 Envoyer par mail</button>
-                    ${dgPeutPartager() ? `<button class="btn-pd" onclick="dgPartager(${i})">\ud83d\udcce
-                      Envoyer avec la pièce jointe</button>` : ''}
-                    <span class="pd-dg-mail-note"><b>Enregistrer en PDF</b> ne sort que ce
-                      formulaire-ci, à l'échelle du modèle, barèmes et boutons exclus.
-                      <b>Envoyer par mail</b> l'enregistre d'abord, puis ouvre votre messagerie
-                      avec le destinataire, l'objet et le texte : il ne reste qu'à glisser le
-                      fichier dans le message — un courriel ouvert depuis une page web ne peut
-                      pas emporter sa pièce jointe tout seul.${dgPeutPartager()
-                      ? ` <b>Envoyer avec la pièce jointe</b> passe par le partage de l'appareil :
-                        le PDF part vraiment attaché, mais le destinataire se choisit dans
-                        l'application de messagerie.` : ''}</span>
+                    <button class="btn-pd" onclick="dgMail(${i})">\u2709 Envoyer par mail
+                      <small>avec la pièce jointe</small></button>
+                    <button class="btn-pd" onclick="dgMailSimple(${i})" title="Pour un webmail :
+                      le message seul, sans pièce jointe">\u2709 Webmail</button>
+                    <span class="pd-dg-mail-note"><b>Envoyer par mail</b> écrit le message
+                      entier — destinataire, objet, texte et <b>le formulaire PDF en pièce
+                      jointe</b> — puis le remet à votre messagerie. Sur ordinateur, ouvrez le
+                      fichier téléchargé : Outlook l'ouvre comme un message prêt à partir, pièce
+                      jointe comprise, il ne reste qu'à l'envoyer ; une autre messagerie
+                      l'ouvrira en lecture, utilisez alors <i>Transférer</i>, la pièce jointe
+                      suit. Sur téléphone ou tablette, le partage de l'appareil prend le relais
+                      et joint le PDF, le destinataire se choisissant dans l'application.
+                      <b>Webmail</b> ouvre le message seul, sans pièce jointe, pour Gmail ou
+                      Outlook en ligne : joignez alors le PDF à la main.
+                      <b>Enregistrer en PDF</b> ne sort que ce formulaire-ci, à l'échelle du
+                      modèle, barèmes et boutons exclus.</span>
                  </div>`;
             h += dgAssistant(i);
             // La mise en page du modele : un texte courant ou les cases se
