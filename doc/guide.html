@@ -934,24 +934,47 @@
     portées. Le <b>pied de page</b> — l'adresse de l'agence — est modifiable : videz la case
     pour revenir au modèle.</p>
 
+    <h4>Sortir le formulaire seul, en PDF</h4>
+
+    <p>Le bouton <b>📄 Enregistrer ce formulaire en PDF</b> produit un fichier qui ne contient
+    que ce formulaire-ci : le logo RTE, le texte de la quittance avec vos cases remplies, le
+    tableau des dégâts et son total, les deux signatures — tracées à l'écran, elles y sont —
+    la note du relevé d'identité bancaire et le pied de l'agence. L'assistant de barème, les
+    boutons et le reste de la préparation n'y figurent pas. Le fichier s'enregistre sur votre
+    ordinateur sous un nom qui dit la ligne, le bénéficiaire et la date, prêt à être classé ou
+    joint à un message. Si le tableau est long, il passe sur une deuxième feuille en reprenant
+    son en-tête, et chaque feuille porte son numéro.</p>
+
+    <img src="captures/26-degats-pdf.png" alt="Les boutons PDF et courriel du formulaire">
+
     <h4>Envoyer le formulaire au propriétaire</h4>
 
     <p>Au-dessus de chaque formulaire, une ligne <b>Courriel du bénéficiaire</b> et un bouton
-    <b>✉ Envoyer par mail</b>. Portez l'adresse, cliquez : votre logiciel de messagerie
-    s'ouvre sur un message déjà écrit — l'objet porte la ligne et la portée, le corps reprend
-    le bénéficiaire et son adresse, le <b>détail chiffré</b> ligne par ligne, le <b>montant
-    total</b>, l'engagement de RTE à payer par chèque, la demande de retour signé en deux
-    exemplaires avec la mention « Lu et approuvé » et le relevé d'identité bancaire, puis le
-    nom du représentant RTE et le pied de l'agence. Ni l'adresse ni le bouton ne
-    s'impriment.</p>
+    <b>✉ Envoyer par mail</b>. Portez l'adresse, cliquez : le formulaire est d'abord
+    <b>enregistré en PDF</b>, puis votre logiciel de messagerie s'ouvre sur un message déjà
+    écrit — l'objet porte la ligne et la portée, le corps reprend le bénéficiaire et son
+    adresse, le <b>détail chiffré</b> ligne par ligne, le <b>montant total</b>, l'engagement de
+    RTE à payer par chèque, la demande de retour signé en deux exemplaires avec la mention
+    « Lu et approuvé » et le relevé d'identité bancaire, puis le nom du représentant RTE et le
+    pied de l'agence. Il ne reste qu'à <b>glisser le PDF dans le message</b> avant de
+    l'envoyer. Ni l'adresse ni les boutons ne s'impriment.</p>
 
     <div class="note">
-        Un courriel ouvert de cette façon <b>ne peut pas porter de pièce jointe tout seul</b> :
-        c'est une limite des liens <code>mailto:</code>, pas de l'application. Faites d'abord
-        <b>📄 Enregistrer en PDF</b> en bas de la préparation, puis glissez le fichier dans le
-        message avant de l'envoyer. Quand le tableau compte beaucoup de lignes, le détail se
-        replie en une phrase qui renvoie au formulaire joint, pour que le message ne soit pas
-        tronqué par la messagerie.
+        Un courriel ouvert depuis une page web <b>ne peut pas emporter sa pièce jointe tout
+        seul</b> : c'est une limite des liens <code>mailto:</code>, pas de l'application. C'est
+        pourquoi le PDF est enregistré juste avant : il vous attend dans vos téléchargements.
+        Sur un téléphone, et sur les ordinateurs dont le navigateur sait partager un fichier,
+        un troisième bouton <b>📎 Envoyer avec la pièce jointe</b> apparaît : il passe par le
+        partage de l'appareil et le PDF part vraiment attaché, mais c'est alors dans
+        l'application de messagerie que se choisit le destinataire. Quand le tableau compte
+        beaucoup de lignes, le détail se replie en une phrase qui renvoie au formulaire joint,
+        pour que le message ne soit pas tronqué par la messagerie.
+    </div>
+
+    <div class="note">
+        Le modèle qui fabrique le PDF se télécharge au premier usage : il faut une connexion
+        la première fois, ensuite il reste en mémoire pour la session. Sans réseau,
+        <b>Envoyer par mail</b> ouvre quand même le message, en le disant.
     </div>
 
     <h3>Le sommaire</h3>
@@ -1739,6 +1762,11 @@
             l'Icc et la durée d'élimination.</td></tr>
         <tr><td><b>↻ Importer le panier</b></td><td>Lit un panier Invent'RTE et en dresse la
             liste imprimable.</td></tr>
+        <tr><td><b>📄 Enregistrer ce formulaire en PDF</b></td><td>Dégâts instantanés : sort ce
+            seul formulaire en PDF, signatures comprises.</td></tr>
+        <tr><td><b>✉ Envoyer par mail</b> / <b>📎 Envoyer avec la pièce jointe</b></td><td>Dégâts
+            instantanés : enregistre le PDF et ouvre le message au bénéficiaire ; le second
+            bouton, quand l'appareil sait le faire, joint vraiment le fichier.</td></tr>
         <tr><td><b>Tout afficher</b> / <b>Tout masquer</b></td><td>Sur les schémas du document
             opératoire, les familles d'outillage et les fiches SUE : choisissent ce qui part à
             l'impression.</td></tr>

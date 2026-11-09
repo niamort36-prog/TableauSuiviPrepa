@@ -550,7 +550,7 @@
         .pd-dg-mail label { display: flex; align-items: center; gap: 6px; font-weight: 700;
                             color: #475569; }
         .pd-dg-mail label .pd-in { width: 230px; }
-        .pd-dg-mail-note { flex: 1 1 260px; font-weight: 400; color: #64748b;
+        .pd-dg-mail-note { flex: 1 1 100%; font-weight: 400; color: #64748b;
                            line-height: 1.45; }
         .pd-dg-vide { display: block; min-height: 1.2em; }
         /* Le pied est l'adresse de l'agence : au papier, du texte, pas une case. */
@@ -5898,13 +5898,10 @@
         // Le formulaire part au propriétaire : le courriel reprend le detail
         // chiffre et la quittance, en clair, pour qu'il sache ce qu'il signe
         // avant meme d'ouvrir la piece jointe.
-        function dgMail(i) {
+        function dgCourriel(i) {
             const c = pdChantier();
             const v = k => String(pv('dg' + i + '-' + k)).trim();
             const adr = v('mail');
-            if(adr && !/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(adr)
-               && !confirm('\u00ab ' + adr + ' \u00bb ne ressemble pas \u00e0 une adresse de '
-                         + 'courriel.\n\nPr\u00e9parer le message quand m\u00eame ?')) return;
 
             const ligne = v('ligne') || c.nomLigne || '';
             const kv    = v('kv') || c.tension || '';
@@ -5977,13 +5974,324 @@
                     corps = L.join('\n');
                 }
             }
+            return { adr: adr, sujet: sujet, corps: corps, lien: adresse(corps) };
+        }
+
+        function dgAdresseValide(adr) {
+            return !adr || /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(adr)
+                || confirm('\u00ab ' + adr + ' \u00bb ne ressemble pas \u00e0 une adresse de '
+                         + 'courriel.\n\nPr\u00e9parer le message quand m\u00eame ?');
+        }
+
+        // Un courriel ne sait pas emporter de piece jointe tout seul : on
+        // enregistre d'abord le PDF, puis on ouvre le message. Il ne reste
+        // qu'a glisser le fichier dedans.
+        async function dgMail(i) {
+            const m = dgCourriel(i);
+            if(!dgAdresseValide(m.adr)) return;
+            let joint = false;
+            try { await dgPdf(i, true); joint = true; }
+            catch(e) { console.warn('PDF du formulaire :', e); }
             const lien = document.createElement('a');
-            lien.href = adresse(corps);
+            lien.href = m.lien;
             lien.style.display = 'none';
             document.body.appendChild(lien);
             lien.click();
             lien.remove();
-            souffler('Courriel pr\u00e9par\u00e9');
+            souffler(joint
+                ? 'Courriel pr\u00e9par\u00e9, PDF enregistr\u00e9 \u2014 glissez-le dans le message'
+                : 'Courriel pr\u00e9par\u00e9 (le PDF n\u2019a pas pu \u00eatre produit)');
+        }
+
+        // La ou l'appareil sait partager un fichier, la piece jointe part
+        // vraiment : le destinataire, lui, se choisit dans l'application.
+        let DG_PARTAGE = null;
+        function dgPeutPartager() {
+            if(DG_PARTAGE === null) {
+                try {
+                    DG_PARTAGE = !!(navigator.share && navigator.canShare
+                        && navigator.canShare({ files: [new File([new Blob()], 'a.pdf',
+                                                                 { type: 'application/pdf' })] }));
+                } catch(e) { DG_PARTAGE = false; }
+            }
+            return DG_PARTAGE;
+        }
+
+        async function dgPartager(i) {
+            const m = dgCourriel(i);
+            try {
+                const doc = await dgDocument(i);
+                const f = new File([doc.output('blob')], dgNomPdf(i), { type: 'application/pdf' });
+                await navigator.share({ title: m.sujet, text: m.corps, files: [f] });
+                souffler('Formulaire partag\u00e9');
+            } catch(e) {
+                if(e && e.name === 'AbortError') return;
+                if(e && e.name === 'NotAllowedError') {
+                    alert('Le partage demande un clic : recommencez, le mod\u00e8le est '
+                        + 'maintenant charg\u00e9.');
+                    return;
+                }
+                alert('Le partage a \u00e9chou\u00e9 : ' + (e && e.message ? e.message : e));
+            }
+        }
+
+        // ------------------------------------------------------------------
+        //  Le formulaire en PDF
+        //  Redessine le modele, sans les barres d'outils ni l'assistant : ce
+        //  qu'on envoie au proprietaire est le document, pas l'ecran.
+        // ------------------------------------------------------------------
+        const JSPDF_URL = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+        let dgLogo = null;
+
+        // Le logo est une image carree de 512 points : telle quelle elle
+        // pesait un mega-octet dans le PDF, pour quinze millimetres de
+        // papier. On la reduit avant de l'y mettre.
+        function dgImage(url, cote) {
+            return new Promise((res, rej) => {
+                const im = new Image();
+                im.onload = () => {
+                    const k = Math.min(1, (cote || 160) / Math.max(im.naturalWidth, im.naturalHeight));
+                    const t = document.createElement('canvas');
+                    t.width = Math.round(im.naturalWidth * k);
+                    t.height = Math.round(im.naturalHeight * k);
+                    const g = t.getContext('2d');
+                    g.imageSmoothingQuality = 'high';
+                    g.drawImage(im, 0, 0, t.width, t.height);
+                    res(t.toDataURL('image/png'));
+                };
+                im.onerror = () => rej(new Error('image introuvable : ' + url));
+                im.src = url;
+            });
+        }
+
+        async function dgMoteurPdf() {
+            if(!(window.jspdf && window.jspdf.jsPDF)) await chargerScript(JSPDF_URL, 25000);
+            if(!(window.jspdf && window.jspdf.jsPDF))
+                throw new Error('le mod\u00e8le PDF n\u2019a pas pu \u00eatre charg\u00e9');
+            if(dgLogo === null) dgLogo = await dgImage('assets/rte-logo.png', 150).catch(() => '');
+            return window.jspdf.jsPDF;
+        }
+
+        // Les polices de base d'un PDF ignorent l'espace fine des sommes :
+        // sans cela, « 1 234,56 € » sortirait avec un caractere de rebut.
+        function dgTxt(v) {
+            return String(v === undefined || v === null ? '' : v)
+                   .replace(/[\u202f\u2009\u00a0]/g, ' ')
+                   .replace(/\u2212/g, '-');
+        }
+
+        function dgNomPdf(i) {
+            const c = pdChantier();
+            const v = k => String(pv('dg' + i + '-' + k)).trim();
+            const bouts = ['D\u00e9g\u00e2ts instantan\u00e9s', v('ligne') || c.nomLigne,
+                           v('sous') || v('ben'), v('date') || new Date().toISOString().slice(0, 10)];
+            return bouts.filter(x => String(x || '').trim()).join(' - ')
+                   .replace(/[\\/:*?"<>|]/g, ' ').replace(/ +/g, ' ').trim() + '.pdf';
+        }
+
+        async function dgDocument(i) {
+            const JsPDF = await dgMoteurPdf();
+            const c = pdChantier();
+            const v = k => String(pv('dg' + i + '-' + k)).trim();
+            const vs = (k, source) => v(k) || String(source || '').trim();
+            const doc = new JsPDF({ unit: 'mm', format: 'a4' });
+            const G = 18, D = 192, L = D - G, BAS = 262;
+            const MARINE = [5, 65, 145], GRIS = [100, 116, 139], TRAIT = [148, 163, 184];
+            let y = 0;
+
+            const entete = () => {
+                if(dgLogo) doc.addImage(dgLogo, 'PNG', G, 12, 15, 15);
+                doc.setFont('helvetica', 'bold').setFontSize(13);
+                doc.setTextColor(MARINE[0], MARINE[1], MARINE[2]);
+                doc.text('INDEMNIT\u00c9 POUR D\u00c9G\u00c2TS INSTANTAN\u00c9S', 105, 22,
+                         { align: 'center' });
+                doc.setDrawColor(MARINE[0], MARINE[1], MARINE[2]).setLineWidth(0.6);
+                doc.line(G, 30, D, 30);
+                doc.setTextColor(25, 25, 25);
+                y = 40;
+            };
+            const place = h => { if(y + h > BAS) { doc.addPage(); entete(); } };
+            entete();
+
+            // --- Le texte courant, ou les valeurs tiennent la place des pointilles
+            const INTER = 8;
+            const flux = bouts => {
+                doc.setFont('helvetica', 'normal').setFontSize(10.5);
+                doc.setTextColor(25, 25, 25);
+                place(INTER);
+                let x = G;
+                const saut = () => { y += INTER; x = G; place(INTER); };
+                bouts.forEach(b => {
+                    if(b.t !== undefined) {
+                        String(b.t).split(/\s+/).filter(Boolean).forEach(mot => {
+                            const w = doc.getTextWidth(dgTxt(mot) + ' ');
+                            if(x > G && x + w > D) saut();
+                            doc.text(dgTxt(mot), x, y);
+                            x += w;
+                        });
+                        return;
+                    }
+                    const val = dgTxt(b.v);
+                    const w = Math.min(L, Math.max(b.min || 45, doc.getTextWidth(val) + 6));
+                    if(x > G && x + w > D) saut();
+                    if(b.gras) { doc.setFont('helvetica', 'bold');
+                                 doc.setTextColor(MARINE[0], MARINE[1], MARINE[2]); }
+                    doc.text(val, x + 2, y - 0.7);
+                    if(b.gras) { doc.setFont('helvetica', 'normal'); doc.setTextColor(25, 25, 25); }
+                    doc.setDrawColor(TRAIT[0], TRAIT[1], TRAIT[2]).setLineWidth(0.2);
+                    doc.setLineDashPattern([0.6, 0.8], 0);
+                    doc.line(x, y + 1.1, x + w, y + 1.1);
+                    doc.setLineDashPattern([], 0);
+                    x += w + 3;
+                });
+                y += INTER;
+            };
+
+            const tot = dgTotal(i);
+            flux([{ t: 'Je soussign\u00e9' }, { v: v('sous'), min: 120 }]);
+            flux([{ t: 'demeurant \u00e0' }, { v: v('dem'), min: 125 }]);
+            flux([{ t: 'd\u00e9clare accepter la somme de' }, { v: tot ? eur(tot) : '', min: 38, gras: true },
+                  { t: 'correspondant \u00e0 l\u2019indemnit\u00e9 \u00e9valu\u00e9e en '
+                     + 'r\u00e9paration des d\u00e9g\u00e2ts occasionn\u00e9s lors des travaux de' },
+                  { v: v('trav') }, { t: 'effectu\u00e9s par' }, { v: v('par') }]);
+            flux([{ t: 'RTE sur la ligne' }, { v: vs('ligne', c.nomLigne) },
+                  { v: vs('kv', c.tension), min: 20 }, { t: 'kV' },
+                  { t: 'Port\u00e9e ou Pyl n\u00b0' }, { v: v('pyl'), min: 28 }]);
+            doc.setFont('helvetica', 'normal').setFontSize(10.5);
+            place(10);
+            doc.text('Cette indemnit\u00e9 est d\u00e9termin\u00e9e comme suit :', G, y);
+            y += 6;
+
+            // --- Le tableau des degats
+            const COL = [76, 30, 28, 40];
+            const TETES = ['Nature des d\u00e9g\u00e2ts', 'Surface endommag\u00e9e en m\u00b2',
+                           'Somme en \u20ac/m\u00b2', 'Montant total \u00e0 verser en \u20ac'];
+            const teteTab = () => {
+                place(12);
+                doc.setFillColor(MARINE[0], MARINE[1], MARINE[2]);
+                doc.rect(G, y, L, 11, 'F');
+                doc.setFont('helvetica', 'bold').setFontSize(7.6).setTextColor(255, 255, 255);
+                let x = G;
+                TETES.forEach((t, k) => {
+                    const l = doc.splitTextToSize(dgTxt(t), COL[k] - 4);
+                    l.forEach((s2, j) => doc.text(s2, x + 2, y + 4 + j * 3.2
+                                                  + (11 - l.length * 3.2) / 2 - 1.4));
+                    x += COL[k];
+                });
+                doc.setTextColor(25, 25, 25);
+                y += 11;
+            };
+            teteTab();
+            const rows = lst('dg' + i + '-l', vides(3, { n: '', s: '', p: '' }));
+            doc.setFont('helvetica', 'normal').setFontSize(8.6);
+            rows.forEach(r => {
+                const nat = [];
+                String(r.n || '').split('\n').forEach(t => {
+                    doc.splitTextToSize(dgTxt(t), COL[0] - 4).forEach(x2 => nat.push(x2));
+                });
+                const h = Math.max(8, nat.length * 3.8 + 3.4);
+                if(y + h > BAS) { doc.addPage(); entete(); teteTab();
+                                  doc.setFont('helvetica', 'normal').setFontSize(8.6); }
+                doc.setDrawColor(TRAIT[0], TRAIT[1], TRAIT[2]).setLineWidth(0.15);
+                let x = G;
+                COL.forEach(w => { doc.rect(x, y, w, h); x += w; });
+                nat.forEach((t, j) => doc.text(t, G + 2, y + 5 + j * 3.8));
+                const m = num(r.s) * num(r.p);
+                doc.text(dgTxt(r.s || ''), G + COL[0] + COL[1] - 2, y + 5, { align: 'right' });
+                doc.text(dgTxt(r.p || ''), G + COL[0] + COL[1] + COL[2] - 2, y + 5, { align: 'right' });
+                if(num(r.s) && num(r.p)) {
+                    doc.setFont('helvetica', 'bold');
+                    doc.text(dgTxt(eur(m)), D - 2, y + 5, { align: 'right' });
+                    doc.setFont('helvetica', 'normal');
+                }
+                y += h;
+            });
+            place(9);
+            doc.setFillColor(241, 245, 249).rect(G, y, L, 8, 'F');
+            doc.setDrawColor(TRAIT[0], TRAIT[1], TRAIT[2]).rect(G, y, L, 8);
+            doc.setFont('helvetica', 'bold').setFontSize(9);
+            doc.text('Total', G + COL[0] + COL[1] + COL[2] - 2, y + 5.4, { align: 'right' });
+            doc.text(dgTxt(tot ? eur(tot) : '\u2014'), D - 2, y + 5.4, { align: 'right' });
+            y += 13;
+
+            // --- La quittance
+            flux([{ t: 'RTE s\u2019engage \u00e0 verser l\u2019indemnit\u00e9 '
+                     + 'pr\u00e9cit\u00e9e par ch\u00e8que bancaire ou postal \u00b9.' }]);
+            flux([{ t: 'En contre partie, M' }, { v: v('m') },
+                  { t: 'donne quittance d\u00e9finitive \u00e0 RTE pour ces d\u00e9g\u00e2ts.' }]);
+            flux([{ t: 'Fait en deux exemplaires \u00e0' }, { v: v('lieu') }, { t: ',' }]);
+            flux([{ t: 'Le' }, { v: v('date') ? fmtDatePrint(v('date')) : '', min: 34 }, { t: ',' }]);
+            y += 3;
+
+            // --- Les signatures
+            const SIG = 30;
+            place(16 + SIG);
+            const demi = L / 2;
+            doc.setFillColor(MARINE[0], MARINE[1], MARINE[2]).rect(G, y, L, 12, 'F');
+            doc.setFont('helvetica', 'bold').setFontSize(8.6).setTextColor(255, 255, 255);
+            doc.text('Le repr\u00e9sentant RTE', G + demi / 2, y + 5, { align: 'center' });
+            doc.text('Le b\u00e9n\u00e9ficiaire', G + demi + demi / 2, y + 5, { align: 'center' });
+            doc.setFont('helvetica', 'normal').setFontSize(6.8);
+            doc.text('Signature', G + demi / 2, y + 9.2, { align: 'center' });
+            doc.text(dgTxt('Signature pr\u00e9c\u00e9d\u00e9e de la mention '
+                         + '\u00ab Lu et approuv\u00e9 \u00bb'),
+                     G + demi + demi / 2, y + 9.2, { align: 'center' });
+            doc.setTextColor(25, 25, 25);
+            y += 12;
+            doc.setDrawColor(TRAIT[0], TRAIT[1], TRAIT[2]).setLineWidth(0.15);
+            doc.rect(G, y, demi, 9); doc.rect(G + demi, y, demi, 9);
+            doc.setFont('helvetica', 'normal').setFontSize(9);
+            doc.text(dgTxt(v('rte')), G + 3, y + 5.8);
+            doc.text(dgTxt(v('ben')), G + demi + 3, y + 5.8);
+            y += 9;
+            doc.rect(G, y, demi, SIG); doc.rect(G + demi, y, demi, SIG);
+            [['dg' + i + '-visa-rte', G], ['dg' + i + '-visa-ben', G + demi]].forEach(x => {
+                const img = SIGNES[x[0]];
+                if(!img) return;
+                try { doc.addImage(img, 'PNG', x[1] + 4, y + 2, demi - 8, SIG - 4,
+                                   undefined, 'FAST'); } catch(e) {}
+            });
+            y += SIG + 6;
+
+            // --- La note de bas de page et le pied d'agence
+            // Ils tiennent le bas de la feuille, comme sur le papier a
+            // en-tete : ce n'est pas la suite du texte, c'est son pied.
+            if(y > BAS) { doc.addPage(); entete(); }
+            doc.setFont('helvetica', 'normal').setFontSize(7.2);
+            doc.setTextColor(GRIS[0], GRIS[1], GRIS[2]);
+            doc.text('\u00b9 Joindre un Relev\u00e9 d\u2019Identit\u00e9 Bancaire ou Postal',
+                     G, Math.max(y, 270));
+            doc.setDrawColor(203, 213, 225).setLineWidth(0.2).line(G, 274.5, D, 274.5);
+            let yp = 279;
+            (String(pv('dg' + i + '-pied')).trim() || DG_PIED).split('\n').forEach(t => {
+                doc.text(dgTxt(t), G, yp); yp += 3.6;
+            });
+            doc.setTextColor(25, 25, 25);
+
+            // --- Le folio, quand le tableau a pousse sur une deuxieme feuille
+            const n = doc.getNumberOfPages();
+            if(n > 1) {
+                for(let k = 1; k <= n; k++) {
+                    doc.setPage(k).setFont('helvetica', 'normal').setFontSize(7.5);
+                    doc.setTextColor(GRIS[0], GRIS[1], GRIS[2]);
+                    doc.text(k + ' / ' + n, D, 291, { align: 'right' });
+                }
+            }
+            return doc;
+        }
+
+        async function dgPdf(i, muet) {
+            try {
+                const doc = await dgDocument(i);
+                doc.save(dgNomPdf(i));
+                if(!muet) souffler('Formulaire enregistr\u00e9 en PDF');
+            } catch(e) {
+                if(muet) throw e;
+                alert('Le PDF n\u2019a pas pu \u00eatre produit : '
+                    + (e && e.message ? e.message : e)
+                    + '\n\nLe mod\u00e8le se t\u00e9l\u00e9charge au premier usage : il faut '
+                    + 'une connexion.');
+            }
         }
 
         function dgPorter(i) {
@@ -6128,15 +6436,24 @@
                                celui-ci</button>` : ''}
                  </div>
                  <div class="pd-l pd-aide pd-grp-barre pd-ecran pd-dg-mail">
+                    <button class="btn-pd" onclick="dgPdf(${i})">\ud83d\udcc4 Enregistrer ce
+                      formulaire en PDF</button>
                     <label>Courriel du bénéficiaire
                       <input class="pd-in" type="email" value="${esc(pv('dg' + i + '-mail'))}"
                              placeholder="nom@exemple.fr" autocomplete="email"
                              onchange="setPV('dg${i}-mail', this.value)"></label>
                     <button class="btn-pd" onclick="dgMail(${i})">\u2709 Envoyer par mail</button>
-                    <span class="pd-dg-mail-note">Le message emporte le détail chiffré et le
-                      texte de la quittance. Pour y joindre le formulaire lui-même,
-                      <b>Enregistrer en PDF</b> d'abord, puis glissez le fichier dans le
-                      courriel.</span>
+                    ${dgPeutPartager() ? `<button class="btn-pd" onclick="dgPartager(${i})">\ud83d\udcce
+                      Envoyer avec la pièce jointe</button>` : ''}
+                    <span class="pd-dg-mail-note"><b>Enregistrer en PDF</b> ne sort que ce
+                      formulaire-ci, à l'échelle du modèle, barèmes et boutons exclus.
+                      <b>Envoyer par mail</b> l'enregistre d'abord, puis ouvre votre messagerie
+                      avec le destinataire, l'objet et le texte : il ne reste qu'à glisser le
+                      fichier dans le message — un courriel ouvert depuis une page web ne peut
+                      pas emporter sa pièce jointe tout seul.${dgPeutPartager()
+                      ? ` <b>Envoyer avec la pièce jointe</b> passe par le partage de l'appareil :
+                        le PDF part vraiment attaché, mais le destinataire se choisit dans
+                        l'application de messagerie.` : ''}</span>
                  </div>`;
             h += dgAssistant(i);
             // La mise en page du modele : un texte courant ou les cases se
