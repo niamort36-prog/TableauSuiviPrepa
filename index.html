@@ -404,6 +404,11 @@
         .pd-champ { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
         .pd-champ > label { font-size: .7rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: .03em; }
         .pd-coche { display: flex; align-items: flex-start; gap: 7px; font-size: .86rem; padding: 3px 0; cursor: pointer; }
+        /* La case et son avertissement sur la meme ligne, l'un apres l'autre. */
+        .pd-coche-l { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+        .pd-seveso { color: #b91c1c; font-weight: 700; font-size: .82rem; line-height: 1.35; }
+        .pd-note-seveso { border-left-color: #b91c1c !important; background: #fef2f2 !important;
+                          color: #7f1d1d; }
         .pd-coche input { width: 16px; height: 16px; margin-top: 2px; flex: 0 0 16px; cursor: pointer; }
         .pd-sous { font-size: .82rem; font-weight: 800; color: var(--primary); text-transform: uppercase;
                    letter-spacing: .04em; margin: 16px 0 8px; padding-bottom: 3px; border-bottom: 1px solid var(--border); }
@@ -1543,6 +1548,17 @@
                     <select id="inp-line" class="form-input" onchange="updateHeader()"></select>
                 </div>
                 
+                <div class="form-group span-2" id="grp-modele">
+                    <label class="form-label">Modèle de préparation</label>
+                    <select id="inp-modele" class="form-input" onchange="majModeleFiche()">
+                        <option>Conventionnel</option>
+                        <option>TST</option>
+                        <option>Végétation</option>
+                        <option>Visite d'investigation</option>
+                        <option>Visite de diagnostic</option>
+                    </select>
+                </div>
+
                 <div class="form-group"><label class="form-label">Chargé de Travaux (CdT)</label><input id="inp-cdt" class="form-input"></div>
                 <div class="form-group"><label class="form-label">CdT Suppléant</label><input id="inp-cdt-sup" class="form-input"></div>
 
@@ -1800,6 +1816,16 @@
         // 6011...). L'ancien noeud plat "lignes" est conservé en sauvegarde.
         const EQUIPE_DEFAUT = 'EEL Limoges';
         let equipesDispo = [EQUIPE_DEFAUT];
+        let equipesInfo = {};                         // <nom> -> { nom, modele }
+
+        // Le metier de l'equipe. Il est enregistre avec elle ; le document
+        // ne s'en sert pas encore.
+        const MODELES_PREPA = ['Lignes', 'Groupement de postes', 'Postes', 'EMASE', 'PEASI'];
+        function modelePrepaEquipe(e) {
+            const d = equipesInfo[e];
+            const v = d && d.modele;
+            return MODELES_PREPA.includes(v) ? v : MODELES_PREPA[0];
+        }
         let equipeActive = EQUIPE_DEFAUT;
         try { equipeActive = localStorage.getItem('suivi-equipe') || EQUIPE_DEFAUT; } catch(e) {}
 
@@ -1871,6 +1897,24 @@
         let tech = { pylones: [], portees: [] };      // voir normSup
         let planning = {};                            // { "2026-S34": { "2026-08-17": {matin:[],apm:[]} } }
         let modeOp = [];                              // {id,titre,personnes[],sem,jour,demi,sousTaches[]}
+
+        // Le modele de la fiche, cote ligne. Seule la vegetation change
+        // aujourd'hui le contenu de la preparation : les autres sont la
+        // pour etre choisis, et le seront quand leur contenu existera.
+        const MODELES_FICHE = ['Conventionnel', 'TST', 'V\u00e9g\u00e9tation',
+                               "Visite d'investigation", 'Visite de diagnostic'];
+        // La liste deroulante fait foi : elle est remplie au chargement du
+        // chantier, et vide pour un chantier neuf.
+        function modeleFiche() {
+            const el = document.getElementById('inp-modele');
+            const v = el && el.value;
+            return MODELES_FICHE.includes(v) ? v : MODELES_FICHE[0];
+        }
+        function modeleVegetation() { return modeleFiche() === MODELES_FICHE[2]; }
+        function majModeleFiche() {
+            const ec = document.getElementById('screen-prepadoc');
+            if(ec && ec.classList.contains('active')) renderPrepa();
+        }
         let moOuverts = {};                           // repli/depli des fiches, non enregistre
         let notes = [];                               // {id, auteur, texte, fait, date}
         let dossiersArchives = {};                    // repli/depli des dossiers d'archives
@@ -1935,6 +1979,7 @@
                   .catch(e => alert("Impossible d'initialiser les équipes : " + e.message));
                 return;
             }
+            equipesInfo = data;
             equipesDispo = Object.keys(data).sort((a, b) => a.localeCompare(b));
             if(!equipesDispo.includes(equipeActive)) equipeActive = equipesDispo[0] || EQUIPE_DEFAUT;
             fillEquipeSelects();
@@ -2314,6 +2359,7 @@
                     archived: arch,
                     equipe: (elEq && elEq.value) || equipeActive,
                     lid: lineId, lname: l.n, lcode: l.t,
+                    modele: modeleFiche(),
                     cdt: document.getElementById('inp-cdt').value,
                     cdtSup: document.getElementById('inp-cdt-sup').value,
                     start: document.getElementById('inp-start').value,
@@ -2418,6 +2464,8 @@
                 fillLineSelect();
             }
             document.getElementById('inp-line').value = p.lid;
+            document.getElementById('inp-modele').value =
+                MODELES_FICHE.includes(p.modele) ? p.modele : MODELES_FICHE[0];
             // Firebase ne stocke pas les chaines vides : un champ laisse
             // vide revient absent, et sans ce garde-fou la case affichait
             // « undefined » — jusque dans la nature des travaux imprimee.
@@ -2464,6 +2512,7 @@
             const elDepl = document.getElementById('inp-depl');
             if(elDepl) elDepl.checked = false;
             
+            document.getElementById('inp-modele').value = MODELES_FICHE[0];
             document.getElementById('display-line-header').textContent = "NOUVEAU CHANTIER";
             fillEquipeSelects();          // le nouveau chantier naît dans l'équipe affichée
             refreshUI(); switchScreen('screen-form');
@@ -2664,14 +2713,26 @@
             c.innerHTML = equipesDispo.map((e, i) => {
                 const nb = projects.filter(p => equipeDe(p) === e).length;
                 const actif = (e === equipeActive);
+                const mod = modelePrepaEquipe(e);
                 return `<div class="opt-row eq-row ${actif ? 'eq-active' : ''}">
                     <span class="opt-n"><b>${esc(e)}</b></span>
                     <span class="opt-used">${nb ? nb + ' chantier' + (nb > 1 ? 's' : '') : 'aucun chantier'}</span>
+                    <select class="opt-modele" title="Mod\u00e8le de pr\u00e9paration de l'\u00e9quipe"
+                            onchange="setModeleEquipe(${i}, this.value)">
+                        ${MODELES_PREPA.map(m => `<option${m === mod ? ' selected' : ''}>${esc(m)}</option>`).join('')}
+                    </select>
                     ${actif ? '<span class="badge-actif">✓ Équipe affichée</span>'
                             : `<button class="btn-basculer" onclick="changerEquipeIdx(${i})">Basculer sur cette équipe</button>`}
                     <button class="btn-del-ligne" onclick="deleteEquipe(${i})">🗑 Supprimer</button>
                 </div>`;
             }).join('');
+        }
+
+        function setModeleEquipe(i, v) {
+            const e = equipesDispo[i];
+            if(!e) return;
+            db.ref('equipes/' + e + '/modele').set(v)
+              .catch(x => alert("Enregistrement impossible : " + x.message));
         }
 
         function addEquipeOpt() {
@@ -2680,7 +2741,7 @@
             const v = n.trim();
             if(/[.#$\[\]\/]/.test(v)) { alert("Le nom ne peut pas contenir . # $ [ ] ou /"); return; }
             if(equipesDispo.includes(v)) { alert("Cette équipe existe déjà."); return; }
-            db.ref('equipes/' + v).set({ nom: v })
+            db.ref('equipes/' + v).set({ nom: v, modele: MODELES_PREPA[0] })
               .then(() => alert(`Équipe « ${v} » créée.\n\nSon référentiel de lignes est vide : ajoutez-les depuis cet écran après avoir basculé dessus en haut de page.`))
               .catch(e => alert("Erreur : " + e.message));
         }
@@ -3383,6 +3444,21 @@
                 commentaires: val('inp-comments'),
                 ots: ots.slice(), ois: ois.slice()
             };
+        }
+
+        // --- Zones SEVESO traversees -----------------------------------------
+        // Reprises du modèle de préparation de travail : pour chaque liaison
+        // concernée, le site classé et la plage de pylônes (z), la consigne de
+        // référence (r) et, le cas échéant, la précaution particulière (m).
+        // La clé est le code de la LIT, et non le numéro de ligne : un même
+        // numéro désigne deux lignes différentes selon l'équipe.
+        const SEVESO = {"AURENL41ZMAGR": {"n": "4061", "z": "Primagaz Pyl 33 à Martinerie Marinerie à Pyl 43", "r": "INS-SECU-TESO-MCO-06-01545"}, "BXREGZ41DONZE": {"n": "4023", "z": "Butagaz de Beauregard au pyl 13", "r": "INS-SECU-TESO-MCO-06-01545"}, "BORIEL41ZBXRE": {"n": "4018", "z": "Butagaz de Beauregard au Pyl 109", "r": "INS-SECU-TESO-MCO-06-01545"}, "CASSEZ41MAURE": {"n": "4072", "z": "Primagaz Pyl 32 à Martinerie Marinerie à Pyl 44", "r": "INS-SECU-TESO-MCO-06-01545"}, "CHABAL41PLAUD": {"n": "4076", "z": "Internationnal Paper Pyl 36 à 49", "r": "INS-SECU-TESO-MCO-06-01545", "m": "Nécessite l’utilisation d’un masque respiratoire en cas d’alerte (voir annexe n°3). Le masque respiratoire approprié est de type K2 qui apporte une protection contre les gaz de type « ammoniac et dérivés organiques aminés »."}, "CLERAL71PLAUD": {"n": "7007", "z": "Internationnal Paper Pyl 240 à 249", "r": "INS-SECU-TESO-MCO-06-01545", "m": "Nécessite l’utilisation d’un masque respiratoire en cas d’alerte (voir annexe n°3). Le masque respiratoire approprié est de type K2 qui apporte une protection contre les gaz de type « ammoniac et dérivés organiques aminés »."}, "MAUREL41PALAI": {"n": "4099", "z": "Primagaz Pyl 24 à 34", "r": "INS-SECU-TESO-MCO-06-01545"}, "PLAUDZ41TANNI": {"n": "4112", "z": "Internationnal Paper Gorre à Tannin Tannin au Pyl 49", "r": "INS-SECU-TESO-MCO-06-01545", "m": "Nécessite l’utilisation d’un masque respiratoire en cas d’alerte (voir annexe n°3). Le masque respiratoire approprié est de type K2 qui apporte une protection contre les gaz de type « ammoniac et dérivés organiques aminés »."}, "SSJUNZ41TANNI": {"n": "4114", "z": "Internationnal Paper Lit GOR6L41ZGOR6, TANNIL41ZGOR, Pyl 21 au Piquage", "r": "INS-SECU-TESO-MCO-06-01545", "m": "Nécessite l’utilisation d’un masque respiratoire en cas d’alerte (voir annexe n°3). Le masque respiratoire approprié est de type K2 qui apporte une protection contre les gaz de type « ammoniac et dérivés organiques aminés »."}};
+
+        // La liaison du chantier, si elle traverse une zone classée.
+        function sevesoDuChantier() {
+            const c = pdChantier();
+            const lit = String(litDeLigne(c.numero) || '').trim().toUpperCase();
+            return (lit && SEVESO[lit]) || null;
         }
 
         // --- Coordonnees des pylones -----------------------------------------
@@ -7073,6 +7149,58 @@
                 ['11 — Petit matériel', ['Collier Petit Jean', 'Pelles / pioches', 'Masses', 'Serre-joint', 'Broches', 'Rallonge électrique']]
         ];
 
+        // Le mot SEVESO ne suffit pas : s'il y a une zone, elle se nomme, en
+        // rouge, à côté de la case — au papier comme à l'écran.
+        function marqueSeveso() {
+            const z = sevesoDuChantier();
+            if(!z) return '';
+            return `<span class="pd-seveso">⚠ Zone SEVESO sur cette ligne — ${esc(z.z)}</span>`;
+        }
+        function noteSeveso() {
+            const z = sevesoDuChantier();
+            if(!z) return '';
+            return `<div class="pd-note pd-note-seveso"><b>Zone SEVESO traversée par la ligne
+                    ${esc(pdChantier().ligne)}</b><br>${esc(z.z)}.
+                    Consigne de référence : <b>${esc(z.r)}</b>.${
+                    z.m ? '<br>' + esc(z.m) : ''}</div>`;
+        }
+
+        // --- Les modèles de mode opératoire ---------------------------------
+        // Le classeur en propose un ; un chantier de végétation suit le sien,
+        // où la coupe est faite par le prestataire pendant que la ligne est
+        // tenue à la terre. Le bouton « Pré-remplir » verse l'un ou l'autre.
+        const MO_LIGNE = [
+            {t:'Vérification état initial (terrain, préparation de travail)', r:'', a:'', pa:'1', e:'', al:''},
+            {t:'Pré Job Briefing (PF 1)', r:'', a:'', pa:'', e:'', al:''},
+            {t:'Communication sécurisée (PF 3)', r:'', a:'', pa:'', e:'', al:''},
+            {t:"Prise de l'A1EC au GdP", r:'', a:'', pa:'', e:'', al:''},
+            {t:'Identification de la ligne et du pylône', r:'confusion', a:'contrôle visuel', pa:'', e:'', al:''},
+            {t:'Explication du mode opératoire aux agents (Exigence 14)', r:'', a:'', pa:'', e:'', al:''},
+            {t:'Ascension des monteurs avec LDV et corde de service', r:'Travaux en hauteur', a:'Ligne de vie + EPI + lunettes de protection', pa:'', e:'', al:''},
+            {t:'VATn + pose de MALT/CC', r:'Électrique, induction', a:'Tableau du doc. D sur les MALT', pa:'', e:'', al:''},
+            {t:'Travaux proprement dits', r:'', a:'', pa:'', e:'', al:''},
+            {t:'Dépose de tout le matériel et des MALT/CC', r:'Électrique, induction', a:'Tableau du doc. D sur les MALT', pa:'', e:'', al:''},
+            {t:'Descente des monteurs', r:'Travaux en hauteur', a:'Ligne de vie + EPI + lunettes de protection', pa:'', e:'', al:''},
+            {t:'Débriefing (PF 6)', r:'', a:'', pa:'', e:'', al:''}
+        ];
+
+        const MO_VEGETATION = [
+            {t:'Vérification état initial (terrain, préparation de travail)', r:'', a:'', pa:'1', e:'', al:''},
+            {t:'Pré Job Briefing (PF 1)', r:'', a:'', pa:'', e:'', al:''},
+            {t:'Communication sécurisée (PF 3)', r:'', a:'', pa:'', e:'', al:''},
+            {t:"Passage d'un message collationné pour pose de MALT/cc (PDM)", r:'', a:'', pa:'', e:'', al:''},
+            {t:'Identification de la ligne et du pylône', r:'confusion', a:'contrôle visuel', pa:'', e:'', al:''},
+            {t:'Explication du mode opératoire aux agents (Exigence 14)', r:'', a:'', pa:'', e:'', al:''},
+            {t:'Ascension des monteurs avec LDV et corde de service', r:'Travaux en hauteur', a:'Ligne de vie + EPI + lunettes de protection', pa:'', e:'', al:''},
+            {t:'VATn + pose de MALT/CC + confirmation par message collationné', r:'Électrique, induction', a:'Tableau du doc. D sur les MALT', pa:'', e:'', al:''},
+            {t:'Travaux par le prestataire travaux végétation', r:'', a:'', pa:'', e:'', al:''},
+            {t:'Passage de message collationné pour la dépose des MALT/CC', r:'', a:'', pa:'', e:'', al:''},
+            {t:'Dépose des MALT/cc + Descente des monteurs + confirmation au CDC par message', r:'Travaux en hauteur + Électrique, induction', a:'Ligne de vie + EPI + lunettes de protection + Tableau du doc. D sur les MALT', pa:'', e:'', al:''},
+            {t:'Débriefing (PF 6)', r:'', a:'', pa:'', e:'', al:''}
+        ];
+
+        function moModele() { return modeleVegetation() ? MO_VEGETATION : MO_LIGNE; }
+
         const PREPA_PAGES = [
 
         { id:'couverture', titre:'Couverture', defaut:true, horsCompte:true, corps: () => {
@@ -7252,7 +7380,9 @@
             ${sous('Annexes numérotées')}
             ${num.map(o => coche(o.c, o.t)).join('')}
             ${sous('Autres pièces jointes')}
-            ${autres.map((t, i) => coche('an-a' + i, t)).join('')}
+            ${autres.map((t, i) => `<div class="pd-coche-l">${coche('an-a' + i, t)}${
+                  t === 'SEVESO' ? marqueSeveso() : ''}</div>`).join('')}
+            ${noteSeveso()}
             <div class="pd-l"><span class="pd-lab">Autre :</span>${chp('an-autre')}</div>`;
         }},
 
@@ -7348,20 +7478,7 @@
             une autre personne que le CDT ; laissé décoché, il s'agit d'un <b>autocontrôle</b>.
             ${exig('Exigence 3')}</div>
             ${grille('pd-g3', champ('PPE', chp('mo-etren', 'N° PPE')) + champ('Fiche PPE signée par le CDT', coche('mo-etren-sig', 'Signée')) + champ('Impact environnemental', sel('mo-env', ['OUI','NON'])))}
-            ${tableau('mo-l', [{k:'t', t:'Tâches à réaliser', l:'26%', m:true, o:'taches'}, {k:'r', t:'Analyse de risques', l:'24%', m:true, o:'risques'}, {k:'a', t:'Actions préventives', l:'24%', m:true, o:'actions'}, {k:'pa', t:'Point d\'arrêt', c:true}, {k:'cc', t:'Contrôle croisé', c:true, b:true}, {k:'e', t:'État réalisé', c:true}, {k:'al', t:'Aléa n°', c:true}], {t:'', r:'', a:'', cc:false, e:'', al:''}, [
-                {t:'Vérification état initial (terrain, préparation de travail)', r:'', a:'', pa:'1', e:'', al:''},
-                {t:'Pré Job Briefing (PF 1)', r:'', a:'', pa:'', e:'', al:''},
-                {t:'Communication sécurisée (PF 3)', r:'', a:'', pa:'', e:'', al:''},
-                {t:'Prise de l\'A1EC au GdP', r:'', a:'', pa:'', e:'', al:''},
-                {t:'Identification de la ligne et du pylône', r:'confusion', a:'contrôle visuel', pa:'', e:'', al:''},
-                {t:'Explication du mode opératoire aux agents (Exigence 14)', r:'', a:'', pa:'', e:'', al:''},
-                {t:'Ascension des monteurs avec LDV et corde de service', r:'Travaux en hauteur', a:'Ligne de vie + EPI + lunettes de protection', pa:'', e:'', al:''},
-                {t:'VATn + pose de MALT/CC', r:'Électrique, induction', a:'Tableau du doc. D sur les MALT', pa:'', e:'', al:''},
-                {t:'Travaux proprement dits', r:'', a:'', pa:'', e:'', al:''},
-                {t:'Dépose de tout le matériel et des MALT/CC', r:'Électrique, induction', a:'Tableau du doc. D sur les MALT', pa:'', e:'', al:''},
-                {t:'Descente des monteurs', r:'Travaux en hauteur', a:'Ligne de vie + EPI + lunettes de protection', pa:'', e:'', al:''},
-                {t:'Débriefing (PF 6)', r:'', a:'', pa:'', e:'', al:''}
-            ], {etapes:true, arret:'pa'})}
+            ${tableau('mo-l', [{k:'t', t:'Tâches à réaliser', l:'26%', m:true, o:'taches'}, {k:'r', t:'Analyse de risques', l:'24%', m:true, o:'risques'}, {k:'a', t:'Actions préventives', l:'24%', m:true, o:'actions'}, {k:'pa', t:'Point d\'arrêt', c:true}, {k:'cc', t:'Contrôle croisé', c:true, b:true}, {k:'e', t:'État réalisé', c:true}, {k:'al', t:'Aléa n°', c:true}], {t:'', r:'', a:'', cc:false, e:'', al:''}, moModele(), {etapes:true, arret:'pa'})}
         `},
 
         { id:'modeop2', titre:'Mode opératoire (suite)', rang:2, annexe:'Annexe 5', defaut:true, paysage:true, corps: () => `
@@ -7516,6 +7633,7 @@
           corps: () => sueFiches() },
 
         { id:'synoptique', titre:'Synoptique de déroulage', defaut:false, paysage:true,
+          dispo: () => !modeleVegetation(),
           corps: () => synoptique() },
 
         { id:'planif', titre:'Planification des travaux', defaut:false, corps: () => {
@@ -7528,7 +7646,7 @@
                                               .map(j => ({j: j, d:'', t:''}))})}`;
         }},
 
-        { id:'cables', titre:'Câbles', defaut:true, corps: () => {
+        { id:'cables', titre:'Câbles', defaut:true, dispo: () => !modeleVegetation(), corps: () => {
             const c = CABLES.find(x => x.n === pv('ca-type'));
             const cd = COTE_D[pv('ca-tension')];
             const par = num(pv('ca-param'));
@@ -7600,7 +7718,11 @@
         { id:'metrologie', titre:'Métrologie', defaut:false, corps: () => {
             const c = pdChantier();
             let h = `${grille('pd-g3', champ('Ouvrage', auto(c.ligne)) + champ('Du', auto(c.debut)) + champ('Au', auto(c.fin)))}`;
-            [['Dynamomètre', 'dy'], ['Clé dynamométrique', 'cd'], ['Théodolite', 'th']].forEach(ap => {
+            // Un chantier de végétation n'emporte que le dynamomètre.
+            const appareils = modeleVegetation()
+                ? [['Dynamomètre', 'dy']]
+                : [['Dynamomètre', 'dy'], ['Clé dynamométrique', 'cd'], ['Théodolite', 'th']];
+            appareils.forEach(ap => {
                 h += sous(ap[0]);
                 h += tableau('me-' + ap[1],
                     [{k:'n', t:'N° appareil', l:'150px'}, {k:'d', t:"Date d'utilisation", l:'140px'}, {k:'o', t:'Opération réalisée'}],
@@ -7610,7 +7732,8 @@
             return h;
         }},
 
-        { id:'manchonnage', titre:'Procès-verbal de manchonnage', defaut:false, corps: () => `
+        { id:'manchonnage', titre:'Procès-verbal de manchonnage', defaut:false,
+          dispo: () => !modeleVegetation(), corps: () => `
             ${grille('pd-g3', champ('Manchon contrôlé', chp('ma-manchon')) + champ('Dans la portée', chp('ma-portee')) + champ('Au pylône n°', chp('ma-pylone')))}
             ${grille('pd-g2', champ('Fournisseur', chp('ma-fourn')) + champ('Type de graisse (conforme à la notice constructeur)', chp('ma-graisse')))}
             ${grille('pd-g2', champ('Type de câble', chp('ma-cable')) + champ('Type de presse / matrices', chp('ma-presse')))}

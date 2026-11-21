@@ -253,6 +253,10 @@
             qu'on déplace un chantier d'une équipe à l'autre.</li>
         <li><b>Ligne HTB</b> — choisie dans le référentiel de l'équipe. Le titre de la fiche
             reprend automatiquement la tension et le nom de la ligne.</li>
+        <li><b>Modèle de préparation</b> — la nature du chantier :
+            <i>Conventionnel</i>, <i>TST</i>, <i>Végétation</i>, <i>Visite d'investigation</i>
+            ou <i>Visite de diagnostic</i>. Il décide de ce que la préparation contient
+            (voir ci-dessous).</li>
         <li><b>Début et fin de chantier</b> — la date de début sert de référence à tout le
             calcul des échéances, et détermine les semaines du planning. C'est le champ le
             plus important de la fiche.</li>
@@ -260,6 +264,36 @@
             La croix le retire.</li>
         <li><b>Commentaires internes</b> — en bas de la fiche, pour les remarques d'équipe.</li>
     </ul>
+
+    <h3>Le modèle de préparation</h3>
+
+    <p>Tous les chantiers ne demandent pas le même dossier. Le <b>modèle</b> choisi sur la
+    fiche taille la préparation à la nature du travail. Il est enregistré avec le chantier,
+    et se change à tout moment : rien de ce qui a été saisi n'est perdu, seules les pages
+    affichées changent.</p>
+
+    <p><b>Végétation</b> est le premier modèle à porter ses propres règles. Sur un chantier
+    d'élagage, la ligne est tenue à la terre pendant que le prestataire coupe : ni déroulage,
+    ni manchonnage, ni clé dynamométrique. L'application retire donc d'elle-même :</p>
+    <ul>
+        <li>la page <b>Synoptique de déroulage</b> ;</li>
+        <li>la page <b>Câbles</b> ;</li>
+        <li>la page <b>Procès-verbal de manchonnage</b> ;</li>
+        <li>dans <b>Métrologie</b>, la clé dynamométrique et le théodolite : il ne reste que
+            le <b>dynamomètre</b>.</li>
+    </ul>
+
+    <p>Et le bouton <b>✨ Pré-remplir</b> du <b>mode opératoire</b> verse alors la trame d'un
+    chantier de végétation : messages collationnés pour la pose puis la dépose des MALT/CC,
+    coupe par le prestataire, confirmation au CDC à la descente. La trame conventionnelle
+    reste celle des autres modèles.</p>
+
+    <div class="note">
+        Les quatre autres modèles — <i>Conventionnel</i>, <i>TST</i>,
+        <i>Visite d'investigation</i>, <i>Visite de diagnostic</i> — donnent pour l'instant
+        la préparation complète. Ils sont là pour être choisis dès maintenant : le chantier
+        portera le bon modèle le jour où son contenu propre arrivera.
+    </div>
 
     <div class="note">
         <b>Rien n'est enregistré tant que vous n'avez pas cliqué sur ENREGISTRER.</b>
@@ -1114,6 +1148,26 @@
     <b>s'imprime avec la préparation</b>, une feuille par page du PDF, et se décoche comme
     n'importe quelle autre page. Sans NIP importée, cette page n'apparaît pas.</p>
 
+    <h3>La zone SEVESO, signalée d'elle-même</h3>
+
+    <p>En bas de la page <b>Annexes</b>, la liste <b>Autres pièces jointes</b> porte une case
+    <b>SEVESO</b>. Dès que la ligne choisie sur la fiche traverse une zone classée,
+    l'application l'écrit <b>en rouge à côté de la case</b> : le site concerné et la plage de
+    pylônes. Plus bas, un encadré rouge reprend la <b>consigne de référence</b> et, s'il y en
+    a une, la <b>précaution particulière</b> — par exemple le masque respiratoire de type K2
+    exigé autour d'International Paper. Les deux s'impriment.</p>
+
+    <p>Rien n'apparaît quand la ligne n'est pas concernée : l'avertissement ne se montre que
+    lorsqu'il a lieu d'être. La case, elle, reste la vôtre à cocher.</p>
+
+    <div class="note">
+        Les zones sont celles du <b>modèle de préparation de travail</b> du classeur, reprises
+        liaison par liaison. La reconnaissance se fait sur le <b>code de la LIT</b> et non sur
+        le numéro de ligne, puisqu'un même numéro désigne deux lignes différentes selon
+        l'équipe. Une ligne dont le code LIT n'est pas renseigné dans le référentiel ne peut
+        pas être reconnue : vérifiez-le dans les options.
+    </div>
+
     <h3>Le schéma unifilaire</h3>
 
     <p>Juste en dessous, le bouton <b>📎 Importer le schéma (PDF)</b> fonctionne de la même
@@ -1451,6 +1505,19 @@
     <p>Une équipe ne peut pas être supprimée tant que des chantiers y sont rattachés : ils
     disparaîtraient de toutes les listes. Réaffectez-les d'abord depuis leur fiche.</p>
 
+    <h3>Le métier de l'équipe</h3>
+
+    <p>Sur la ligne de chaque équipe, une liste déroulante dit son métier :
+    <b>Lignes</b>, <b>Groupement de postes</b>, <b>Postes</b>, <b>EMASE</b> ou <b>PEASI</b>.
+    Le choix part en base aussitôt, sans ENREGISTRER, et vaut pour tout le monde.</p>
+
+    <div class="note">
+        Ce réglage ne change <b>encore rien</b> à la préparation : il est posé maintenant pour
+        que chaque équipe soit déjà déclarée le jour où les dossiers de poste, EMASE et PEASI
+        auront leurs propres pages. Les chantiers de ligne, eux, se taillent déjà par le
+        <b>modèle de préparation</b> de chaque fiche.
+    </div>
+
     <h3>Gérer les lignes</h3>
 
     <p>La liste affiche les lignes de l'équipe affichée, groupées par niveau de tension, avec
@@ -1767,7 +1834,8 @@
         <tr><td><b>+</b> et <b>×</b> en bout de ligne</td><td>Insèrent une ligne en dessous, ou
             suppriment celle-ci.</td></tr>
         <tr><td><b>✨ Pré-remplir</b></td><td>Verse le modèle du classeur dans le tableau, sans
-            écraser ce qui s'y trouve.</td></tr>
+            écraser ce qui s'y trouve. Dans le mode opératoire, le modèle versé dépend du
+            <b>modèle de préparation</b> de la fiche.</td></tr>
         <tr><td><b>✎ Signer</b></td><td>Ouvre la fenêtre de signature : au doigt, à la souris,
             ou en important une image. <b>Effacer</b> recommence, <b>Valider</b> pose la
             signature.</td></tr>
@@ -1822,6 +1890,9 @@
         <tr><td><b>+ Nouvelle équipe</b>, <b>Basculer sur cette équipe</b>, <b>🗑
             Supprimer</b></td><td>Gèrent les équipes. Chaque équipe a ses chantiers et son
             référentiel de lignes.</td></tr>
+        <tr><td>La liste <b>Lignes / Groupement de postes / Postes / EMASE / PEASI</b></td>
+            <td>Le métier de l'équipe. Enregistré aussitôt ; sans effet sur le document pour
+            l'instant.</td></tr>
         <tr><td><b>+ Ajouter</b> / <b>✔ Enregistrer</b>, <b>Annuler</b></td><td>Ajoutent une
             ligne au référentiel, ou enregistrent celle qu'on modifie.</td></tr>
         <tr><td><b>✎ Modifier</b>, <b>🗑 Supprimer</b></td><td>Sur une ligne du référentiel. Le
