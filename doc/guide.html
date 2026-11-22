@@ -229,7 +229,29 @@
         <tr><td><b>Jauge</b></td><td>Part des tâches renseignées, sur les 25 tâches du suivi.</td></tr>
         <tr><td><b>Liste d'alertes</b></td><td>Les tâches en retard (⚠️) ou proches de l'échéance (🕒).</td></tr>
         <tr><td><span class="pastille">🚗 Déplacement</span></td><td>Le chantier nécessite un déplacement.</td></tr>
+        <tr><td><b>Pastille de type</b></td><td>Le <b>modèle de préparation</b> du chantier, sous
+            le titre : <i>Conventionnel</i>, <i>TST</i>, <i>Végétation</i>,
+            <i>Visite d'investigation</i> ou <i>Visite de diagnostic</i>. Chaque type a sa
+            couleur, pour reconnaître un élagage d'un chantier conventionnel sans lire.</td></tr>
     </table>
+
+    <h3>Ne voir qu'une partie des chantiers</h3>
+
+    <p>Au-dessus de la grille, deux listes : <b>Type</b> et <b>CdT</b>. Elles se combinent —
+    <i>Végétation</i> et <i>Dupont</i> ne laissent que les élagages de Dupont. À droite, le
+    compte dit ce qui est montré : <i>5 chantiers</i>, ou <i>2 sur 5 chantiers</i> dès qu'un
+    filtre est posé. Un bouton <b>Tout afficher</b> apparaît alors pour les lever tous les
+    deux d'un coup.</p>
+
+    <figure>
+        <img src="captures/27-filtres-accueil.png" alt="Les filtres de l'accueil">
+        <figcaption>Le type en pastille sous le titre, et les deux filtres au-dessus de la grille</figcaption>
+    </figure>
+
+    <p>Les choix proposés viennent des chantiers de l'équipe affichée, pas d'une liste figée :
+    on ne vous propose jamais un filtre qui ne rendrait rien. Les chantiers dont le CdT n'est
+    pas renseigné se retrouvent sous <b>Sans CdT</b>. Le filtre ne vaut que pour l'accueil :
+    aux archives, les dossiers par mois font déjà le tri.</p>
 
     <p>Un clic sur une carte ouvre le chantier. Le bouton <b>+ NOUVEAU</b> en crée un dans
     l'équipe affichée.</p>
@@ -1756,6 +1778,10 @@
         <thead><tr><th style="width:34%">Bouton</th><th>Ce qu'il fait</th></tr></thead>
         <tbody>
         <tr><td><b>Une ligne de la liste</b></td><td>Ouvre la fiche du chantier.</td></tr>
+        <tr><td>Les listes <b>Type</b> et <b>CdT</b></td><td>Ne montrent que les chantiers du
+            type ou du chargé de travaux choisi. Elles se combinent.</td></tr>
+        <tr><td><b>Tout afficher</b></td><td>Lève les deux filtres. N'apparaît que lorsqu'un
+            filtre est posé.</td></tr>
         <tr><td><b>🖨️ Imprimer A3</b></td><td>Sort le porte-document A3 de tous les chantiers
             affichés.</td></tr>
         </tbody>

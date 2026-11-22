@@ -83,6 +83,30 @@
         
         /* STYLES SPÉCIAUX */
         .badge-depl { background-color: #fef0d4; color: #d99400; font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; border: 1px solid #fab928; font-weight: bold; display: inline-flex; align-items: center; gap: 4px; }
+        /* Le type de chantier, lisible d'un coup d'oeil sur la carte. */
+        .badge-type { font-size: 0.72rem; padding: 2px 9px; border-radius: 12px; border: 1px solid;
+                      font-weight: 700; display: inline-flex; align-items: center;
+                      text-transform: uppercase; letter-spacing: .02em; }
+        /* La barre de tri de l'accueil. Elle reste au-dessus de la grille. */
+        .home-filtres { display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+                        background: #fff; border: 1px solid var(--border); border-radius: 10px;
+                        padding: 10px 14px; margin-bottom: 14px; }
+        .home-filtres label { display: flex; align-items: center; gap: 6px;
+                              font-size: 0.82rem; color: #64748b; font-weight: 600; }
+        .home-filtres select { border: 1px solid var(--border); border-radius: 7px;
+                               padding: 6px 9px; font-size: 0.85rem; background: #fff;
+                               color: #1e293b; max-width: 230px; }
+        .home-filtres .f-compte { margin-left: auto; font-size: 0.82rem; color: #64748b; }
+        .home-filtres .f-vider { border: 1px solid var(--border); background: #f8fafc;
+                                 border-radius: 7px; padding: 6px 11px; font-size: 0.82rem;
+                                 cursor: pointer; color: #475569; font-weight: 600; }
+        .home-filtres .f-vider:hover { background: #eef2f7; }
+        @media (max-width: 680px) {
+            .home-filtres { gap: 8px; padding: 9px 11px; }
+            .home-filtres label { flex: 1 1 100%; }
+            .home-filtres select { flex: 1 1 auto; max-width: none; }
+            .home-filtres .f-compte { margin-left: 0; flex: 1 1 100%; }
+        }
         .card-desc { margin-top: 10px; font-size: 0.9rem; color: #475569; background: #f8fafc; padding: 8px; border-radius: 6px; border-left: 3px solid #cbd5e1; font-style: italic; }
 
         /* BOUTON SUPPRESSION */
@@ -1388,6 +1412,7 @@
     </nav>
 
     <div id="screen-home" class="screen active">
+        <div id="home-filtres" class="home-filtres"></div>
         <div id="grid-projects" class="projects-grid"></div>
     </div>
 
@@ -1911,6 +1936,26 @@
             return MODELES_FICHE.includes(v) ? v : MODELES_FICHE[0];
         }
         function modeleVegetation() { return modeleFiche() === MODELES_FICHE[2]; }
+        // Le modele d'un chantier deja enregistre, quand on le lit de l'exterieur
+        // (l'accueil, les archives) sans l'avoir charge dans le formulaire.
+        function modeleDe(p) {
+            const v = p && p.modele;
+            return MODELES_FICHE.includes(v) ? v : MODELES_FICHE[0];
+        }
+        // Fond, texte et bordure de chaque type, pour la pastille des cartes.
+        const COULEUR_MODELE = {
+            'Conventionnel':           ['#eef2f7', '#475569', '#cbd5e1'],
+            'TST':                     ['#fdeee6', '#c2410c', '#fbc9ad'],
+            'V\u00e9g\u00e9tation': ['#e6f6ec', '#15803d', '#a7d9ba'],
+            "Visite d'investigation":  ['#e8f1fb', '#1d4ed8', '#b3cdf2'],
+            'Visite de diagnostic':    ['#f2ebfb', '#6d28d9', '#cfbcf0']
+        };
+        function pastilleModele(p) {
+            const m = modeleDe(p);
+            const c = COULEUR_MODELE[m] || COULEUR_MODELE['Conventionnel'];
+            return `<span class="badge-type" style="background:${c[0]};color:${c[1]};
+                          border-color:${c[2]}">${esc(m)}</span>`;
+        }
         function majModeleFiche() {
             const ec = document.getElementById('screen-prepadoc');
             if(ec && ec.classList.contains('active')) renderPrepa();
@@ -2561,6 +2606,7 @@
                     <div class="card-body">
                         <div class="card-title">
                             ${p.lcode} - ${p.lname}
+                            ${pastilleModele(p)}
                             ${p.depl ? '<span class="badge-depl">🚗 Déplacement</span>' : ''}
                         </div>
                         <div class="card-dates">📅 Du ${p.start?new Date(p.start).toLocaleDateString():'?'} au ${p.end?new Date(p.end).toLocaleDateString():'?'}</div>
@@ -2580,11 +2626,56 @@
             return card;
         }
 
+        // --- Les filtres de l'accueil ---------------------------------------
+        // Ils ne valent que pour les chantiers en cours : aux archives, les
+        // dossiers par mois font deja le tri.
+        let filtreType = '';
+        let filtreCdt  = '';
+        function setFiltre(quoi, v) {
+            if(quoi === 'type') filtreType = v; else filtreCdt = v;
+            renderHome();
+        }
+        function viderFiltres() { filtreType = ''; filtreCdt = ''; renderHome(); }
+        function cdtDe(p) { return String(p.cdt || '').trim(); }
+
+        // Les choix proposes viennent des chantiers de l'equipe, pas d'une
+        // liste figee : on ne propose jamais un filtre qui ne rendrait rien.
+        function majBarreFiltres(base, montres) {
+            const bar = document.getElementById('home-filtres');
+            if(!bar) return;
+            const opt = (v, cur, lib) =>
+                `<option value="${esc(v)}"${v === cur ? ' selected' : ''}>${esc(lib || v)}</option>`;
+            const types = [...new Set(base.map(modeleDe))]
+                          .sort((a, b) => MODELES_FICHE.indexOf(a) - MODELES_FICHE.indexOf(b));
+            const cdts  = [...new Set(base.map(cdtDe).filter(Boolean))]
+                          .sort((a, b) => a.localeCompare(b));
+            const sansCdt = base.some(p => !cdtDe(p));
+            const filtre  = filtreType || filtreCdt;
+            bar.innerHTML = `
+                <label>Type
+                    <select onchange="setFiltre('type', this.value)">
+                        ${opt('', filtreType, 'Tous les types')}
+                        ${types.map(t => opt(t, filtreType)).join('')}
+                    </select>
+                </label>
+                <label>CdT
+                    <select onchange="setFiltre('cdt', this.value)">
+                        ${opt('', filtreCdt, 'Tous les CdT')}
+                        ${cdts.map(c => opt(c, filtreCdt)).join('')}
+                        ${sansCdt ? opt('\u2014', filtreCdt, 'Sans CdT') : ''}
+                    </select>
+                </label>
+                ${filtre ? '<button class="f-vider" onclick="viderFiltres()">Tout afficher</button>' : ''}
+                <span class="f-compte">${filtre
+                    ? montres + ' sur ' + base.length + ' chantier' + (base.length > 1 ? 's' : '')
+                    : base.length + ' chantier' + (base.length > 1 ? 's' : '')}</span>`;
+        }
+
         function renderGrid(domId, isArch) {
             const d = document.getElementById(domId); d.innerHTML = '';
 
             // Chaque equipe ne voit que ses chantiers, puis tri par date
-            const lst = projects
+            const base = projects
                 .filter(p => equipeDe(p) === equipeActive)
                 .filter(p => !!p.archived === isArch)
                 .sort((a, b) => {
@@ -2593,9 +2684,18 @@
                     return new Date(a.start) - new Date(b.start);
                 });
 
+            const lst = isArch ? base : base.filter(p =>
+                (!filtreType || modeleDe(p) === filtreType) &&
+                (!filtreCdt  || (cdtDe(p) || '\u2014') === filtreCdt));
+
+            if(!isArch) majBarreFiltres(base, lst.length);
+
             if(!lst.length) {
                 d.className = 'projects-grid';
-                d.innerHTML = `<div style="text-align:center;color:#999;grid-column:1/-1;padding:20px;">Aucun dossier pour ${esc(equipeActive)}</div>`;
+                d.innerHTML = `<div style="text-align:center;color:#999;grid-column:1/-1;padding:20px;">${
+                    base.length
+                        ? 'Aucun chantier ne correspond au filtre.'
+                        : 'Aucun dossier pour ' + esc(equipeActive)}</div>`;
                 return;
             }
 
