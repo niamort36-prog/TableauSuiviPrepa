@@ -309,7 +309,8 @@
     <h3>La zone atteignable depuis une adresse</h3>
 
     <p>Sous les filtres, une barre : portez une <b>adresse</b> ou une <b>commune</b>,
-    choisissez le <b>moyen de déplacement</b> — en voiture ou à pied — et un <b>temps</b>,
+    choisissez le <b>moyen de déplacement</b> — en voiture, <b>en camion</b> ou à pied —
+    et un <b>temps</b>,
     de 5 minutes à une heure, puis <b>Tracer la zone</b>. La carte dessine en violet tout ce
     qu'on atteint dans ce temps-là depuis ce point, par les routes réelles.</p>
 
@@ -318,6 +319,18 @@
     voulu. La case <b>Afficher</b> masque la zone sans la perdre — le calcul reste — et
     <b>Effacer</b> la retire. Elle ne bouge pas quand on change de filtre ou de fond de
     carte.</p>
+
+    <div class="attention">
+        <b>Le camion est une estimation.</b> Le service de l'IGN ne connaît que la voiture et
+        la marche. La zone <i>En camion (PL)</i> se calcule donc sur le réseau routier de la
+        voiture, avec un budget de temps rogné d'un bon quart : un poids lourd est bridé à
+        80 km/h sur route et 90 sur autoroute, là où la voiture roule à 90 et 130, et s'y
+        ajoutent les côtes, les traversées de bourg et les manœuvres. Le contour est donc
+        prudent, et la barre le rappelle en clair (« 15 min en camion (PL) · estimation »).
+        Il ne tient en revanche pas compte des <b>limitations de tonnage, de hauteur ou de
+        gabarit</b> : un pont ou une route étroite écartés à un convoi restent dans la zone.
+        Pour un acheminement engageant, l'itinéraire se vérifie à part.
+    </div>
 
     <div class="note">
         L'adresse et la zone viennent de la <b>Géoplateforme de l'IGN</b>, comme les fonds de
@@ -2018,7 +2031,7 @@
         <tr><td><b>🗺️ Carte</b></td><td>Montre les chantiers de l'équipe sur le fond IGN,
             d'après les pylônes de leur fiche de secours.</td></tr>
         <tr><td><b>Tracer la zone</b></td><td>Carte : dessine ce qu'on atteint depuis une
-            adresse dans un temps donné, en voiture ou à pied.</td></tr>
+            adresse dans un temps donné, en voiture, en camion ou à pied.</td></tr>
         <tr><td><b>Afficher</b> / <b>Effacer</b> (zone)</td><td>Masque la zone sans la perdre,
             ou la retire.</td></tr>
         </tbody>

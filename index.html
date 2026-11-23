@@ -1474,6 +1474,7 @@
                    onkeypress="if(event.key==='Enter') tracerZone()">
             <select id="zone-mode">
                 <option value="car">🚗 En voiture</option>
+                <option value="camion">🚛 En camion (PL)</option>
                 <option value="pedestrian">🚶 À pied</option>
             </select>
             <select id="zone-min">
@@ -2680,6 +2681,20 @@
         const GEOCODE_URL = 'https://data.geopf.fr/geocodage/search';
         const ISO_URL     = 'https://data.geopf.fr/navigation/isochrone';
 
+        // Les moyens de déplacement. La Géoplateforme ne connaît que la
+        // voiture et la marche : le camion se calcule donc sur le réseau
+        // routier de la voiture, avec un budget de temps rogné. Un poids
+        // lourd est bridé à 80 km/h sur route et 90 sur autoroute, là où la
+        // voiture roule à 90 et 130 ; s'y ajoutent les côtes, les traversées
+        // de bourg et les manœuvres. Le contour est donc une estimation
+        // prudente, et l'application le dit plutôt que de le taire.
+        const MODES_ZONE = {
+            car:        { profil: 'car',        nom: 'en voiture',     part: 1    },
+            camion:     { profil: 'car',        nom: 'en camion (PL)', part: .72,
+                          estime: true },
+            pedestrian: { profil: 'pedestrian', nom: 'à pied',         part: 1    }
+        };
+
         let carteZone = null;          // le contour et son épingle
         let carteZoneVisible = true;
 
@@ -2710,7 +2725,7 @@
             const adr  = String(document.getElementById('zone-adr').value || '').trim();
             if(!adr) { if(etat) etat.textContent = 'Portez une adresse ou une commune.'; return; }
             if(!window.L || !carte) return;
-            const mode = document.getElementById('zone-mode').value;
+            const mode = MODES_ZONE[document.getElementById('zone-mode').value] || MODES_ZONE.car;
             const min  = parseInt(document.getElementById('zone-min').value, 10) || 15;
             if(etat) etat.textContent = 'Recherche de l\u2019adresse\u2026';
             try {
@@ -2723,17 +2738,18 @@
                 const nom = (f.properties && f.properties.label) || adr;
 
                 if(etat) etat.textContent = 'Calcul de la zone\u2026';
+                const budget = Math.max(60, Math.round(min * 60 * mode.part));
                 const u = ISO_URL + '?resource=bdtopo-valhalla&costType=time&direction=departure'
                         + '&point=' + lon + ',' + lat
-                        + '&costValue=' + (min * 60) + '&profile=' + mode;
+                        + '&costValue=' + budget + '&profile=' + mode.profil;
                 const ri = await fetch(u);
                 if(!ri.ok) throw new Error('isochrone : ' + ri.status);
                 const iso = await ri.json();
                 if(!iso || !iso.geometry) { if(etat) etat.textContent = "Pas de zone pour ce point."; return; }
 
                 effacerZone();
-                const libelle = esc(nom) + ' — ' + min + ' min '
-                              + (mode === 'car' ? 'en voiture' : 'à pied');
+                const libelle = esc(nom) + ' — ' + min + ' min ' + mode.nom
+                              + (mode.estime ? ' · estimation' : '');
                 carteZone = L.layerGroup([
                     L.geoJSON({ type: 'Feature', geometry: iso.geometry }, {
                         style: { color: '#6d28d9', weight: 2, opacity: .9,
