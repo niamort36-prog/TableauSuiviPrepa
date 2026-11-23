@@ -237,11 +237,16 @@
 
     <h3>Ne voir qu'une partie des chantiers</h3>
 
-    <p>Au-dessus de la grille, deux listes : <b>Type</b> et <b>CdT</b>. Elles se combinent —
-    <i>Végétation</i> et <i>Dupont</i> ne laissent que les élagages de Dupont. À droite, le
-    compte dit ce qui est montré : <i>5 chantiers</i>, ou <i>2 sur 5 chantiers</i> dès qu'un
-    filtre est posé. Un bouton <b>Tout afficher</b> apparaît alors pour les lever tous les
-    deux d'un coup.</p>
+    <p>Au-dessus de la grille, trois listes : <b>Type</b>, <b>Tension</b> et <b>CdT</b>. Elles
+    se combinent — <i>Végétation</i>, <i>90 kV</i> et <i>Dupont</i> ne laissent que les
+    élagages 90 kV de Dupont. Les niveaux sont rangés par kilovolts, 63 avant 400, et non par
+    ordre alphabétique. À droite, le compte dit ce qui est montré : <i>5 chantiers</i>, ou
+    <i>2 sur 5 chantiers</i> dès qu'un filtre est posé. Un bouton <b>Tout afficher</b> apparaît
+    alors pour les lever tous d'un coup.</p>
+
+    <p>Les mêmes trois listes se retrouvent sur l'onglet <b>Carte</b>, et c'est le même
+    réglage : filtrer d'un côté filtre de l'autre. On ne cherche pas deux fois le même
+    chantier.</p>
 
     <figure>
         <img src="captures/27-filtres-accueil.png" alt="Les filtres de l'accueil">
@@ -260,9 +265,19 @@
 
     <p>L'onglet <b>🗺️ Carte</b>, entre <i>Archives</i> et <i>Options</i>, montre où sont les
     chantiers de l'équipe affichée. Chaque chantier y est placé d'après les <b>coordonnées
-    des pylônes de sa fiche de secours</b> : un point par support, un trait qui les relie, et
-    une épingle sur le premier. La couleur est celle de sa carte à l'accueil — vert, jaune ou
-    rouge selon les échéances.</p>
+    des pylônes de sa fiche de secours</b> : un point par support, une épingle sur le
+    premier. La couleur est celle de sa carte à l'accueil — vert, jaune ou rouge selon les
+    échéances.</p>
+
+    <p>Le trait ne relie que les supports dont les <b>numéros se suivent</b> : 12-13-14 font un
+    tronçon, 40-41 un autre, et rien ne joint les deux. Une même ligne porte souvent des
+    interventions éparpillées sur des dizaines de kilomètres ; un trait d'un bout à l'autre
+    ne dirait rien de vrai. Des supports isolés — 12, 14, 17 — restent trois points, sans
+    trait.</p>
+
+    <p>Sur l'accueil, les chantiers qui figurent sur la carte portent une <b>boussole</b>
+    🧭 à côté de leur titre : un clic ouvre la carte <b>cadrée sur eux</b>, bulle ouverte.
+    Si un filtre les cachait, il est levé plutôt que de montrer une carte vide.</p>
 
     <figure>
         <img src="captures/28-carte.jpg" alt="La carte des chantiers">
@@ -1352,6 +1367,14 @@
         comprennent Waze, Maps et les fonds de carte.
     </div>
 
+    <div class="note">
+        Les supports et leurs coordonnées <b>partent en base tout de suite</b>, comme une pièce
+        jointe ou un panier, sans attendre ENREGISTRER — avec les points d'intérêt qui en
+        découlent. C'est nécessaire : la <b>carte lit la base</b>, pas l'écran. Un chantier
+        dont la fiche de secours n'a jamais été enregistrée n'apparaît pas sur la carte ;
+        ouvrez sa préparation une fois, les supports s'y inscrivent.
+    </div>
+
     <figure>
         <img src="captures/14-prepa-secours.png" alt="Fiche de secours pré-remplie">
         <figcaption>L'encadrement et les groupements insérés par le bouton Pré-remplir</figcaption>
@@ -1906,8 +1929,11 @@
         <thead><tr><th style="width:34%">Bouton</th><th>Ce qu'il fait</th></tr></thead>
         <tbody>
         <tr><td><b>Une ligne de la liste</b></td><td>Ouvre la fiche du chantier.</td></tr>
-        <tr><td>Les listes <b>Type</b> et <b>CdT</b></td><td>Ne montrent que les chantiers du
-            type ou du chargé de travaux choisi. Elles se combinent.</td></tr>
+        <tr><td>Les listes <b>Type</b>, <b>Tension</b> et <b>CdT</b></td><td>Ne montrent que les
+            chantiers du type, du niveau de tension ou du chargé de travaux choisi. Elles se
+            combinent, et valent aussi sur la carte.</td></tr>
+        <tr><td><b>🧭</b> sur une carte de chantier</td><td>Ouvre la carte cadrée sur ce
+            chantier. N'apparaît que s'il est localisé.</td></tr>
         <tr><td><b>Tout afficher</b></td><td>Lève les deux filtres. N'apparaît que lorsqu'un
             filtre est posé.</td></tr>
         <tr><td><b>🖨️ Imprimer A3</b></td><td>Sort le porte-document A3 de tous les chantiers

@@ -80,6 +80,11 @@
         .carte-barre .etat { margin-left: auto; font-size: .82rem; color: #64748b; }
         #carte-fond { height: calc(100vh - 230px); min-height: 420px; border-radius: 12px;
                       border: 1px solid var(--border); background: #e8eef4; overflow: hidden; }
+        /* La boussole d'une carte de chantier : elle mène à la carte. */
+        .btn-boussole { border: 1px solid #b3cdf2; background: #e8f1fb; color: #1d4ed8;
+                        border-radius: 999px; width: 26px; height: 26px; line-height: 1;
+                        font-size: .92rem; cursor: pointer; padding: 0; flex: 0 0 auto; }
+        .btn-boussole:hover { background: #d4e6fb; }
         .carte-pop b { color: #054191; }
         .carte-pop .l { display: block; font-size: .82rem; color: #475569; margin-top: 2px; }
         .carte-pop button { margin-top: 8px; border: none; border-radius: 7px; cursor: pointer;
@@ -1438,6 +1443,7 @@
             <label><input type="checkbox" id="carte-arch" onchange="renderCarte()"> Afficher les archives</label>
             <span class="etat" id="carte-etat"></span>
         </div>
+        <div id="carte-filtres" class="home-filtres"></div>
         <div id="carte-fond"></div>
     </div>
 
@@ -2385,7 +2391,8 @@
             });
         }
 
-        // Les supports localisés d'un chantier, en degrés, dans l'ordre.
+        // Les supports localisés d'un chantier, en degrés, du plus petit
+        // numéro au plus grand.
         function pointsChantier(p) {
             const rows = (p.prepa && p.prepa.l && p.prepa.l['sec-sup']) || [];
             const pts = [];
@@ -2396,7 +2403,31 @@
                 pts.push({ sup: String((r && r.sup) || '').trim(),
                            lat: parseFloat(c[0]), lon: parseFloat(c[1]) });
             });
-            return pts;
+            return pts.sort((a, b) => rangSupport(a.sup) - rangSupport(b.sup));
+        }
+
+        // Deux supports se suivent quand leurs numéros se suivent : 12 et 13,
+        // ou 42/1 et 42/2. Une même ligne porte souvent des interventions
+        // éparpillées : un trait d'un bout à l'autre du département ne dirait
+        // rien de vrai, on ne relie donc que ce qui se touche.
+        function supportsSuivis(a, b) {
+            const ra = rangSupport(a), rb = rangSupport(b);
+            if(ra >= 1e9 || rb >= 1e9) return false;
+            const d = rb - ra;
+            return d === 1 || d === 1000;
+        }
+        function tronconsChantier(pts) {
+            const out = [];
+            let cour = [];
+            pts.forEach((x, i) => {
+                if(i && !supportsSuivis(pts[i - 1].sup, x.sup)) {
+                    if(cour.length > 1) out.push(cour);
+                    cour = [];
+                }
+                cour.push(x);
+            });
+            if(cour.length > 1) out.push(cour);
+            return out;
         }
 
         async function goCarte() {
@@ -2443,9 +2474,12 @@
 
             const arch = document.getElementById('carte-arch');
             const avecArch = arch && arch.checked;
-            const lot = projects.filter(p => equipeDe(p) === equipeActive)
-                                .filter(p => avecArch || !p.archived);
+            const base = projects.filter(p => equipeDe(p) === equipeActive)
+                                 .filter(p => avecArch || !p.archived);
+            const lot = base.filter(chantierRetenu);
+            majBarreFiltres(base, lot.length, 'carte-filtres');
             const bornes = [];
+            let vise = null, viseMarqueur = null;
             let poses = 0;
 
             lot.forEach(p => {
@@ -2454,10 +2488,10 @@
                 poses++;
                 const st = statutChantier(p);
                 const coul = st === 'red' ? '#d77864' : (st === 'yellow' ? '#fab928' : '#4bb9aa');
-                const ligne = pts.map(x => [x.lat, x.lon]);
-                if(ligne.length > 1) {
-                    L.polyline(ligne, { color: coul, weight: 4, opacity: .85 }).addTo(carteCouche);
-                }
+                tronconsChantier(pts).forEach(tr => {
+                    L.polyline(tr.map(x => [x.lat, x.lon]),
+                               { color: coul, weight: 4, opacity: .85 }).addTo(carteCouche);
+                });
                 pts.forEach(x => {
                     L.circleMarker([x.lat, x.lon], { radius: 5, color: '#fff', weight: 2,
                         fillColor: coul, fillOpacity: 1 })
@@ -2467,25 +2501,52 @@
                 const t = pts[0];
                 const dates = (p.start ? new Date(p.start).toLocaleDateString() : '?')
                             + ' → ' + (p.end ? new Date(p.end).toLocaleDateString() : '?');
-                L.marker([t.lat, t.lon]).addTo(carteCouche).bindPopup(
+                const marque = L.marker([t.lat, t.lon]).addTo(carteCouche).bindPopup(
                     `<div class="carte-pop"><b>${esc(p.lcode || '')} ${esc(p.lname || '')}</b>
                      <span class="l">${esc(modeleDe(p))} · ${esc(dates)}</span>
                      <span class="l">👤 ${esc(p.cdt || '—')}</span>
                      <span class="l">${pts.length} support(s) localisé(s)</span>
                      <button onclick="ouvrirDepuisCarte('${esc(String(p.id))}')">Ouvrir le chantier</button>
                      </div>`);
-                ligne.forEach(c => bornes.push(c));
+                pts.forEach(x => bornes.push([x.lat, x.lon]));
+                if(carteCible && String(p.id) === carteCible) {
+                    vise = pts.map(x => [x.lat, x.lon]);
+                    viseMarqueur = marque;
+                }
             });
 
-            if(bornes.length) carte.fitBounds(bornes, { padding: [40, 40], maxZoom: 15 });
+            if(vise && vise.length) {
+                carte.fitBounds(vise, { padding: [60, 60], maxZoom: 15 });
+                if(viseMarqueur) setTimeout(() => viseMarqueur.openPopup(), 300);
+            } else if(bornes.length) {
+                carte.fitBounds(bornes, { padding: [40, 40], maxZoom: 15 });
+            }
+            carteCible = null;
             if(etat) etat.textContent = poses
                 ? poses + ' chantier(s) localisé(s) sur ' + lot.length
                 : (lot.length ? "Aucun chantier localisé — renseignez les supports dans la fiche de secours"
-                              : 'Aucun chantier pour ' + equipeActive);
+                              : (base.length ? 'Aucun chantier ne correspond au filtre'
+                                             : 'Aucun chantier pour ' + equipeActive));
             setTimeout(() => carte.invalidateSize(), 60);
         }
 
         function ouvrirDepuisCarte(id) { load(id); }
+
+        // La boussole d'une carte de chantier : on passe à la carte, cadrée
+        // sur lui. Si un filtre le cachait, on lève le filtre plutôt que de
+        // montrer une carte vide.
+        let carteCible = null;
+        async function allerCarte(id, ev) {
+            if(ev) { ev.stopPropagation(); ev.preventDefault(); }
+            const p = projects.find(x => String(x.id) === String(id));
+            if(p) {
+                if(!chantierRetenu(p)) { filtreType = ''; filtreCdt = ''; filtreTension = ''; }
+                const arch = document.getElementById('carte-arch');
+                if(p.archived && arch && !arch.checked) arch.checked = true;
+            }
+            carteCible = String(id);
+            await goCarte();
+        }
         function goOptions() { switchScreen('screen-options'); fillTensionSelect(); renderEquipes();
                                renderLignes(); renderOperateurs(); renderSecours(); renderVersion(); }
 
@@ -2774,6 +2835,9 @@
                     <div class="card-body">
                         <div class="card-title">
                             ${p.lcode} - ${p.lname}
+                            ${pointsChantier(p).length ? `<button class="btn-boussole"
+                                 title="Voir ce chantier sur la carte"
+                                 onclick="allerCarte('${esc(String(p.id))}', event)">\U0001F9ED</button>` : ''}
                             ${pastilleModele(p)}
                             ${p.depl ? '<span class="badge-depl">🚗 Déplacement</span>' : ''}
                         </div>
@@ -2799,17 +2863,36 @@
         // dossiers par mois font deja le tri.
         let filtreType = '';
         let filtreCdt  = '';
-        function setFiltre(quoi, v) {
-            if(quoi === 'type') filtreType = v; else filtreCdt = v;
-            renderHome();
+        let filtreTension = '';
+        // Les mêmes filtres servent à l'accueil et à la carte : on ne veut pas
+        // chercher deux fois le même chantier.
+        function rafraichirFiltres() {
+            const carteActive = document.getElementById('screen-carte')
+                             && document.getElementById('screen-carte').classList.contains('active');
+            if(carteActive) renderCarte(); else renderHome();
         }
-        function viderFiltres() { filtreType = ''; filtreCdt = ''; renderHome(); }
-        function cdtDe(p) { return String(p.cdt || '').trim(); }
+        function setFiltre(quoi, v) {
+            if(quoi === 'type') filtreType = v;
+            else if(quoi === 'cdt') filtreCdt = v;
+            else filtreTension = v;
+            rafraichirFiltres();
+        }
+        function viderFiltres() {
+            filtreType = ''; filtreCdt = ''; filtreTension = '';
+            rafraichirFiltres();
+        }
+        function cdtDe(p)     { return String(p.cdt || '').trim(); }
+        function tensionDe(p) { return String(p.lcode || '').trim(); }
+        function chantierRetenu(p) {
+            return (!filtreType    || modeleDe(p) === filtreType)
+                && (!filtreCdt     || (cdtDe(p) || '\u2014') === filtreCdt)
+                && (!filtreTension || tensionDe(p) === filtreTension);
+        }
 
         // Les choix proposes viennent des chantiers de l'equipe, pas d'une
         // liste figee : on ne propose jamais un filtre qui ne rendrait rien.
-        function majBarreFiltres(base, montres) {
-            const bar = document.getElementById('home-filtres');
+        function majBarreFiltres(base, montres, idBarre) {
+            const bar = document.getElementById(idBarre || 'home-filtres');
             if(!bar) return;
             const opt = (v, cur, lib) =>
                 `<option value="${esc(v)}"${v === cur ? ' selected' : ''}>${esc(lib || v)}</option>`;
@@ -2818,12 +2901,22 @@
             const cdts  = [...new Set(base.map(cdtDe).filter(Boolean))]
                           .sort((a, b) => a.localeCompare(b));
             const sansCdt = base.some(p => !cdtDe(p));
-            const filtre  = filtreType || filtreCdt;
+            // Les niveaux se rangent par kilovolts, pas par ordre alphabétique :
+            // 400 kV viendrait avant 63 kV.
+            const tens  = [...new Set(base.map(tensionDe).filter(Boolean))]
+                          .sort((a, b) => (parseInt(a, 10) || 0) - (parseInt(b, 10) || 0));
+            const filtre  = filtreType || filtreCdt || filtreTension;
             bar.innerHTML = `
                 <label>Type
                     <select onchange="setFiltre('type', this.value)">
                         ${opt('', filtreType, 'Tous les types')}
                         ${types.map(t => opt(t, filtreType)).join('')}
+                    </select>
+                </label>
+                <label>Tension
+                    <select onchange="setFiltre('tension', this.value)">
+                        ${opt('', filtreTension, 'Toutes les tensions')}
+                        ${tens.map(t => opt(t, filtreTension)).join('')}
                     </select>
                 </label>
                 <label>CdT
@@ -2852,9 +2945,7 @@
                     return new Date(a.start) - new Date(b.start);
                 });
 
-            const lst = isArch ? base : base.filter(p =>
-                (!filtreType || modeleDe(p) === filtreType) &&
-                (!filtreCdt  || (cdtDe(p) || '\u2014') === filtreCdt));
+            const lst = isArch ? base : base.filter(chantierRetenu);
 
             if(!isArch) majBarreFiltres(base, lst.length);
 
@@ -3782,6 +3873,7 @@
                 return;
             }
             const pi = reporterPI();
+            await persisterSupports();
             renderPrepa();
             if(!r.lignes) { alert("Ajoutez d'abord les numéros de support dans le tableau."); return; }
             let msg = r.trouves + ' support(s) localisé(s) sur la liaison ' + r.code + '.';
@@ -3895,6 +3987,21 @@
             return n;
         }
 
+        // Les supports et leurs coordonnées partent en base tout de suite,
+        // comme une pièce jointe ou un panier. Sans cela l'écran les montre
+        // et la base les ignore : la carte, qui lit la base, reste vide.
+        async function persisterSupports() {
+            if(!curId || LECTURE) return;
+            const lignes = lst('sec-sup').filter(o =>
+                Object.keys(o).some(k => String(o[k] === undefined ? '' : o[k]).trim() !== ''));
+            const maj = {};
+            maj['chantiers/' + curId + '/prepa/l/sec-sup'] = lignes.length ? lignes : null;
+            maj['chantiers/' + curId + '/prepa/v/sec-sup-lu'] = pv('sec-sup-lu') || null;
+            maj['chantiers/' + curId + '/pi'] = piList.length ? piList : null;
+            await db.ref().update(maj).catch(e =>
+                console.warn('Enregistrement des supports :', e));
+        }
+
         // Lire la nature des travaux, localiser, reporter : la chaîne
         // entière, sans un mot si elle ne trouve rien.
         async function majSupports(force) {
@@ -3905,6 +4012,7 @@
             try { const r = await completerCoords(); localises = (r && r.trouves) || 0; }
             catch(e) { console.warn('Coordonnées des pylônes :', e); }
             const pi = reporterPI();
+            await persisterSupports();
             renderPrepa();
             if(ajoutes) souffler(ajoutes + ' support(s) repris de la nature des travaux'
                                + (localises ? ', ' + localises + ' localisé(s)' : ''));
