@@ -255,6 +255,39 @@
 
     <p>Un clic sur une carte ouvre le chantier. Le bouton <b>+ NOUVEAU</b> en crée un dans
     l'équipe affichée.</p>
+
+    <h3>La carte des chantiers</h3>
+
+    <p>L'onglet <b>🗺️ Carte</b>, entre <i>Archives</i> et <i>Options</i>, montre où sont les
+    chantiers de l'équipe affichée. Chaque chantier y est placé d'après les <b>coordonnées
+    des pylônes de sa fiche de secours</b> : un point par support, un trait qui les relie, et
+    une épingle sur le premier. La couleur est celle de sa carte à l'accueil — vert, jaune ou
+    rouge selon les échéances.</p>
+
+    <figure>
+        <img src="captures/28-carte.jpg" alt="La carte des chantiers">
+        <figcaption>Les chantiers posés sur le plan IGN, un trait par ligne travaillée</figcaption>
+    </figure>
+
+    <p>Un clic sur l'épingle ouvre une bulle : la ligne, le type de chantier, les dates, le
+    CdT, le nombre de supports localisés, et un bouton <b>Ouvrir le chantier</b>.</p>
+
+    <p>Trois fonds au choix, par l'icône en haut à droite : <b>Plan IGN</b>, <b>Satellite
+    IGN</b> — l'orthophotographie, pour voir les accès et la végétation — et une
+    <b>carte simple</b> de secours. Une case affiche aussi les <b>archives</b>.</p>
+
+    <div class="note">
+        Les fonds viennent de la <b>Géoplateforme de l'IGN</b>, en libre accès : aucune clé à
+        demander, rien à payer, et les données du chantier ne sortent pas de l'application —
+        seules les tuiles d'image sont téléchargées. Le fond de carte demande une connexion ;
+        sans réseau, l'onglet le dit au lieu de rester blanc.
+    </div>
+
+    <div class="note">
+        Un chantier n'apparaît que s'il porte au moins un <b>support localisé</b> dans sa fiche
+        de secours, et qu'il a été <b>enregistré</b>. Le compte en haut à droite dit combien
+        le sont.
+    </div>
 </section>
 
 <!-- ======================================================= 3. FICHE ==== -->
@@ -1286,6 +1319,39 @@
     l'application remplit la colonne X ; Y pour chacun. Un support hors de la liaison est
     signalé, avec la plage réellement couverte.</p>
 
+    <h3>Les pylônes lus dans la nature des travaux</h3>
+
+    <p>Le plus souvent vous n'aurez rien à saisir. L'application <b>lit la nature des
+    travaux</b> et en tire les numéros de support toute seule :</p>
+    <ul>
+        <li><b>Pyl</b>, <b>pylône</b>, <b>support</b>, <b>poteau</b> annoncent une liste :
+            « remplacement de chaînes sur <i>pylônes 12, 14 et 17</i> » donne trois
+            lignes.</li>
+        <li><b>Portée</b> annonce deux bornes dont il faut <b>tous les intermédiaires</b> :
+            « <i>portée 23 à 27</i> », ou « <i>portée 23-27</i> », en donne cinq.</li>
+        <li>Les supports de dérivation s'écrivent <b>42/1</b> : la barre fait partie du
+            numéro, elle ne sépare pas.</li>
+    </ul>
+
+    <p>Les numéros trouvés sont ajoutés à la fiche de secours, <b>leurs coordonnées sont
+    cherchées</b> dans la foulée, puis chaque pylône localisé devient un <b>point d'intérêt</b>
+    dans <i>Logistique &amp; Terrain — PI</i>, prêt pour Waze ou Maps. Cela se fait à
+    l'ouverture de la préparation et à chaque fois que vous modifiez la nature des travaux.</p>
+
+    <div class="note">
+        <b>Rien n'est jamais effacé.</b> Les supports que vous ajoutez à la main restent, et un
+        support que vous supprimez ne revient pas tant que la nature des travaux ne change pas.
+        Le bouton <b>↻ Reprendre les supports de la nature des travaux</b> relit le texte à la
+        demande. Un intervalle de plus de 300 supports n'est pas déplié : seules ses deux
+        bornes sont posées, pour qu'une faute de frappe ne noie pas la fiche.
+    </div>
+
+    <div class="note">
+        Les coordonnées du référentiel sont en <b>Lambert 93</b>, comme dans le classeur ; les
+        points d'intérêt et la carte les convertissent en <b>degrés</b>, qui sont ce que
+        comprennent Waze, Maps et les fonds de carte.
+    </div>
+
     <figure>
         <img src="captures/14-prepa-secours.png" alt="Fiche de secours pré-remplie">
         <figcaption>L'encadrement et les groupements insérés par le bouton Pré-remplir</figcaption>
@@ -1846,6 +1912,8 @@
             filtre est posé.</td></tr>
         <tr><td><b>🖨️ Imprimer A3</b></td><td>Sort le porte-document A3 de tous les chantiers
             affichés.</td></tr>
+        <tr><td><b>🗺️ Carte</b></td><td>Montre les chantiers de l'équipe sur le fond IGN,
+            d'après les pylônes de leur fiche de secours.</td></tr>
         </tbody>
     </table>
 
@@ -1930,7 +1998,9 @@
         <tr><td><b>↻ Reprendre le carnet de l'équipe</b></td><td>Fiche de secours : reverse
             l'encadrement et les groupements enregistrés dans les options.</td></tr>
         <tr><td><b>📍 Retrouver les coordonnées</b></td><td>Cherche les coordonnées des pylônes
-            de la liaison.</td></tr>
+            de la liaison, et les reporte en points d'intérêt.</td></tr>
+        <tr><td><b>↻ Reprendre les supports de la nature des travaux</b></td><td>Relit le texte
+            et ajoute les numéros cités à la fiche de secours.</td></tr>
         <tr><td><b>↻ Calculer la section</b></td><td>MALT / CC : calcule la section depuis
             l'Icc et la durée d'élimination.</td></tr>
         <tr><td><b>↻ Importer le panier</b></td><td>Lit un panier Invent'RTE et en dresse la

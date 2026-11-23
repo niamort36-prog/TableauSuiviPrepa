@@ -70,6 +70,21 @@
         
         /* --- ACCUEIL --- */
         .projects-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 20px; }
+        /* --- La carte des chantiers --- */
+        .carte-barre { display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+                       background: #fff; border: 1px solid var(--border); border-radius: 10px;
+                       padding: 10px 14px; margin-bottom: 14px; }
+        .carte-barre .t { font-weight: 700; color: #1e293b; }
+        .carte-barre label { display: flex; align-items: center; gap: 6px;
+                             font-size: .85rem; color: #475569; cursor: pointer; }
+        .carte-barre .etat { margin-left: auto; font-size: .82rem; color: #64748b; }
+        #carte-fond { height: calc(100vh - 230px); min-height: 420px; border-radius: 12px;
+                      border: 1px solid var(--border); background: #e8eef4; overflow: hidden; }
+        .carte-pop b { color: #054191; }
+        .carte-pop .l { display: block; font-size: .82rem; color: #475569; margin-top: 2px; }
+        .carte-pop button { margin-top: 8px; border: none; border-radius: 7px; cursor: pointer;
+                            background: #054191; color: #fff; font-weight: 700; padding: 6px 12px; }
+        @media (max-width: 680px) { #carte-fond { height: calc(100vh - 280px); } }
         .project-card { background: white; border-radius: 12px; padding: 20px; border: 1px solid var(--border); cursor: pointer; transition: transform 0.2s; position: relative; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .project-card:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
         
@@ -1406,6 +1421,7 @@
         <div class="nav-actions">
             <button class="btn-nav active" id="nav-home" onclick="goHome()">En cours</button>
             <button class="btn-nav" id="nav-arch" onclick="goArchive()">Archives</button>
+            <button class="btn-nav" id="nav-carte" onclick="goCarte()">🗺️ Carte</button>
             <button class="btn-nav" id="nav-opt" onclick="goOptions()">⚙️ Options</button>
             <button class="btn-new" onclick="newItem()">+ NOUVEAU</button>
         </div>
@@ -1414,6 +1430,15 @@
     <div id="screen-home" class="screen active">
         <div id="home-filtres" class="home-filtres"></div>
         <div id="grid-projects" class="projects-grid"></div>
+    </div>
+
+    <div id="screen-carte" class="screen">
+        <div class="carte-barre">
+            <span class="t">🗺️ Chantiers de <span id="carte-equipe">—</span></span>
+            <label><input type="checkbox" id="carte-arch" onchange="renderCarte()"> Afficher les archives</label>
+            <span class="etat" id="carte-etat"></span>
+        </div>
+        <div id="carte-fond"></div>
     </div>
 
     <div id="screen-archive" class="screen">
@@ -2307,8 +2332,10 @@
             document.getElementById(id).classList.add('active');
             ajusterMargeBasse();
             // Onglet actif dans la barre du haut (aucun sur la fiche chantier)
-            const onglet = { 'screen-home':'nav-home', 'screen-archive':'nav-arch', 'screen-options':'nav-opt' }[id];
-            ['nav-home','nav-arch','nav-opt'].forEach(n => document.getElementById(n).classList.toggle('active', n === onglet));
+            const onglet = { 'screen-home':'nav-home', 'screen-archive':'nav-arch',
+                             'screen-carte':'nav-carte', 'screen-options':'nav-opt' }[id];
+            ['nav-home','nav-arch','nav-carte','nav-opt'].forEach(n =>
+                document.getElementById(n).classList.toggle('active', n === onglet));
         }
         function goHome() { switchScreen('screen-home'); renderHome(); }
 
@@ -2329,6 +2356,136 @@
             soufflet = setTimeout(() => z.classList.remove('vu'), 2600);
         }
         function goArchive() { switchScreen('screen-archive'); renderGrid('grid-archives', true); }
+
+        // ==================================================================
+        //  LA CARTE DES CHANTIERS
+        //  Un chantier est là où sont ses pylônes : la fiche de secours en
+        //  porte les coordonnées, on les lit et on les pose sur le fond de
+        //  carte de l'IGN. Rien à saisir de plus, rien à payer : la
+        //  Géoplateforme sert ces tuiles librement.
+        // ==================================================================
+        const LEAFLET_JS  = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js';
+        const LEAFLET_CSS = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css';
+        const GEOPF = 'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0'
+                    + '&STYLE=normal&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}';
+        const ATTR_IGN = '© <a href="https://www.ign.fr/" target="_blank" rel="noopener">IGN</a> — Géoplateforme';
+
+        let carte = null, carteCouche = null;
+
+        function chargerFeuille(url) {
+            return new Promise((res, rej) => {
+                if([...document.styleSheets].some(f => f.href === url)) { res(); return; }
+                if([...document.querySelectorAll('link[rel=stylesheet]')].some(l => l.href === url)) { res(); return; }
+                const l = document.createElement('link');
+                l.rel = 'stylesheet'; l.href = url;
+                const t = setTimeout(() => rej(new Error('délai dépassé : ' + url)), 20000);
+                l.onload = () => { clearTimeout(t); res(); };
+                l.onerror = () => { clearTimeout(t); rej(new Error('feuille indisponible : ' + url)); };
+                document.head.appendChild(l);
+            });
+        }
+
+        // Les supports localisés d'un chantier, en degrés, dans l'ordre.
+        function pointsChantier(p) {
+            const rows = (p.prepa && p.prepa.l && p.prepa.l['sec-sup']) || [];
+            const pts = [];
+            rows.forEach(r => {
+                const d = coordDegres(r && r.coord);
+                if(!d) return;
+                const c = d.split(',');
+                pts.push({ sup: String((r && r.sup) || '').trim(),
+                           lat: parseFloat(c[0]), lon: parseFloat(c[1]) });
+            });
+            return pts;
+        }
+
+        async function goCarte() {
+            switchScreen('screen-carte');
+            const lbl = document.getElementById('carte-equipe');
+            if(lbl) lbl.textContent = equipeActive;
+            const etat = document.getElementById('carte-etat');
+            if(!window.L) {
+                if(etat) etat.textContent = 'Chargement du fond de carte…';
+                try {
+                    await chargerFeuille(LEAFLET_CSS);
+                    await chargerScript(LEAFLET_JS, 25000);
+                } catch(e) {
+                    if(etat) etat.textContent = '';
+                    document.getElementById('carte-fond').innerHTML =
+                        '<div style="padding:40px;text-align:center;color:#9c4433">'
+                      + "Le fond de carte n'a pas pu être chargé : " + esc(e.message)
+                      + '<br><small>Il vient d\'un service en ligne ; vérifiez la connexion.</small></div>';
+                    return;
+                }
+            }
+            renderCarte();
+        }
+
+        function renderCarte() {
+            const fond = document.getElementById('carte-fond');
+            const etat = document.getElementById('carte-etat');
+            if(!fond || !window.L) return;
+
+            if(!carte) {
+                carte = L.map(fond, { center: [46.6, 2.5], zoom: 6 });
+                const plan = L.tileLayer(GEOPF + '&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&FORMAT=image/png',
+                                         { maxZoom: 19, attribution: ATTR_IGN });
+                const sat  = L.tileLayer(GEOPF + '&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&FORMAT=image/jpeg',
+                                         { maxZoom: 19, attribution: ATTR_IGN });
+                const osm  = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                         { maxZoom: 19, attribution: '© OpenStreetMap' });
+                plan.addTo(carte);
+                L.control.layers({ 'Plan IGN': plan, 'Satellite IGN': sat,
+                                   'Carte simple': osm }, null, { position: 'topright' }).addTo(carte);
+                carteCouche = L.layerGroup().addTo(carte);
+            }
+            carteCouche.clearLayers();
+
+            const arch = document.getElementById('carte-arch');
+            const avecArch = arch && arch.checked;
+            const lot = projects.filter(p => equipeDe(p) === equipeActive)
+                                .filter(p => avecArch || !p.archived);
+            const bornes = [];
+            let poses = 0;
+
+            lot.forEach(p => {
+                const pts = pointsChantier(p);
+                if(!pts.length) return;
+                poses++;
+                const st = statutChantier(p);
+                const coul = st === 'red' ? '#d77864' : (st === 'yellow' ? '#fab928' : '#4bb9aa');
+                const ligne = pts.map(x => [x.lat, x.lon]);
+                if(ligne.length > 1) {
+                    L.polyline(ligne, { color: coul, weight: 4, opacity: .85 }).addTo(carteCouche);
+                }
+                pts.forEach(x => {
+                    L.circleMarker([x.lat, x.lon], { radius: 5, color: '#fff', weight: 2,
+                        fillColor: coul, fillOpacity: 1 })
+                     .bindTooltip('Pylône ' + (x.sup || '?'), { direction: 'top' })
+                     .addTo(carteCouche);
+                });
+                const t = pts[0];
+                const dates = (p.start ? new Date(p.start).toLocaleDateString() : '?')
+                            + ' → ' + (p.end ? new Date(p.end).toLocaleDateString() : '?');
+                L.marker([t.lat, t.lon]).addTo(carteCouche).bindPopup(
+                    `<div class="carte-pop"><b>${esc(p.lcode || '')} ${esc(p.lname || '')}</b>
+                     <span class="l">${esc(modeleDe(p))} · ${esc(dates)}</span>
+                     <span class="l">👤 ${esc(p.cdt || '—')}</span>
+                     <span class="l">${pts.length} support(s) localisé(s)</span>
+                     <button onclick="ouvrirDepuisCarte('${esc(String(p.id))}')">Ouvrir le chantier</button>
+                     </div>`);
+                ligne.forEach(c => bornes.push(c));
+            });
+
+            if(bornes.length) carte.fitBounds(bornes, { padding: [40, 40], maxZoom: 15 });
+            if(etat) etat.textContent = poses
+                ? poses + ' chantier(s) localisé(s) sur ' + lot.length
+                : (lot.length ? "Aucun chantier localisé — renseignez les supports dans la fiche de secours"
+                              : 'Aucun chantier pour ' + equipeActive);
+            setTimeout(() => carte.invalidateSize(), 60);
+        }
+
+        function ouvrirDepuisCarte(id) { load(id); }
         function goOptions() { switchScreen('screen-options'); fillTensionSelect(); renderEquipes();
                                renderLignes(); renderOperateurs(); renderSecours(); renderVersion(); }
 
@@ -2565,6 +2722,15 @@
 
         // --- 11. AFFICHAGE DES GRILLES (TRI PAR DATE) ---
         function renderHome() { renderGrid('grid-projects', false); }
+
+        // La couleur d'un chantier, calculée en dressant sa carte. La carte
+        // géographique la reprend : deux feux de couleurs différentes pour
+        // le même chantier ne diraient rien de bon.
+        const STATUTS = {};
+        function statutChantier(p) {
+            carteChantier(p, !!p.archived);     // la carte se jette, la couleur reste
+            return STATUTS[p.id] || 'green';
+        }
         // Fabrique la carte d'un chantier. Partagee par l'accueil et les
         // archives : seul le bouton de suppression les distingue.
         function carteChantier(p, isArch) {
@@ -2593,6 +2759,8 @@
                 });
             }
             if(alertsHtml) alertsHtml = `<div class="card-alerts">${alertsHtml}</div>`;
+            // La carte reprend la même couleur : vert, jaune ou rouge.
+            STATUTS[p.id] = globalStatus;
 
             const borderClass = globalStatus==='red'?'card-red':(globalStatus==='yellow'?'card-yellow':'card-green');
             const gaugeColor = p.pct===100 ? '#4bb9aa' : (globalStatus==='red' ? '#d77864' : '#00a6d9');
@@ -3572,39 +3740,217 @@
             return PYLONES;
         }
 
-        async function retrouverCoords() {
+        // Remplit les coordonnees des supports déjà listés. Rend le compte
+        // rendu, sans rien afficher : c'est l'appelant qui parle.
+        async function completerCoords() {
             const code = codeLiaison();
-            if(!code) { alert("Le code liaison n'est pas renseigné : impossible de retrouver les pylônes."); return; }
+            if(!code) return { erreur: 'liaison' };
+            const base = await chargerPylones();
+            const ligne = base[code];
+            if(!ligne) return { erreur: 'inconnue', code: code };
+            const rows = lst('sec-sup');
+            let trouves = 0;
+            const absents = [];
+            rows.forEach(r => {
+                const n = String(r.sup || '').trim();
+                if(!n) return;
+                if(ligne[n]) { r.coord = ligne[n]; trouves++; }
+                else absents.push(n);
+            });
+            return { code: code, lignes: rows.length, trouves: trouves,
+                     absents: absents, bornes: Object.keys(ligne).map(Number)
+                                                     .filter(x => !isNaN(x)) };
+        }
+
+        async function retrouverCoords() {
             const etat = document.getElementById('sec-etat');
             if(etat) etat.textContent = ' Chargement…';
-            try {
-                const base = await chargerPylones();
-                const ligne = base[code];
-                if(!ligne) { if(etat) etat.textContent = ''; alert("Aucun pylône connu pour le code liaison " + code + "."); return; }
-                const rows = lst('sec-sup');
-                let trouves = 0, absents = [];
-                rows.forEach(r => {
-                    const n = String(r.sup || '').trim();
-                    if(!n) return;
-                    if(ligne[n]) { r.coord = ligne[n]; trouves++; }
-                    else absents.push(n);
-                });
-                renderPrepa();
-                let msg = trouves + ' support(s) localisé(s) sur la liaison ' + code + '.';
-                if(absents.length) {
-                    // Une liaison ne couvre souvent qu'une tranche de la ligne :
-                    // autant dire laquelle plutot que de laisser chercher.
-                    const nums = Object.keys(ligne).map(Number).filter(n => !isNaN(n));
-                    msg += '\n\nIntrouvables : ' + absents.join(', ');
-                    if(nums.length) msg += '\nCette liaison va du support ' + Math.min(...nums)
-                                         + ' au support ' + Math.max(...nums) + '.';
-                }
-                if(!rows.length) msg = "Ajoutez d'abord les numéros de support dans le tableau.";
-                alert(msg);
-            } catch(e) {
+            let r;
+            try { r = await completerCoords(); }
+            catch(e) {
                 if(etat) etat.textContent = '';
                 alert('Coordonnées indisponibles : ' + e.message);
+                return;
             }
+            if(etat) etat.textContent = '';
+            if(r.erreur === 'liaison') {
+                alert("Le code liaison n'est pas renseigné : impossible de retrouver les pylônes.");
+                return;
+            }
+            if(r.erreur === 'inconnue') {
+                alert("Aucun pylône connu pour le code liaison " + r.code + ".");
+                return;
+            }
+            const pi = reporterPI();
+            renderPrepa();
+            if(!r.lignes) { alert("Ajoutez d'abord les numéros de support dans le tableau."); return; }
+            let msg = r.trouves + ' support(s) localisé(s) sur la liaison ' + r.code + '.';
+            if(pi) msg += '\n' + pi + " point(s) d'intérêt ajouté(s) à la logistique.";
+            if(r.absents.length) {
+                // Une liaison ne couvre souvent qu'une tranche de la ligne :
+                // autant dire laquelle plutot que de laisser chercher.
+                msg += '\n\nIntrouvables : ' + r.absents.join(', ');
+                if(r.bornes.length) msg += '\nCette liaison va du support ' + Math.min(...r.bornes)
+                                         + ' au support ' + Math.max(...r.bornes) + '.';
+            }
+            alert(msg);
+        }
+
+        // ==================================================================
+        //  LES SUPPORTS CITÉS DANS LA NATURE DES TRAVAUX
+        //  « Pyl », « pylône », « support » et « poteau » annoncent une
+        //  liste de numéros ; « portée » annonce deux numéros dont il faut
+        //  tous les intermédiaires. Un support de dérivation s'écrit 42/1 :
+        //  la barre fait partie du numéro, elle ne sépare pas.
+        // ==================================================================
+        const MOT_SUPPORT = /(pyl[oô]nes?|pyl\.?|supports?|poteaux?|port[ée]es?|cantons?)/gi;
+        const JETON       = /\d+(?:\/\d+)?|[a-zà-ÿ']+|[^\s\w]/gi;
+        const LIEN        = /^(?:à|au|aux|jusqu|jusqu'|\u2013|\u2014|-)$/i;   // un intervalle ; « a » seul est le plus souvent le verbe
+        const PASSE       = /^(?:et|n|no|nos|n°|\u00ba|,|;|&|\+|:|\.|\/)$/i;  // on continue
+
+        function supportsDuTexte(t) {
+            const src = String(t || '');
+            const out = [];
+            const ajouter = n => { if(n && out.indexOf(n) < 0) out.push(n); };
+            // Un intervalle ne s'étend que sur des entiers simples, et pas
+            // sur mille : une faute de frappe ne doit pas noyer la fiche.
+            const etendre = (a, b) => {
+                if(!/^\d+$/.test(a) || !/^\d+$/.test(b)) { ajouter(b); return; }
+                const x = +a, y = +b;
+                if(y <= x || y - x > 300) { ajouter(b); return; }
+                for(let k = x + 1; k <= y; k++) ajouter(String(k));
+            };
+
+            MOT_SUPPORT.lastIndex = 0;
+            let m;
+            while((m = MOT_SUPPORT.exec(src)) !== null) {
+                const portee = /^(port|canton)/i.test(m[0]);
+                const suite = src.slice(m.index + m[0].length, m.index + m[0].length + 160);
+                const jetons = suite.match(JETON) || [];
+                let prec = null, lien = false;
+                for(const j of jetons) {
+                    if(/^\d/.test(j)) {
+                        // Après « portée », deux nombres qui se suivent bornent
+                        // toujours un intervalle, séparateur ou non.
+                        if(prec !== null && (lien || portee)) etendre(prec, j);
+                        else ajouter(j);
+                        prec = j; lien = false;
+                        continue;
+                    }
+                    if(LIEN.test(j)) { lien = true; continue; }
+                    if(PASSE.test(j)) continue;
+                    break;              // un vrai mot : la liste est finie
+                }
+            }
+            return out;
+        }
+
+        // Le numéro d'un support se trie comme un nombre, 42/1 après 42.
+        function rangSupport(n) {
+            const m = String(n).match(/^(\d+)(?:\/(\d+))?/);
+            return m ? (+m[1]) * 1000 + (m[2] ? +m[2] : 0) : 1e9;
+        }
+
+        // On n'enlève jamais rien : ce qui a été ajouté à la main reste. Le
+        // texte déjà lu est retenu, pour qu'une ligne supprimée exprès ne
+        // revienne pas à chaque ouverture.
+        function reporterSupports(force) {
+            const texte = String(pv('tv-nature')).trim() || pdChantier().desc || '';
+            if(!force && String(pv('sec-sup-lu')) === texte) return 0;
+            prepa.v['sec-sup-lu'] = texte;
+            const trouves = supportsDuTexte(texte);
+            if(!trouves.length) return 0;
+            const rows = lst('sec-sup');
+            let n = 0;
+            trouves.sort((a, b) => rangSupport(a) - rangSupport(b)).forEach(num => {
+                if(rows.some(r => String(r.sup || '').trim() === num)) return;
+                const vide = rows.find(r => !String(r.sup || '').trim()
+                                         && !String(r.coord || '').trim());
+                if(vide) vide.sup = num; else rows.push({ sup: num, coord: '' });
+                n++;
+            });
+            return n;
+        }
+
+        // Chaque support localisé devient un point d'intérêt : on le retrouve
+        // dans Waze ou Maps sans retaper ses coordonnées.
+        function reporterPI() {
+            let n = 0;
+            lst('sec-sup').forEach(r => {
+                const num = String(r.sup || '').trim();
+                const deg = coordDegres(r.coord);
+                if(!num || !deg) return;
+                const lib = 'Pylône ' + num;
+                const deja = piList.find(x => String(x.lib || '').trim().toLowerCase()
+                                            === lib.toLowerCase());
+                if(deja) {
+                    if(String(deja.coord || '').trim()) return;
+                    deja.coord = deg; n++; return;
+                }
+                piList.push({ lib: lib, coord: deg });
+                n++;
+            });
+            if(n && document.getElementById('sub-pi')
+                 && document.getElementById('screen-logi').classList.contains('active')) renderPI();
+            return n;
+        }
+
+        // Lire la nature des travaux, localiser, reporter : la chaîne
+        // entière, sans un mot si elle ne trouve rien.
+        async function majSupports(force) {
+            if(LECTURE && !PARTAGE_PREPA) return;
+            const ajoutes = reporterSupports(force);
+            if(!ajoutes && !force) return;
+            let localises = 0;
+            try { const r = await completerCoords(); localises = (r && r.trouves) || 0; }
+            catch(e) { console.warn('Coordonnées des pylônes :', e); }
+            const pi = reporterPI();
+            renderPrepa();
+            if(ajoutes) souffler(ajoutes + ' support(s) repris de la nature des travaux'
+                               + (localises ? ', ' + localises + ' localisé(s)' : ''));
+            return { ajoutes: ajoutes, localises: localises, pi: pi };
+        }
+
+        // --- Du Lambert 93 au degré -----------------------------------------
+        // Le référentiel donne les pylônes en Lambert 93 (RGF93) ; Waze, Maps
+        // et les fonds de carte veulent des degrés. Projection conique
+        // conforme inverse, constantes de l'IGN.
+        const L93 = { n: 0.7256077650532670, C: 11754255.426096,
+                      Xs: 700000.0, Ys: 12655612.049876,
+                      e: 0.0818191910428158, lon0: 3 * Math.PI / 180 };
+        function lambert93Degres(x, y) {
+            const dx = x - L93.Xs, dy = y - L93.Ys;
+            const R = Math.sqrt(dx * dx + dy * dy);
+            if(!R) return null;
+            const lon = L93.lon0 + Math.atan2(dx, -dy) / L93.n;
+            const li = -Math.log(Math.abs(R / L93.C)) / L93.n;
+            let phi = 2 * Math.atan(Math.exp(li)) - Math.PI / 2;
+            for(let i = 0; i < 16; i++) {
+                const sn = L93.e * Math.sin(phi);
+                const suiv = 2 * Math.atan(Math.pow((1 + sn) / (1 - sn), L93.e / 2)
+                                         * Math.exp(li)) - Math.PI / 2;
+                if(Math.abs(suiv - phi) < 1e-12) { phi = suiv; break; }
+                phi = suiv;
+            }
+            return { lat: phi * 180 / Math.PI, lon: lon * 180 / Math.PI };
+        }
+
+        // « 637098.2 ; 6539686.4 » (Lambert 93) ou « 45.12, 1.23 » (degrés)
+        // deviennent « lat, lon ». Rend null si ce n'est ni l'un ni l'autre.
+        function coordDegres(v) {
+            const m = String(v || '').match(/(-?\d+(?:[.,]\d+)?)\s*[;,]\s*(-?\d+(?:[.,]\d+)?)/);
+            if(!m) return null;
+            const a = parseFloat(m[1].replace(',', '.')), b = parseFloat(m[2].replace(',', '.'));
+            if(isNaN(a) || isNaN(b)) return null;
+            const net = x => String(parseFloat(x.toFixed(6)));
+            // Le Lambert 93 se compte en mètres, par centaines de milliers.
+            if(a > 50000 && b > 1000000) {
+                const d = lambert93Degres(a, b);
+                if(!d || d.lat < 40 || d.lat > 53 || d.lon < -6 || d.lon > 11) return null;
+                return net(d.lat) + ', ' + net(d.lon);
+            }
+            if(Math.abs(a) <= 90 && Math.abs(b) <= 180) return net(a) + ', ' + net(b);
+            return null;
         }
 
         // --- Champs -----------------------------------------------------------
@@ -3631,9 +3977,14 @@
             return champPartageable(c) ? ' data-partageable' : '';
         }
 
+        // Ce qu'une case déclenche une fois remplie. La nature des travaux
+        // dit souvent les pylônes : on les reprend sans qu'on le demande.
+        const APRES_SAISIE = { 'tv-nature': () => majSupports() };
+
         function setPV(c, val) {
             prepa.v[c] = val;
             majPrepaEtat();
+            if(APRES_SAISIE[c]) setTimeout(APRES_SAISIE[c], 0);
             if(champPartageable(c)) {
                 db.ref('chantiers/' + PREPA_ID + '/prepa/v/' + c)
                   .set(String(val).trim() === '' ? null : val)
@@ -7524,9 +7875,15 @@
             ${tableau('sec-sup', [{k:'sup', t:'N° support', l:'130px'}, {k:'coord', t:'Coordonnées (X ; Y)'}], {sup:'', coord:''})}
             <div class="pd-l">
                 <button class="btn-pd pre" onclick="retrouverCoords()">📍 Retrouver les coordonnées</button>
+                <button class="btn-pd" onclick="majSupports(true)">↻ Reprendre les supports de la nature des travaux</button>
                 <span id="sec-etat" style="font-size:.78rem;font-weight:700;color:#054191"></span>
                 <span class="pd-aide">d'après le code liaison ${esc(codeLiaison()) || '(non renseigné)'}</span>
             </div>
+            <div class="pd-note pd-ecran">Les numéros cités dans la <b>nature des travaux</b> arrivent
+            ici tout seuls : « pylônes 12, 14 et 17 » donne trois lignes, « portée 23 à 27 » en
+            donne cinq. Leurs coordonnées sont cherchées dans le référentiel, puis reportées
+            en points d'intérêt dans <b>Logistique — PI</b>. Ajoutez-en autant que vous voulez :
+            rien de ce qui est écrit ici n'est effacé.</div>
 
             ${sous('Ambulance privée et véhicule sanitaire léger')}
             <div class="pd-note">Annuaire : <a href="https://annuairesante.ameli.fr" target="_blank" rel="noopener">annuairesante.ameli.fr</a></div>
@@ -9164,7 +9521,7 @@
 
         function goPrepaDoc() { switchScreen('screen-prepadoc'); renderPrepa(true);
                                 chargerPhotoCouv(); chargerPieces(); chargerSignatures();
-                                chargerAnnexes(); }
+                                chargerAnnexes(); majSupports(); }
 
         // Redessiner la preparation vide puis remplit #pd-pages : le temps
         // d'un souffle le document est court, et le navigateur ramene la vue
