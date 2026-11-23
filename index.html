@@ -429,7 +429,7 @@
         .pd-champ > label { font-size: .7rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: .03em; }
         .pd-coche { display: flex; align-items: flex-start; gap: 7px; font-size: .86rem; padding: 3px 0; cursor: pointer; }
         /* La case et son avertissement sur la meme ligne, l'un apres l'autre. */
-        .pd-coche-l { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+        .pd-coche-av { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
         .pd-seveso { color: #b91c1c; font-weight: 700; font-size: .82rem; line-height: 1.35; }
         .pd-note-seveso { border-left-color: #b91c1c !important; background: #fef2f2 !important;
                           color: #7f1d1d; }
@@ -3506,7 +3506,7 @@
             const sel = document.getElementById('inp-line');
             const refer = litDeLigne(sel ? sel.value : '');
             const saisi = String(pv('tv-liaison')).trim();
-            return `<input class="pd-in" value="${esc(saisi || refer)}"
+            return `<input class="pd-in" value="${esc(saisi || refer)}" data-cle="tv-liaison"
                            placeholder="ex : EGUZOL71PLAUD" onchange="setPV('tv-liaison', this.value)">
                     <span class="pd-aide">${refer
                         ? (saisi && saisi !== refer
@@ -3628,7 +3628,7 @@
         // Le marquage que porte une case ouverte au partage : la feuille de
         // style lui rend le clic, et la mise a jour en direct la retrouve.
         function marquePartage(c) {
-            return champPartageable(c) ? ` data-cle="${c}" data-partageable` : '';
+            return champPartageable(c) ? ' data-partageable' : '';
         }
 
         function setPV(c, val) {
@@ -3645,7 +3645,7 @@
 
         function chp(c, ph, type) {
             return `<input class="pd-in" type="${type || 'text'}" value="${esc(pv(c))}"
-                           placeholder="${esc(ph || '')}"${marquePartage(c)}
+                           placeholder="${esc(ph || '')}" data-cle="${c}"${marquePartage(c)}
                            onchange="setPV('${c}', this.value)">`;
         }
         // Variante multiligne, pour les valeurs qui debordent d'une ligne.
@@ -3659,7 +3659,7 @@
         function chpLie(c, source, ph, type) {
             const saisi = String(pv(c)).trim();
             return `<input class="pd-in" type="${type || 'text'}" value="${esc(saisi || source || '')}"
-                           placeholder="${esc(ph || '')}"${marquePartage(c)}
+                           placeholder="${esc(ph || '')}" data-cle="${c}"${marquePartage(c)}
                            onchange="setPV('${c}', this.value)">`;
         }
 
@@ -3683,10 +3683,11 @@
         }
         function coche(c, lab) {
             return `<label class="pd-coche"><input type="checkbox" ${pv(c) ? 'checked' : ''}
+                           data-cle="${c}"
                            onchange="setPC('${c}', this.checked)"><span>${lab}</span></label>`;
         }
         function sel(c, opts) {
-            return `<select class="pd-in" onchange="setPV('${c}', this.value)">
+            return `<select class="pd-in" data-cle="${c}" onchange="setPV('${c}', this.value)">
                 <option value=""></option>
                 ${opts.map(o => `<option value="${esc(o)}" ${pv(c) === o ? 'selected' : ''}>${esc(o)}</option>`).join('')}
             </select>`;
@@ -3698,7 +3699,7 @@
         // Liste deroulante qui previent quand elle change : la page se met a
         // jour sans etre redessinee, et la saisie en cours n'est pas perdue.
         function selFait(c, opts, apres) {
-            return `<select class="pd-in" onchange="setPV('${c}', this.value); ${apres}">
+            return `<select class="pd-in" data-cle="${c}" onchange="setPV('${c}', this.value); ${apres}">
                 <option value=""></option>
                 ${opts.map(o => `<option value="${esc(o)}" ${pv(c) === o ? 'selected' : ''}>${esc(o)}</option>`).join('')}
             </select>`;
@@ -3899,7 +3900,7 @@
         function cl(c, i, k, ph, o) {
             const v = prepa.l[c][i][k];
             return `<input class="pd-in" value="${esc(v === undefined ? '' : v)}" placeholder="${esc(ph || '')}"
-                           ${o ? `list="dl-${c}-${k}"` : ''}
+                           ${o ? `list="dl-${c}-${k}"` : ''} data-cle="${c}-${i}-${k}"
                            onchange="setL('${c}',${i},'${k}',this.value)">`;
         }
 
@@ -3909,6 +3910,7 @@
         }
         function clc(c, i, k) {
             return `<input type="checkbox" ${prepa.l[c][i][k] ? 'checked' : ''}
+                           data-cle="${c}-${i}-${k}"
                            onchange="setL('${c}',${i},'${k}',this.checked)">`;
         }
 
@@ -6864,9 +6866,10 @@
         // Une case a cocher suivie, s'il le faut, de sa precision.
         function cocheLibre(cle, lab, clePrec, ph) {
             return `<label class="pd-coche"><input type="checkbox" ${pv(cle) ? 'checked' : ''}
+                           data-cle="${cle}"
                            onchange="setPC('${cle}', this.checked)"><span>${lab}</span></label>
                     <input class="pd-in pd-coche-prec" value="${esc(pv(clePrec))}"
-                           placeholder="${esc(ph || 'à préciser')}"
+                           placeholder="${esc(ph || 'à préciser')}" data-cle="${clePrec}"
                            onchange="setPV('${clePrec}', this.value)">`;
         }
 
@@ -6915,7 +6918,8 @@
 
         function pfListe(l) {
             return l.map(x => `<label class="pd-coche pd-coche-l"><input type="checkbox"
-                        ${pv(x[0]) ? 'checked' : ''} onchange="setPC('${x[0]}', this.checked)">
+                        ${pv(x[0]) ? 'checked' : ''} data-cle="${x[0]}"
+                        onchange="setPC('${x[0]}', this.checked)">
                         <span>${esc(x[1])}</span></label>`).join('');
         }
 
@@ -7402,7 +7406,8 @@
                 <div class="pd-rg-l">${coche('tv-rpe', 'RPE')}</div>
                 ${grille('pd-g2', coche('tv-malt', 'Pose MALT/CC en poste') + coche('tv-fibre', 'Incidence fibre optique'))}
                 ${lst('tv-rg').map((r, i) => `<div class="pd-rg-l">
-                    <input type="checkbox" ${r.ok ? 'checked' : ''} onchange="setL('tv-rg',${i},'ok',this.checked)">
+                    <input type="checkbox" ${r.ok ? 'checked' : ''} data-cle="tv-rg-${i}-ok"
+                           onchange="setL('tv-rg',${i},'ok',this.checked)">
                     ${cl('tv-rg', i, 'n', 'Autre régime ou disposition')}
                     <button class="pd-sup" onclick="delL('tv-rg',${i})">×</button></div>`).join('')}
             </div>
@@ -7480,7 +7485,7 @@
             ${sous('Annexes numérotées')}
             ${num.map(o => coche(o.c, o.t)).join('')}
             ${sous('Autres pièces jointes')}
-            ${autres.map((t, i) => `<div class="pd-coche-l">${coche('an-a' + i, t)}${
+            ${autres.map((t, i) => `<div class="pd-coche-av">${coche('an-a' + i, t)}${
                   t === 'SEVESO' ? marqueSeveso() : ''}</div>`).join('')}
             ${noteSeveso()}
             <div class="pd-l"><span class="pd-lab">Autre :</span>${chp('an-autre')}</div>`;
@@ -7766,6 +7771,7 @@
                 champ('Niveau de tension', selFait('ca-tension', Object.keys(COTE_D), 'majCables()'))
               + champ('Paramètre du conducteur à 15 °C',
                       `<input class="pd-in" type="number" inputmode="numeric" value="${esc(pv('ca-param'))}"
+                              data-cle="ca-param"
                               oninput="setPV('ca-param', this.value); majCables()">`)
               + champ('Cote C', autoId('ca-c', coteC === null ? '' : coteC.toFixed(3) + ' m')))}
             ${champ('Cote D', autoId('ca-cd', cd === undefined ? '' : cd + ' cm'))}
@@ -7804,7 +7810,7 @@
                     g[1].forEach((n, ni) => {
                         const k = 'ou-' + gi + '-' + ni;
                         h += `<tr><td>${n}</td><td>${chp(k + '-c')}</td><td>${chp(k + '-n')}</td>
-                              <td style="text-align:center"><input type="checkbox" ${pv(k + '-k') ? 'checked' : ''} onchange="setPC('${k}-k', this.checked)"></td></tr>`;
+                              <td style="text-align:center"><input type="checkbox" ${pv(k + '-k') ? 'checked' : ''} data-cle="${k}-k" onchange="setPC('${k}-k', this.checked)"></td></tr>`;
                     });
                     h += '</tbody></table>';
                 }
@@ -8888,7 +8894,7 @@
         function champLit(c, source, ph) {
             const saisi = String(pv(c)).trim();
             return `<input class="pd-in" list="dl-lit" value="${esc(saisi || source || '')}"
-                           placeholder="${esc(ph || '')}" onfocus="chargerListeLit()"
+                           placeholder="${esc(ph || '')}" onfocus="chargerListeLit()" data-cle="${c}"
                            onchange="setPV('${c}', this.value.toUpperCase())">`;
         }
         // Firebase interdit le point dans une cle : il y est ecrit en tilde.
@@ -9113,6 +9119,7 @@
                     .map(a => `<option value="${esc(a.nom)}"></option>`).join('')}</datalist>`;
             h += `<div class="pd-l pd-aide">
                     <input class="pd-in" list="dl-annexes" value="${esc(pv('an-annexe-nom'))}"
+                           data-cle="an-annexe-nom"
                            placeholder="Nouvelle catégorie, ex : Calculs"
                            onchange="setPV('an-annexe-nom', this.value)">
                     <label class="btn-pd pre">\u{1f4ce} Cr\u00e9er avec des fichiers
@@ -9246,6 +9253,194 @@
             });
         }
 
+        // ==================================================================
+        //  CE QU'UNE PAGE DOIT PORTER POUR ÊTRE DITE COMPLÈTE
+        //  Une page à 100 % n'est pas une page dont toutes les cases sont
+        //  noircies : c'est une page dont tout ce qui est dû est là. Un
+        //  régime non concerné, un suppléant qu'il n'y a pas, une colonne
+        //  de grue sur un constat fait pour une nacelle : rien de cela n'est
+        //  un manque. Le tableau ci-dessous le dit page par page.
+        //
+        //    libre   : rien n'y est obligatoire
+        //    hors    : clés facultatives ; * y remplace n'importe quoi
+        //    groupes : [{n, cles, motif, listes, cols}] — n occurrences
+        //              remplies dans le lot suffisent, et les clés du lot
+        //              ne comptent plus une à une
+        //    tables  : { clé : n | {n, cols} } — n lignes remplies
+        //              suffisent ; 0 rend le tableau facultatif ; cols
+        //              limite les colonnes qui doivent être remplies
+        //    mesure  : () => ({tot, plein}) quand la règle ne se dit pas
+        //              avec les précédentes
+        //
+        //  Une page absente du tableau compte toutes ses cases, et une
+        //  ligne remplie par tableau. Ce qui ne s'imprime pas — l'aide, les
+        //  réglages d'écran, les cases qui décident de l'affichage — n'est
+        //  jamais compté : ce n'est pas du remplissage.
+        // ==================================================================
+        const REMPLISSAGE = {
+            // Une croix suffit dans les régimes ; la ligne d'un régime non
+            // coché, le suppléant, le changement de CDT et les remarques ne
+            // sont pas dus.
+            travaux: {
+                hors: ['tv-a1ec-l', 'tv-at-l', 'tv-aa-l', 'tv-rg-*',
+                       'sig-sup-*', 'sig-chg-*', 'tv-remarques'],
+                groupes: [{ n: 1, listes: ['tv-rg'], cols: ['n'],
+                            cles: ['tv-a1ec', 'tv-at', 'tv-aa', 'tv-pdm', 'tv-ist',
+                                   'tv-isp', 'tv-rpe', 'tv-malt', 'tv-fibre'] }]
+            },
+            // Seuls la NIP et le schéma unifilaire sont dus : ni les pièces
+            // jointes, ni les cases de la liste des annexes.
+            // « an-n* » engloberait an-nip, qui lui est dû : on les nomme.
+            annexes: { hors: ['an-annexe-nom', 'an-j*', 'an-a*',
+                              'an-n1', 'an-n2', 'an-n3', 'an-n4',
+                              'an-n5', 'an-n6', 'an-n7', 'an-n8'] },
+            // L'ambulance la plus proche se cherche le jour venu.
+            secours: {
+                hors: ['sec-ambu'],
+                tables: { 'se-enc': { n: 1, cols: ['n', 't'] },
+                          'se-grp': { n: 1, cols: ['n', 't'] },
+                          'sec-sup': { n: 1, cols: ['sup', 'coord'] } }
+            },
+            // Une règle cochée suffit à dire qu'elles ont été passées en revue.
+            regles: { groupes: [{ n: 1, motif: /^rg-\d+$/ }] },
+            // Un véhicule suffit ; les engins de location sont l'exception.
+            moyens: {
+                groupes: [{ n: 1, motif: /^mh-v\d+$/ }],
+                tables: { 'mh-ag': { n: 1, cols: ['nb', 'hab'] }, 'mh-loc': 0 }
+            },
+            // Le numéro de PPE n'est pas toujours connu ; la fiche signée,
+            // elle, est due. Une tâche décrite suffit à ouvrir le tableau.
+            modeop: { hors: ['mo-etren'], tables: { 'mo-l': { n: 1, cols: ['t'] } } },
+            // La suite n'est qu'une feuille de réserve.
+            modeop2: { libre: true },
+            // Les documents associés dépendent du régime des travaux.
+            permisfeu: { hors: ['pf-d1', 'pf-d2', 'pf-d3', 'pf-dautre'] },
+            nacelle: { hors: ['na-schemas', 'na-obs'] },
+            // Un constat se fait pour un seul engin : une colonne suffit.
+            adequation: {
+                hors: ['ad-acc'],
+                groupes: [{ n: 1, cles: ['ad-elev', 'ad-grue'] },
+                          { n: 3, cles: ['ad-pg', 'ad-hg', 'ad-og',
+                                         'ad-pn', 'ad-hn', 'ad-on'] }]
+            },
+            // Le forçage et la liaison voisine ne servent qu'au cas par cas,
+            // et les aléas ne se prévoient pas toujours.
+            maltcc: {
+                hors: ['mc-icc-force', 'mc-lit-voisin', 'mc-voisin'],
+                tables: { 'mc-l': { n: 1, cols: ['p', 's', 'sol'] }, 'mc-al': 0 }
+            },
+            pave: { libre: true },
+            // Une solution retenue suffit : c'est elle qu'on applique.
+            schemaop: { groupes: [{ n: 1, cles: ['so-ret-a', 'so-ret-b', 'so-ret-c'] }] },
+            // Une fiche gardée suffit : les autres ne concernent pas le chantier.
+            sue: { mesure: () => ({ tot: 1,
+                   plein: SUE_FICHES.some(f => !sueMasquee(f)) ? 1 : 0 }) },
+            planif: { tables: { 'pl-l': { n: 1, cols: ['j', 'd', 't'] } } },
+            cables: { hors: ['ca-obs'] },
+            // On porte ce qu'on emporte : un article suffit, sa
+            // caractéristique et son contrôle ne sont pas dus.
+            outillage: {
+                hors: ['ou-*-c', 'ou-*-k', 'ou-panier-*'],
+                groupes: [{ n: 1, motif: /^ou-\d+-\d+-n$/ }],
+                tables: { 'ou-plus': 0, 'ou-inv': 0 }
+            },
+            materiel: { hors: ['mt-panier-*'], tables: { 'mt-inv': 0 } },
+            // Un appareil renseigné sur toute la page suffit.
+            metrologie: { mesure: () => {
+                const fait = ['me-dy', 'me-cd', 'me-th'].some(c =>
+                    (prepa.l[c] || []).some(o => ['n', 'd', 'o']
+                        .every(k => String(o[k] === undefined ? '' : o[k]).trim() !== '')));
+                return { tot: 1, plein: fait ? 1 : 0 };
+            } },
+            // Un manchon relevé suffit ; les observations sont libres.
+            manchonnage: { tables: { 'ma-l': { n: 1, cols: ['n', 'c', 'a'] } } }
+        };
+
+        // Une clé facultative s'écrit avec des *, comme un nom de fichier.
+        function motifCle(x) {
+            return new RegExp('^' + String(x).split('*')
+                .map(m => m.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('.*') + '$');
+        }
+        function valeurRemplie(v) {
+            if(v === true) return true;
+            if(v === false || v === undefined || v === null) return false;
+            return String(v).trim() !== '';
+        }
+        function cleRemplie(c) { return valeurRemplie(prepa.v[c]); }
+        // Les séparateurs d'étape ne sont pas des lignes à remplir.
+        function lignesTable(c) {
+            return (prepa.l[c] || []).filter(o => o && o.sect === undefined);
+        }
+        // Sans colonnes nommées, une ligne est remplie quand toutes ses
+        // cases de texte le sont : une case à cocher ne se réclame pas.
+        function ligneRemplie(o, cols) {
+            const ks = cols || Object.keys(o).filter(k => typeof o[k] !== 'boolean');
+            return ks.length > 0 && ks.every(k => valeurRemplie(o[k]));
+        }
+        function scoreTable(c, regle) {
+            const n = regle === undefined ? 1
+                    : (typeof regle === 'number' ? regle
+                    : (regle.n === undefined ? 1 : regle.n));
+            if(!n) return { tot: 0, plein: 0 };
+            const cols = (regle && regle.cols) || null;
+            const faites = lignesTable(c).filter(o => ligneRemplie(o, cols)).length;
+            return { tot: n, plein: Math.min(n, faites) };
+        }
+
+        const HORS_COMPTE_SEL = '.pd-ecran, .pd-aide, .pd-grp-tete, .pd-sch-outils,'
+                              + ' .pd-sch-reglage, .pd-sch-liens, .pd-syn-aide';
+
+        function scorePage(pg, el) {
+            const r = REMPLISSAGE[pg.id] || {};
+            if(r.libre) return { tot: 0, plein: 0 };
+            if(r.mesure) return r.mesure();
+
+            const hors = (r.hors || []).map(motifCle);
+            const groupes = r.groupes || [];
+            const nommees = new Set();
+            groupes.forEach(g => (g.cles || []).forEach(c => nommees.add(c)));
+            const motifs = groupes.filter(g => g.motif).map(g => g.motif);
+            const dejaVue = c => nommees.has(c) || motifs.some(m => m.test(c));
+
+            let tot = 0, plein = 0;
+
+            // 1. Les cases de la page, sauf celles qui ne s'impriment pas.
+            [...el.querySelectorAll('input, textarea, select')].forEach(x => {
+                if(x.type === 'file' || x.type === 'range' || x.type === 'color') return;
+                if(x.classList.contains('pd-choix')) return;
+                if(x.closest(HORS_COMPTE_SEL)) return;
+                if(x.closest('tr[data-cle]')) return;      // compté avec son tableau
+                const c = x.dataset.cle || '';
+                if(c && (hors.some(m => m.test(c)) || dejaVue(c))) return;
+                tot++;
+                if((x.type === 'checkbox' || x.type === 'radio')
+                    ? x.checked : String(x.value).trim() !== '') plein++;
+            });
+
+            // 2. Les lots où une seule occurrence suffit.
+            groupes.forEach(g => {
+                const n = g.n || 1;
+                let faits = (g.cles || []).filter(cleRemplie).length;
+                if(g.motif) faits += Object.keys(prepa.v)
+                    .filter(c => g.motif.test(c) && cleRemplie(c)).length;
+                (g.listes || []).forEach(c => {
+                    faits += lignesTable(c).filter(o => ligneRemplie(o, g.cols || null)).length;
+                });
+                tot += n; plein += Math.min(n, faits);
+            });
+
+            // 3. Les tableaux : ceux qui sont à l'écran, et ceux que la
+            //    règle nomme et qui existent déjà.
+            const vus = new Set([...el.querySelectorAll('tr[data-cle]')].map(tr => tr.dataset.cle));
+            Object.keys(r.tables || {}).forEach(c => { if(prepa.l[c]) vus.add(c); });
+            vus.forEach(c => {
+                const sc = scoreTable(c, (r.tables || {})[c]);
+                tot += sc.tot; plein += sc.plein;
+            });
+
+            return { tot: tot, plein: plein };
+        }
+
         function majPrepaEtat() {
             let tot = 0, plein = 0;
             toutesLesPages().forEach(pg => {
@@ -9253,12 +9448,11 @@
                 const pc = document.getElementById('pdpc-' + pg.id);
                 if(!el) { if(pc) pc.textContent = ''; return; }
                 if(pg.horsCompte) { if(pc) pc.textContent = ''; return; }
-                const ch = [...el.querySelectorAll('input, textarea, select')];
-                const t = ch.length;
-                const f = ch.filter(x => (x.type === 'checkbox' || x.type === 'radio')
-                                        ? x.checked : String(x.value).trim() !== '').length;
-                tot += t; plein += f;
-                if(pc) pc.textContent = t ? Math.round(f * 100 / t) + '%' : '';
+                const sc = scorePage(pg, el);
+                tot += sc.tot; plein += sc.plein;
+                // Une page sans rien d'obligatoire ne se note pas.
+                if(pc) pc.textContent = sc.tot
+                    ? Math.round(sc.plein * 100 / sc.tot) + '%' : '\u2014';
             });
             const g = document.getElementById('pd-rempli');
             if(g) g.textContent = (tot ? Math.round(plein * 100 / tot) : 0) + ' %';
@@ -9365,7 +9559,18 @@
         // Un tableau se coupe entre ses lignes, une grille entre ses rangees ;
         // tout le reste part d'un seul tenant.
         function atomesDe(bloc, lim) {
-            const h = e => e.getBoundingClientRect().height;
+            // La boite d'un bloc ne compte pas ses marges : deux blocs
+            // mesures l'un apres l'autre tiennent sur le papier, empiles ils
+            // depassent. On ajoute donc la marge a la mesure. Elle est
+            // parfois comptée deux fois, quand deux marges se chevauchent :
+            // mieux vaut une feuille de trop qu'une ligne coupée.
+            const h = e => {
+                const r = e.getBoundingClientRect();
+                if(!e.tagName || e.tagName === 'TR') return r.height;
+                const st = getComputedStyle(e);
+                return r.height + (parseFloat(st.marginTop) || 0)
+                                + (parseFloat(st.marginBottom) || 0);
+            };
             if(bloc.classList && bloc.classList.contains('pd-saut')) return [{ h: 0, saut: true }];
             // Ce qui tient sur une feuille n'a aucune raison d'etre coupe :
             // un tableau de quatre lignes scinde en 1 + 3, avec son en-tete
