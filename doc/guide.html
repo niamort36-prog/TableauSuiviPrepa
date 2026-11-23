@@ -276,8 +276,9 @@
     trait.</p>
 
     <p>Sur l'accueil, les chantiers qui figurent sur la carte portent une <b>boussole</b>
-    🧭 à côté de leur titre : un clic ouvre la carte <b>cadrée sur eux</b>, bulle ouverte.
-    Si un filtre les cachait, il est levé plutôt que de montrer une carte vide.</p>
+    🧭 sous leur titre, devant les pastilles : un clic ouvre la carte <b>cadrée sur
+    eux</b>, bulle ouverte — et donc leur ligne surlignée. Si un filtre les cachait, il est
+    levé plutôt que de montrer une carte vide.</p>
 
     <figure>
         <img src="captures/28-carte.jpg" alt="La carte des chantiers">
@@ -285,7 +286,14 @@
     </figure>
 
     <p>Un clic sur l'épingle ouvre une bulle : la ligne, le type de chantier, les dates, le
-    CdT, le nombre de supports localisés, et un bouton <b>Ouvrir le chantier</b>.</p>
+    CdT, le nombre de supports localisés, et un bouton <b>Ouvrir le chantier</b>. <b>Chaque
+    pylône</b> ouvre la même bulle, précédée de son numéro : un point isolé ne dit rien s'il
+    ne nomme pas son chantier.</p>
+
+    <p>Tant qu'une bulle est ouverte, <b>la liaison entière est surlignée</b> en bleu pâle,
+    du premier au dernier pylône du référentiel. On voit alors où le chantier se tient sur sa
+    ligne, et non plus seulement un groupe de points au milieu de la campagne. Le surlignage
+    s'efface avec la bulle.</p>
 
     <p>Trois fonds au choix, par l'icône en haut à droite : <b>Plan IGN</b>, <b>Satellite
     IGN</b> — l'orthophotographie, pour voir les accès et la végétation — et une
@@ -1932,8 +1940,8 @@
         <tr><td>Les listes <b>Type</b>, <b>Tension</b> et <b>CdT</b></td><td>Ne montrent que les
             chantiers du type, du niveau de tension ou du chargé de travaux choisi. Elles se
             combinent, et valent aussi sur la carte.</td></tr>
-        <tr><td><b>🧭</b> sur une carte de chantier</td><td>Ouvre la carte cadrée sur ce
-            chantier. N'apparaît que s'il est localisé.</td></tr>
+        <tr><td><b>🧭</b> sous le titre d'un chantier</td><td>Ouvre la carte cadrée sur ce
+            chantier, sa ligne surlignée. N'apparaît que s'il est localisé.</td></tr>
         <tr><td><b>Tout afficher</b></td><td>Lève les deux filtres. N'apparaît que lorsqu'un
             filtre est posé.</td></tr>
         <tr><td><b>🖨️ Imprimer A3</b></td><td>Sort le porte-document A3 de tous les chantiers

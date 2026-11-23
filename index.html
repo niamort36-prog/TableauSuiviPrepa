@@ -99,6 +99,10 @@
 
         .card-header { display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; }
         .card-title { font-weight: 700; color: var(--primary); font-size: 1.1rem; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        /* Les marques sous le titre : la jauge occupe le coin, le titre ne
+           doit pas passer dessous et les pastilles ne doivent pas le couper. */
+        .card-marques { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+        .card-body { padding-right: 70px; }
         .card-dates { font-size: 0.9rem; color: #64748b; margin-top: 5px; display:flex; gap:5px; align-items:center;}
         
         /* STYLES SPÉCIAUX */
@@ -2469,8 +2473,16 @@
                 L.control.layers({ 'Plan IGN': plan, 'Satellite IGN': sat,
                                    'Carte simple': osm }, null, { position: 'topright' }).addTo(carte);
                 carteCouche = L.layerGroup().addTo(carte);
+                // Montrer un chantier, c'est montrer où il se tient sur sa
+                // ligne : la liaison entière se surligne derrière lui.
+                carte.on('popupopen', e => {
+                    const p = e.popup._source && e.popup._source.chantier;
+                    if(p) surlignerLiaison(p);
+                });
+                carte.on('popupclose', () => effacerLiaison());
             }
             carteCouche.clearLayers();
+            effacerLiaison();
 
             const arch = document.getElementById('carte-arch');
             const avecArch = arch && arch.checked;
@@ -2492,22 +2504,28 @@
                     L.polyline(tr.map(x => [x.lat, x.lon]),
                                { color: coul, weight: 4, opacity: .85 }).addTo(carteCouche);
                 });
-                pts.forEach(x => {
-                    L.circleMarker([x.lat, x.lon], { radius: 5, color: '#fff', weight: 2,
-                        fillColor: coul, fillOpacity: 1 })
-                     .bindTooltip('Pylône ' + (x.sup || '?'), { direction: 'top' })
-                     .addTo(carteCouche);
-                });
-                const t = pts[0];
                 const dates = (p.start ? new Date(p.start).toLocaleDateString() : '?')
                             + ' → ' + (p.end ? new Date(p.end).toLocaleDateString() : '?');
-                const marque = L.marker([t.lat, t.lon]).addTo(carteCouche).bindPopup(
-                    `<div class="carte-pop"><b>${esc(p.lcode || '')} ${esc(p.lname || '')}</b>
-                     <span class="l">${esc(modeleDe(p))} · ${esc(dates)}</span>
+                // Le même rappel sous l'épingle et sous chaque pylône : vu de la
+                // carte, un point isolé ne dit rien s'il ne nomme pas son chantier.
+                const rappel = `<span class="l">${esc(modeleDe(p))} · ${esc(dates)}</span>
                      <span class="l">👤 ${esc(p.cdt || '—')}</span>
                      <span class="l">${pts.length} support(s) localisé(s)</span>
-                     <button onclick="ouvrirDepuisCarte('${esc(String(p.id))}')">Ouvrir le chantier</button>
-                     </div>`);
+                     <button onclick="ouvrirDepuisCarte('${esc(String(p.id))}')">Ouvrir le chantier</button>`;
+                const titre = esc((p.lcode || '') + ' ' + (p.lname || '')).trim();
+                pts.forEach(x => {
+                    const rond = L.circleMarker([x.lat, x.lon], { radius: 5, color: '#fff',
+                        weight: 2, fillColor: coul, fillOpacity: 1 })
+                     .bindTooltip('Pylône ' + (x.sup || '?'), { direction: 'top' })
+                     .bindPopup(`<div class="carte-pop"><b>Pylône ${esc(x.sup || '?')}</b>
+                         <span class="l"><b>${titre}</b></span>${rappel}</div>`)
+                     .addTo(carteCouche);
+                    rond.chantier = p;
+                });
+                const t = pts[0];
+                const marque = L.marker([t.lat, t.lon]).addTo(carteCouche).bindPopup(
+                    `<div class="carte-pop"><b>${titre}</b>${rappel}</div>`);
+                marque.chantier = p;
                 pts.forEach(x => bornes.push([x.lat, x.lon]));
                 if(carteCible && String(p.id) === carteCible) {
                     vise = pts.map(x => [x.lat, x.lon]);
@@ -2528,6 +2546,43 @@
                               : (base.length ? 'Aucun chantier ne correspond au filtre'
                                              : 'Aucun chantier pour ' + equipeActive));
             setTimeout(() => carte.invalidateSize(), 60);
+        }
+
+        // Le code de la LIT d'un chantier : celui qu'il porte, sinon celui
+        // du référentiel de sa ligne.
+        function litDuChantier(p) {
+            const v = (p.prepa && p.prepa.v) || {};
+            const saisi = String(v['tv-liaison'] || '').trim();
+            return (saisi || String(litDeLigne(p.lid) || '')).trim().toUpperCase();
+        }
+
+        let carteLiaison = null;
+        function effacerLiaison() {
+            if(!carteLiaison) return;
+            carte.removeLayer(carteLiaison);
+            carteLiaison = null;
+        }
+        // Tous les pylônes de la liaison, du premier au dernier, en trait
+        // large et pâle : le chantier se lit alors dans sa ligne.
+        async function surlignerLiaison(p) {
+            effacerLiaison();
+            const lit = litDuChantier(p);
+            if(!lit) return;
+            let base;
+            try { base = await chargerPylones(); }
+            catch(e) { console.warn('Tracé de la liaison :', e); return; }
+            const ligne = base[lit];
+            if(!ligne) return;
+            const pts = Object.keys(ligne)
+                .sort((a, b) => rangSupport(a) - rangSupport(b))
+                .map(n => coordDegres(ligne[n]))
+                .filter(Boolean)
+                .map(d => d.split(',').map(x => parseFloat(x)));
+            if(pts.length < 2) return;
+            carteLiaison = L.polyline(pts, { color: '#1d4ed8', weight: 10, opacity: .18,
+                                             lineCap: 'round', lineJoin: 'round',
+                                             interactive: false }).addTo(carte);
+            carteLiaison.bringToBack();
         }
 
         function ouvrirDepuisCarte(id) { load(id); }
@@ -2833,11 +2888,11 @@
             card.innerHTML = `
                     ${deleteBtn}
                     <div class="card-body">
-                        <div class="card-title">
-                            ${p.lcode} - ${p.lname}
+                        <div class="card-title">${p.lcode} - ${p.lname}</div>
+                        <div class="card-marques">
                             ${pointsChantier(p).length ? `<button class="btn-boussole"
                                  title="Voir ce chantier sur la carte"
-                                 onclick="allerCarte('${esc(String(p.id))}', event)">\U0001F9ED</button>` : ''}
+                                 onclick="allerCarte('${esc(String(p.id))}', event)">🧭</button>` : ''}
                             ${pastilleModele(p)}
                             ${p.depl ? '<span class="badge-depl">🚗 Déplacement</span>' : ''}
                         </div>
