@@ -78,7 +78,22 @@
         .carte-barre label { display: flex; align-items: center; gap: 6px;
                              font-size: .85rem; color: #475569; cursor: pointer; }
         .carte-barre .etat { margin-left: auto; font-size: .82rem; color: #64748b; }
-        #carte-fond { height: calc(100vh - 230px); min-height: 420px; border-radius: 12px;
+        .carte-zone { display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+                      background: #fff; border: 1px solid var(--border); border-radius: 10px;
+                      padding: 10px 14px; margin-bottom: 14px; }
+        .carte-zone input[type=text] { flex: 1 1 260px; min-width: 180px; border: 1px solid var(--border);
+                      border-radius: 7px; padding: 7px 10px; font-size: .88rem; }
+        .carte-zone select { border: 1px solid var(--border); border-radius: 7px;
+                      padding: 6px 9px; font-size: .85rem; background: #fff; color: #1e293b; }
+        .carte-zone button { border: 1px solid #c4b5fd; background: #f3eefd; color: #6d28d9;
+                      border-radius: 7px; padding: 7px 12px; font-size: .85rem; font-weight: 700;
+                      cursor: pointer; }
+        .carte-zone button:hover { background: #e9ddfb; }
+        .carte-zone button.sobre { border-color: var(--border); background: #f8fafc; color: #475569; }
+        .carte-zone label { display: flex; align-items: center; gap: 6px;
+                      font-size: .85rem; color: #475569; cursor: pointer; }
+        .carte-zone .etat { font-size: .82rem; color: #64748b; }
+        #carte-fond { height: calc(100vh - 330px); min-height: 380px; border-radius: 12px;
                       border: 1px solid var(--border); background: #e8eef4; overflow: hidden; }
         /* La boussole d'une carte de chantier : elle mène à la carte. */
         .btn-boussole { border: 1px solid #b3cdf2; background: #e8f1fb; color: #1d4ed8;
@@ -86,10 +101,16 @@
                         font-size: .92rem; cursor: pointer; padding: 0; flex: 0 0 auto; }
         .btn-boussole:hover { background: #d4e6fb; }
         .carte-pop b { color: #054191; }
+        /* Plusieurs chantiers sur un même support : un bloc par chantier. */
+        .carte-pop .ch + .ch { border-top: 1px solid #e2e8f0; margin-top: 9px; padding-top: 9px; }
+        .carte-pop .multi { font-weight: 700; color: #b45309; }
+        .carte-pop .rond { display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+                           margin-right: 6px; border: 1px solid #fff;
+                           box-shadow: 0 0 0 1px rgba(0,0,0,.18); vertical-align: middle; }
         .carte-pop .l { display: block; font-size: .82rem; color: #475569; margin-top: 2px; }
         .carte-pop button { margin-top: 8px; border: none; border-radius: 7px; cursor: pointer;
                             background: #054191; color: #fff; font-weight: 700; padding: 6px 12px; }
-        @media (max-width: 680px) { #carte-fond { height: calc(100vh - 280px); } }
+        @media (max-width: 680px) { #carte-fond { height: calc(100vh - 420px); min-height: 320px; } }
         .project-card { background: white; border-radius: 12px; padding: 20px; border: 1px solid var(--border); cursor: pointer; transition: transform 0.2s; position: relative; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .project-card:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
         
@@ -1448,6 +1469,28 @@
             <span class="etat" id="carte-etat"></span>
         </div>
         <div id="carte-filtres" class="home-filtres"></div>
+        <div class="carte-zone">
+            <input type="text" id="zone-adr" placeholder="Adresse ou commune — ex : 12 rue de la Gare, Limoges"
+                   onkeypress="if(event.key==='Enter') tracerZone()">
+            <select id="zone-mode">
+                <option value="car">🚗 En voiture</option>
+                <option value="pedestrian">🚶 À pied</option>
+            </select>
+            <select id="zone-min">
+                <option value="5">5 min</option>
+                <option value="10">10 min</option>
+                <option value="15" selected>15 min</option>
+                <option value="20">20 min</option>
+                <option value="30">30 min</option>
+                <option value="45">45 min</option>
+                <option value="60">1 h</option>
+            </select>
+            <button onclick="tracerZone()">Tracer la zone</button>
+            <label id="zone-voir" style="display:none">
+                <input type="checkbox" checked onchange="basculerZone(this.checked)"> Afficher</label>
+            <button id="zone-x" class="sobre" style="display:none" onclick="effacerZone()">Effacer</button>
+            <span class="etat" id="zone-etat"></span>
+        </div>
         <div id="carte-fond"></div>
     </div>
 
@@ -2476,8 +2519,8 @@
                 // Montrer un chantier, c'est montrer où il se tient sur sa
                 // ligne : la liaison entière se surligne derrière lui.
                 carte.on('popupopen', e => {
-                    const p = e.popup._source && e.popup._source.chantier;
-                    if(p) surlignerLiaison(p);
+                    const ps = e.popup._source && e.popup._source.chantiers;
+                    if(ps && ps.length) surlignerLiaisons(ps);
                 });
                 carte.on('popupclose', () => effacerLiaison());
             }
@@ -2494,6 +2537,11 @@
             let vise = null, viseMarqueur = null;
             let poses = 0;
 
+            // Deux chantiers tombent souvent sur les mêmes supports. On range
+            // donc les points par position avant de dessiner : un seul rond,
+            // mais autant d'anneaux que de chantiers, et une bulle qui les
+            // donne tous.
+            const parPoint = new Map();
             lot.forEach(p => {
                 const pts = pointsChantier(p);
                 if(!pts.length) return;
@@ -2504,32 +2552,46 @@
                     L.polyline(tr.map(x => [x.lat, x.lon]),
                                { color: coul, weight: 4, opacity: .85 }).addTo(carteCouche);
                 });
-                const dates = (p.start ? new Date(p.start).toLocaleDateString() : '?')
-                            + ' → ' + (p.end ? new Date(p.end).toLocaleDateString() : '?');
-                // Le même rappel sous l'épingle et sous chaque pylône : vu de la
-                // carte, un point isolé ne dit rien s'il ne nomme pas son chantier.
-                const rappel = `<span class="l">${esc(modeleDe(p))} · ${esc(dates)}</span>
-                     <span class="l">👤 ${esc(p.cdt || '—')}</span>
-                     <span class="l">${pts.length} support(s) localisé(s)</span>
-                     <button onclick="ouvrirDepuisCarte('${esc(String(p.id))}')">Ouvrir le chantier</button>`;
-                const titre = esc((p.lcode || '') + ' ' + (p.lname || '')).trim();
-                pts.forEach(x => {
-                    const rond = L.circleMarker([x.lat, x.lon], { radius: 5, color: '#fff',
-                        weight: 2, fillColor: coul, fillOpacity: 1 })
-                     .bindTooltip('Pylône ' + (x.sup || '?'), { direction: 'top' })
-                     .bindPopup(`<div class="carte-pop"><b>Pylône ${esc(x.sup || '?')}</b>
-                         <span class="l"><b>${titre}</b></span>${rappel}</div>`)
-                     .addTo(carteCouche);
-                    rond.chantier = p;
+                pts.forEach((x, i) => {
+                    const cle = x.lat.toFixed(5) + ',' + x.lon.toFixed(5);
+                    let e = parPoint.get(cle);
+                    if(!e) { e = { lat: x.lat, lon: x.lon, liste: [] }; parPoint.set(cle, e); }
+                    e.liste.push({ p: p, sup: x.sup, coul: coul, nb: pts.length, tete: i === 0 });
+                    bornes.push([x.lat, x.lon]);
                 });
-                const t = pts[0];
-                const marque = L.marker([t.lat, t.lon]).addTo(carteCouche).bindPopup(
-                    `<div class="carte-pop"><b>${titre}</b>${rappel}</div>`);
-                marque.chantier = p;
-                pts.forEach(x => bornes.push([x.lat, x.lon]));
-                if(carteCible && String(p.id) === carteCible) {
-                    vise = pts.map(x => [x.lat, x.lon]);
-                    viseMarqueur = marque;
+                if(carteCible && String(p.id) === carteCible) vise = pts.map(x => [x.lat, x.lon]);
+            });
+
+            parPoint.forEach(e => {
+                const multi = e.liste.length > 1;
+                const nums = [...new Set(e.liste.map(x => String(x.sup || '?')))];
+                const titre = 'Pylône ' + nums.join(' / ');
+                const bulle = `<div class="carte-pop"><b>${esc(titre)}</b>${multi
+                    ? `<span class="l multi">⚠ ${e.liste.length} chantiers sur ce support</span>` : ''}
+                    ${e.liste.map(x => blocBulle(x, multi)).join('')}</div>`;
+                // Un anneau par chantier supplémentaire, à sa couleur : on voit
+                // d'un coup d'œil qu'un support en porte plusieurs.
+                e.liste.slice(1).forEach((x, k) => {
+                    L.circleMarker([e.lat, e.lon], { radius: 9 + k * 4, color: x.coul,
+                        weight: 3, opacity: .95, fill: false, interactive: false })
+                     .addTo(carteCouche);
+                });
+                const rond = L.circleMarker([e.lat, e.lon], {
+                        radius: multi ? 6 : 5, color: '#fff', weight: 2,
+                        fillColor: e.liste[0].coul, fillOpacity: 1 })
+                 .bindTooltip(titre + (multi ? ' — ' + e.liste.length + ' chantiers' : ''),
+                              { direction: 'top' })
+                 .bindPopup(bulle)
+                 .addTo(carteCouche);
+                rond.chantiers = e.liste.map(x => x.p);
+
+                // L'épingle marque le début d'un chantier ; elle porte la même
+                // bulle, puisqu'elle désigne le même support.
+                const tetes = e.liste.filter(x => x.tete);
+                if(tetes.length) {
+                    const marque = L.marker([e.lat, e.lon]).bindPopup(bulle).addTo(carteCouche);
+                    marque.chantiers = e.liste.map(x => x.p);
+                    if(carteCible && tetes.some(x => String(x.p.id) === carteCible)) viseMarqueur = marque;
                 }
             });
 
@@ -2548,6 +2610,24 @@
             setTimeout(() => carte.invalidateSize(), 60);
         }
 
+        // Le rappel d'un chantier sous un point de la carte. Avec plusieurs
+        // chantiers sur le même support, chacun porte sa pastille de couleur,
+        // celle de son anneau.
+        function blocBulle(x, multi) {
+            const p = x.p;
+            const dates = (p.start ? new Date(p.start).toLocaleDateString() : '?')
+                        + ' → ' + (p.end ? new Date(p.end).toLocaleDateString() : '?');
+            const titre = esc(((p.lcode || '') + ' ' + (p.lname || '')).trim());
+            return `<div class="ch">
+                <span class="l"><b>${multi
+                    ? `<span class="rond" style="background:${x.coul}"></span>` : ''}${titre}</b></span>
+                <span class="l">${esc(modeleDe(p))} · ${esc(dates)}</span>
+                <span class="l">👤 ${esc(p.cdt || '—')}</span>
+                <span class="l">${x.nb} support(s) localisé(s)</span>
+                <button onclick="ouvrirDepuisCarte('${esc(String(p.id))}')">Ouvrir le chantier</button>
+            </div>`;
+        }
+
         // Le code de la LIT d'un chantier : celui qu'il porte, sinon celui
         // du référentiel de sa ligne.
         function litDuChantier(p) {
@@ -2563,26 +2643,116 @@
             carteLiaison = null;
         }
         // Tous les pylônes de la liaison, du premier au dernier, en trait
-        // large et pâle : le chantier se lit alors dans sa ligne.
-        async function surlignerLiaison(p) {
+        // large et pâle : le chantier se lit alors dans sa ligne. Deux
+        // chantiers sur deux liaisons différentes en surlignent deux.
+        async function surlignerLiaisons(ps) {
             effacerLiaison();
-            const lit = litDuChantier(p);
-            if(!lit) return;
+            const lits = [...new Set((ps || []).map(litDuChantier).filter(Boolean))];
+            if(!lits.length) return;
             let base;
             try { base = await chargerPylones(); }
             catch(e) { console.warn('Tracé de la liaison :', e); return; }
-            const ligne = base[lit];
-            if(!ligne) return;
-            const pts = Object.keys(ligne)
-                .sort((a, b) => rangSupport(a) - rangSupport(b))
-                .map(n => coordDegres(ligne[n]))
-                .filter(Boolean)
-                .map(d => d.split(',').map(x => parseFloat(x)));
-            if(pts.length < 2) return;
-            carteLiaison = L.polyline(pts, { color: '#1d4ed8', weight: 10, opacity: .18,
-                                             lineCap: 'round', lineJoin: 'round',
-                                             interactive: false }).addTo(carte);
-            carteLiaison.bringToBack();
+            const groupe = L.layerGroup();
+            lits.forEach(lit => {
+                const ligne = base[lit];
+                if(!ligne) return;
+                const pts = Object.keys(ligne)
+                    .sort((a, b) => rangSupport(a) - rangSupport(b))
+                    .map(n => coordDegres(ligne[n]))
+                    .filter(Boolean)
+                    .map(d => d.split(',').map(x => parseFloat(x)));
+                if(pts.length < 2) return;
+                groupe.addLayer(L.polyline(pts, { color: '#1d4ed8', weight: 10, opacity: .18,
+                                                  lineCap: 'round', lineJoin: 'round',
+                                                  interactive: false }));
+            });
+            if(!groupe.getLayers().length) return;
+            carteLiaison = groupe.addTo(carte);
+            groupe.getLayers().forEach(l => l.bringToBack());
+        }
+
+        // ==================================================================
+        //  LA ZONE ATTEIGNABLE
+        //  Une adresse, un moyen de déplacement, un temps : la Géoplateforme
+        //  rend le contour de tout ce qu'on atteint dans ce temps-là. Même
+        //  maison que les fonds de carte : libre d'accès, sans clé.
+        // ==================================================================
+        const GEOCODE_URL = 'https://data.geopf.fr/geocodage/search';
+        const ISO_URL     = 'https://data.geopf.fr/navigation/isochrone';
+
+        let carteZone = null;          // le contour et son épingle
+        let carteZoneVisible = true;
+
+        function majBoutonsZone() {
+            const v = document.getElementById('zone-voir');
+            const x = document.getElementById('zone-x');
+            if(v) v.style.display = carteZone ? 'flex' : 'none';
+            if(x) x.style.display = carteZone ? '' : 'none';
+        }
+        function effacerZone() {
+            if(carteZone) carte.removeLayer(carteZone);
+            carteZone = null; carteZoneVisible = true;
+            const c = document.querySelector('#zone-voir input');
+            if(c) c.checked = true;
+            const e = document.getElementById('zone-etat');
+            if(e) e.textContent = '';
+            majBoutonsZone();
+        }
+        // Masquer sans effacer : on garde le calcul, on rend la carte lisible.
+        function basculerZone(v) {
+            carteZoneVisible = !!v;
+            if(!carteZone) return;
+            if(v) carteZone.addTo(carte); else carte.removeLayer(carteZone);
+        }
+
+        async function tracerZone() {
+            const etat = document.getElementById('zone-etat');
+            const adr  = String(document.getElementById('zone-adr').value || '').trim();
+            if(!adr) { if(etat) etat.textContent = 'Portez une adresse ou une commune.'; return; }
+            if(!window.L || !carte) return;
+            const mode = document.getElementById('zone-mode').value;
+            const min  = parseInt(document.getElementById('zone-min').value, 10) || 15;
+            if(etat) etat.textContent = 'Recherche de l\u2019adresse\u2026';
+            try {
+                const rg = await fetch(GEOCODE_URL + '?limit=1&q=' + encodeURIComponent(adr));
+                if(!rg.ok) throw new Error('géocodage : ' + rg.status);
+                const g = await rg.json();
+                const f = g.features && g.features[0];
+                if(!f) { if(etat) etat.textContent = 'Adresse introuvable.'; return; }
+                const lon = f.geometry.coordinates[0], lat = f.geometry.coordinates[1];
+                const nom = (f.properties && f.properties.label) || adr;
+
+                if(etat) etat.textContent = 'Calcul de la zone\u2026';
+                const u = ISO_URL + '?resource=bdtopo-valhalla&costType=time&direction=departure'
+                        + '&point=' + lon + ',' + lat
+                        + '&costValue=' + (min * 60) + '&profile=' + mode;
+                const ri = await fetch(u);
+                if(!ri.ok) throw new Error('isochrone : ' + ri.status);
+                const iso = await ri.json();
+                if(!iso || !iso.geometry) { if(etat) etat.textContent = "Pas de zone pour ce point."; return; }
+
+                effacerZone();
+                const libelle = esc(nom) + ' — ' + min + ' min '
+                              + (mode === 'car' ? 'en voiture' : 'à pied');
+                carteZone = L.layerGroup([
+                    L.geoJSON({ type: 'Feature', geometry: iso.geometry }, {
+                        style: { color: '#6d28d9', weight: 2, opacity: .9,
+                                 fillColor: '#7c3aed', fillOpacity: .18 } })
+                     .bindPopup('<div class="carte-pop"><b>Zone atteignable</b>'
+                              + '<span class="l">' + libelle + '</span></div>'),
+                    L.circleMarker([lat, lon], { radius: 7, color: '#fff', weight: 2,
+                        fillColor: '#6d28d9', fillOpacity: 1 })
+                     .bindTooltip(nom, { direction: 'top' })
+                ]);
+                if(carteZoneVisible) carteZone.addTo(carte);
+                majBoutonsZone();
+                const b = carteZone.getLayers()[0].getBounds();
+                if(b.isValid()) carte.fitBounds(b, { padding: [30, 30] });
+                if(etat) etat.textContent = libelle;
+            } catch(e) {
+                if(etat) etat.textContent = 'Zone indisponible : ' + e.message;
+                console.warn('Zone atteignable :', e);
+            }
         }
 
         function ouvrirDepuisCarte(id) { load(id); }
