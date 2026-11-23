@@ -3892,6 +3892,131 @@
             return v;
         }
 
+        // ==================================================================
+        //  LE MODE OPÉRATOIRE ET LE PLANNING, REPORTÉS DE LA PRÉPARATION
+        //  La préparation de travail est le document maître : c'est là que
+        //  le mode opératoire s'écrit et se fait vérifier. La logistique en
+        //  reçoit la suite des gestes — sans l'analyse de risques ni les
+        //  actions préventives, qui restent au document.
+        //
+        //  Le report est un ajout, jamais une réécriture. Ce qui est
+        //  retouché, complété ou retiré côté logistique y reste ; ce qui
+        //  s'ajoute côté préparation vient s'y ranger en plus, et rien ne
+        //  remonte jamais dans l'autre sens. Chaque élément déjà reporté
+        //  est retenu, pour qu'il ne revienne pas après avoir été supprimé.
+        // ==================================================================
+        const SEP_REPORT = '\u0001';
+        function dejaReporte(cle) {
+            try { return new Set(JSON.parse(pv(cle) || '[]')); } catch(e) { return new Set(); }
+        }
+        function noterReporte(cle, ens) { prepa.v[cle] = JSON.stringify([...ens]); }
+
+        // Les tâches de la préparation, découpées par étape : chaque titre
+        // d'étape ouvre un mode opératoire de son côté.
+        function etapesPrepa() {
+            const out = [];
+            let cour = null;
+            ['mo-l', 'mo2-l'].forEach(cle => {
+                (prepa.l[cle] || []).forEach(r => {
+                    if(!r) return;
+                    if(r.sect !== undefined) {
+                        cour = { titre: String(r.sect || '').trim() || 'Étape', taches: [] };
+                        out.push(cour);
+                        return;
+                    }
+                    const t = String(r.t || '').trim();
+                    if(!t) return;
+                    if(!cour) { cour = { titre: 'Mode opératoire', taches: [] }; out.push(cour); }
+                    cour.taches.push(t);
+                });
+            });
+            return out.filter(e => e.taches.length);
+        }
+
+        function reporterModeOp() {
+            const etapes = etapesPrepa();
+            if(!etapes.length) return 0;
+            const vus = dejaReporte('mo-logi-vu');
+            let n = 0;
+            etapes.forEach((e, i) => {
+                const id = 'mo-pr-' + i;
+                const neuves = e.taches.filter(t => !vus.has(id + SEP_REPORT + t));
+                if(!neuves.length) return;
+                let fiche = modeOp.find(t => t.id === id);
+                if(!fiche) {
+                    fiche = { id: id, titre: e.titre, personnes: [],
+                              jourDebut: '', jourFin: '', sousTaches: [] };
+                    modeOp.push(fiche);
+                }
+                neuves.forEach(t => {
+                    vus.add(id + SEP_REPORT + t);
+                    // Une tâche déjà écrite à la main ne se double pas.
+                    if((fiche.sousTaches || []).some(x => String(x.texte || '').trim() === t)) return;
+                    fiche.sousTaches.push({ id: 'st' + Math.random().toString(36).slice(2),
+                                            texte: t, jour: '', demi: '' });
+                    n++;
+                });
+            });
+            noterReporte('mo-logi-vu', vus);
+            return n;
+        }
+
+        // Une date du tableau de planification : 12/01/2027, 12-01-27 ou ISO.
+        function dateISO(v) {
+            const t = String(v || '').trim();
+            if(/^\d{4}-\d{2}-\d{2}$/.test(t)) return t;
+            const m = t.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/);
+            if(!m) return '';
+            let an = +m[3];
+            if(an < 100) an += 2000;
+            const d = new Date(an, +m[2] - 1, +m[1]);
+            if(isNaN(d) || d.getDate() !== +m[1] || d.getMonth() !== +m[2] - 1) return '';
+            return isoDe(d);
+        }
+
+        function reporterPlanning() {
+            const vus = dejaReporte('pl-logi-vu');
+            let n = 0, sansDate = 0;
+            (prepa.l['pl-l'] || []).forEach(r => {
+                if(!r || r.sect !== undefined) return;
+                const texte = String(r.t || '').trim();
+                if(!texte) return;
+                const iso = dateISO(r.d);
+                if(!iso) { sansDate++; return; }
+                const marque = iso + SEP_REPORT + texte;
+                if(vus.has(marque)) return;
+                vus.add(marque);
+                const w = numSemaine(new Date(iso + 'T00:00:00'));
+                const sem = w.an + '-S' + String(w.num).padStart(2, '0');
+                if(!planning[sem]) planning[sem] = {};
+                if(!planning[sem][iso]) planning[sem][iso] = { matin: [], apm: [] };
+                const d = planning[sem][iso];
+                if((d.matin || []).some(x => String(x).trim() === texte)
+                || (d.apm   || []).some(x => String(x).trim() === texte)) return;
+                d.matin.push(texte);
+                n++;
+            });
+            noterReporte('pl-logi-vu', vus);
+            return { ajoutes: n, sansDate: sansDate };
+        }
+
+        // Les deux boutons, qui disent ce qu'ils ont fait.
+        function reprendreModeOp() {
+            const n = reporterModeOp();
+            renderModeOp();
+            souffler(n ? n + ' tâche(s) reprise(s) de la préparation'
+                       : 'Rien de nouveau dans la préparation');
+        }
+        function reprendrePlanning() {
+            const r = reporterPlanning();
+            renderPlanning();
+            souffler(r.ajoutes
+                ? r.ajoutes + ' journée(s) reprise(s) de la préparation'
+                  + (r.sansDate ? ' — ' + r.sansDate + ' ligne(s) sans date' : '')
+                : (r.sansDate ? r.sansDate + ' ligne(s) de la planification sont sans date'
+                              : 'Rien de nouveau dans la préparation'));
+        }
+
         // --- Navigation ----------------------------------------------------
         function goLogi() { switchScreen('screen-logi'); renderLogi(); }
 
@@ -3899,6 +4024,9 @@
 
         function showSub(t) {
             subActif = t;
+            // Ce que la préparation a de neuf arrive en ouvrant l'onglet.
+            if(!LECTURE && t === 'modeop'   && reporterModeOp())   renderModeOp();
+            if(!LECTURE && t === 'planning' && reporterPlanning().ajoutes) renderPlanning();
             SOUS_ONGLETS.forEach(x => {
                 document.getElementById('sub-'+x).style.display = (x === t) ? 'block' : 'none';
             });
@@ -11509,7 +11637,8 @@
                     ${sems.map(s => `<button class="sem-tab ${s.cle === semActive ? 'active' : ''}" onclick="showSem('${s.cle}')">${s.lib}</button>`).join('')}
                 </div>
                 <div class="lg-block">
-                    <div class="lg-head"><span>📅 Semaine ${sem.lib} — du ${sem.lundi.toLocaleDateString('fr-FR')}</span></div>
+                    <div class="lg-head"><span>📅 Semaine ${sem.lib} — du ${sem.lundi.toLocaleDateString('fr-FR')}</span>
+                    ${ro ? '' : `<button class="btn-mini ghost" onclick="reprendrePlanning()">↻ Reprendre la préparation</button>`}</div>
                     <div class="lg-body plan-wrap">
                         <table class="plan-table">
                             <thead><tr><th>Jour</th><th>Matin</th><th>Après-midi</th></tr></thead>
@@ -11610,7 +11739,9 @@
 
             let h = `<div class="lg-block">
                 <div class="lg-head"><span>📋 Mode opératoire</span>
-                ${ro ? '' : `<button class="btn-mini" onclick="addMO()">+ Nouvelle tâche</button>`}</div>
+                ${ro ? '' : `<span style="display:flex;gap:8px;flex-wrap:wrap">
+                    <button class="btn-mini ghost" onclick="reprendreModeOp()">↻ Reprendre la préparation</button>
+                    <button class="btn-mini" onclick="addMO()">+ Nouvelle tâche</button></span>`}</div>
                 <div class="lg-body">`;
 
             if(sansJours && !ro) {
