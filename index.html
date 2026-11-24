@@ -4078,7 +4078,7 @@
         // est ce qui distingue un rapprochement d'une recherche par mot
         // clé : elle ramène dix formulations à un concept.
         const REX_CONCEPTS = [
-            { id: 'acces', lib: 'Accès et pistes', mots:
+            { id: 'acces', lib: 'Accès et pistes', local: true, mots:
               ['acces', 'piste', 'chemin', 'cadenas', 'barriere', 'portail', 'bourbier', 'portance',
                'orniere', 'embourbe', 'franchissement', 'gue', 'tonnage', 'quad', 'tracteur',
                'inaccessible', 'bloque', 'clef', 'parcelle', 'cloture'] },
@@ -4112,11 +4112,11 @@
             { id: 'vegetation', lib: 'Végétation', mots:
               ['elagage', 'abattage', 'debroussaillage', 'arbre', 'branche', 'bucheron',
                'tronconneuse', 'haie', 'broyage', 'coupe', 'bois'] },
-            { id: 'tiers', lib: 'Tiers et riverains', mots:
+            { id: 'tiers', lib: 'Tiers et riverains', local: true, mots:
               ['riverain', 'proprietaire', 'exploitant', 'agriculteur', 'convention', 'ferree',
                'sncf', 'deviation', 'croisement', 'autorisation', 'mairie', 'gendarmerie',
                'refu', 'plainte', 'arrete', 'circulation'] },
-            { id: 'environnement', lib: 'Environnement', mots:
+            { id: 'environnement', lib: 'Environnement', local: true, mots:
               ['environnement', 'pollution', 'huile', 'hydrocarbure', 'dechet', 'dib', 'nidification',
                'faune', 'flore', 'natura', 'humide', 'captage', 'sevego', 'seveso', 'amiante'] },
             { id: 'documents', lib: 'Documents et régime', large: true, mots:
@@ -4133,6 +4133,17 @@
         ];
         const REX_CONCEPT = {};
         REX_CONCEPTS.forEach(c => REX_CONCEPT[c.id] = c);
+
+        // Certaines leçons parlent d'un lieu, pas d'un métier : un cadenas
+        // sur un portail, un riverain, une piste qui ne porte pas, un nid à
+        // épargner. Elles valent de l'or sur leur ligne et ne veulent rien
+        // dire ailleurs. D'autres voyagent partout, parce qu'elles parlent
+        // d'un outil ou d'un geste : une batterie qui lâche, une élingue
+        // trop courte. On ne traite pas les deux de la même façon.
+        function leconLocale(l) {
+            const c = (l.concepts || [])[0];
+            return !!c && !!(REX_CONCEPT[c] || {}).local;
+        }
 
         // --- La famille d'un chantier -------------------------------------
         // Une visite héliportée survole quarante lignes en une journée et
@@ -4800,6 +4811,11 @@
             // comptent un peu, mais ne font pas le lien à eux seuls. Et un
             // sujet qui n'est pas l'un des deux premiers de la leçon n'est
             // pas ce dont elle parle.
+            // Une observation de terrain ne quitte pas sa ligne, et une
+            // leçon de trois mots n'en dit pas assez pour être transposée
+            // ailleurs : « accès bloqué par un cadenas » est une note sur un
+            // portail précis, pas un enseignement général.
+            const ancree = leconLocale(l) || rexMots(l.texte).length < 4;
             const cc = (l.concepts || []).filter(x => c.concepts.has(x));
             if(cc.length) {
                 s += Math.min(30, 12 * cc.length);
@@ -4828,6 +4844,7 @@
             // nommément. Sinon, elle n'a rien à faire dans cette préparation.
             // Ce qui est écarté se compte avant la pénalité : sinon
             // l'application ne saurait pas dire ce qu'elle a laissé de côté.
+            if(ancree && !surLaLigne) lien = false;
             const brut = s;
             if(fam !== c.famille) {
                 s = Math.round(s * 0.4);
