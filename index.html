@@ -2907,12 +2907,17 @@
 
         // La date du fichier servi : elle dit sans ambiguite si l'on tourne
         // sur la derniere version ou sur une copie gardee en cache.
+        // La date du fichier servi. Elle dit sans ambiguite sur quelle
+        // version on tourne, ce qui evite de chercher un defaut deja corrige
+        // dans une copie gardee en cache par le navigateur.
+        function versionApp() {
+            const d = new Date(document.lastModified);
+            return isNaN(d) ? '\u2014'
+                : d.toLocaleDateString('fr-FR') + ' \u00e0 ' + d.toLocaleTimeString('fr-FR').slice(0, 5);
+        }
         function renderVersion() {
             const e = document.getElementById('app-version');
-            if(!e) return;
-            const d = new Date(document.lastModified);
-            e.textContent = isNaN(d) ? '\u2014'
-                : d.toLocaleDateString('fr-FR') + ' \u00e0 ' + d.toLocaleTimeString('fr-FR').slice(0, 5);
+            if(e) e.textContent = versionApp();
         }
 
         // Recharger ne suffit pas : tant que la copie en cache n'a pas
@@ -4832,7 +4837,8 @@
             // leçon de trois mots n'en dit pas assez pour être transposée
             // ailleurs : « accès bloqué par un cadenas » est une note sur un
             // portail précis, pas un enseignement général.
-            const ancree = leconLocale(l) || rexMots(l.texte).length < 4;
+            const ancree = leconLocale(l) || rexMots(l.texte).length < 4
+                        || (l.sup || []).length > 0;
             const cc = (l.concepts || []).filter(x => c.concepts.has(x));
             if(cc.length) {
                 s += Math.min(30, 12 * cc.length);
@@ -4867,7 +4873,17 @@
             // nommément. Sinon, elle n'a rien à faire dans cette préparation.
             // Ce qui est écarté se compte avant la pénalité : sinon
             // l'application ne saurait pas dire ce qu'elle a laissé de côté.
-            if(ancree && !surLaLigne) lien = false;
+            // Une leçon ancrée ne vaut que là où elle a été vécue : la même
+            // ligne, et le même secteur de cette ligne. Un cadenas rencontré
+            // à la portée 73-74 ne dit rien du pylône 12, soixante portées
+            // plus loin. Quand aucun support n'est connu de part et d'autre,
+            // la ligne seule suffit — on ne peut pas en demander plus.
+            if(ancree) {
+                const situee = sl.length && c.rangs.length;
+                const pres = situee && sl.some(n => c.rangs.some(
+                                  r => Math.abs(rangSupport(n) - r) <= 10000));
+                if(!surLaLigne || (situee && !pres)) lien = false;
+            }
             // Le matériel de ligne ne traverse ni les tensions ni les
             // familles qui n'y touchent pas.
             if(leconMateriel(l)) {
@@ -5021,7 +5037,8 @@
                         + esc(c.sources.join(', ')) + '.</span>' : ''}
                     <span class="rex-src2">Analyse refaite à
                         ${rexDernier.heure ? rexDernier.heure.toLocaleTimeString() : ''}
-                        — chaque clic relit le dossier tel qu'il est.</span>
+                        — chaque clic relit le dossier tel qu'il est.
+                        Application du ${esc(versionApp())}.</span>
                 </div>
                 ${rexDernier.large ? `<div class="rex-inc">Recherche élargie : les leçons
                     ci-dessous n'ont pas de lien solide avec ce chantier — autre famille de
