@@ -4085,13 +4085,17 @@
             { id: 'meteo', lib: 'Météo', mots:
               ['meteo', 'vent', 'orage', 'pluie', 'gel', 'verglas', 'neige', 'canicule', 'chaleur',
                'brouillard', 'foudre', 'temperature', 'boue', 'humidite'] },
-            { id: 'deroulage', lib: 'Déroulage et câbles', mots:
+            { id: 'deroulage', lib: 'Déroulage et câbles', materiel: true, mots:
               ['deroulage', 'derouleuse', 'treuil', 'frein', 'chaussette', 'cabestan', 'poulie',
                'pilote', 'touret', 'retente', 'fleche', 'regleur', 'conducteur', 'garde', 'ocp'] },
-            { id: 'manchonnage', lib: 'Manchonnage', mots:
+            { id: 'armement', lib: 'Armement, pinces et isolateurs', materiel: true, mots:
+              ['pince', 'isolateur', 'armement', 'chaine', 'console', 'gousset', 'ferrure',
+               'suspension', 'ancrage', 'etrier', 'rotule', 'tourillon', 'cornier', 'bretelle',
+               'pontage', 'depontage', 'repontage', 'plage'] },
+            { id: 'manchonnage', lib: 'Manchonnage', materiel: true, mots:
               ['manchon', 'manchonnage', 'sertissage', 'sertir', 'matrice', 'presse', 'raccord',
                'jonction', 'douille'] },
-            { id: 'malt', lib: 'MALT / CC et consignation', mots:
+            { id: 'malt', lib: 'MALT / CC et consignation', materiel: true, mots:
               ['malt', 'vatn', 'equipotentielle', 'courtcircuit', 'shunt', 'perche', 'terre',
                'consignation', 'regime', 'a1ec', 'a2ec', 'retrait'] },
             { id: 'nacelle', lib: 'Nacelle / PEMP', mots:
@@ -4143,6 +4147,16 @@
         function leconLocale(l) {
             const c = (l.concepts || [])[0];
             return !!c && !!(REX_CONCEPT[c] || {}).local;
+        }
+
+        // Le matériel de la ligne — pinces, isolateurs, câbles, manchons,
+        // MALT — n'est pas le même d'une tension à l'autre : une pince de
+        // 400 kV ne se monte pas sur une 90 kV, et l'on n'en ouvre aucune
+        // en élagage ni en visite. Ces leçons ne quittent donc ni leur
+        // tension, ni la famille qui touche à l'ouvrage.
+        function leconMateriel(l) {
+            const c = (l.concepts || [])[0];
+            return !!c && !!(REX_CONCEPT[c] || {}).materiel;
         }
 
         // --- La famille d'un chantier -------------------------------------
@@ -4662,6 +4676,9 @@
                 const f = tf[w];
                 if(!f) return;
                 const n = idx.df[w] || 0;
+                // Un terme présent dans le tiers de la bibliothèque ne
+                // distingue plus rien : c'est du vocabulaire de métier.
+                if(n > idx.n * 0.3) return;
                 const idf = Math.log(1 + (idx.n - n + 0.5) / (n + 0.5));
                 const x = poids * idf * (f * (k1 + 1)) / (f + k1 * (1 - b + b * d.mots.length / idx.moy));
                 s += x;
@@ -4713,22 +4730,13 @@
             }));
             (chargement || []).forEach(x => poser(x && (x.lib || x.nom || x.designation), 2,
                                                   'chargement'));
-            // Tout le reste de la préparation, en fond : ce qui est écrit
-            // quelque part compte un peu, même si personne n'y pense.
-            Object.keys(v).forEach(k => {
-                if(REX_SANS.has(k)) return;
-                const x = v[k];
-                if(typeof x !== 'string' || x.length < 5) return;
-                if(/^[\d\s\/.:-]+$/.test(x) || /^[\[{]/.test(x)) return;
-                poser(x, 1);
-            });
-            Object.keys(L).forEach(c => (L[c] || []).forEach(r => {
-                if(!r || typeof r !== 'object') return;
-                Object.keys(r).forEach(k => {
-                    const x = r[k];
-                    if(typeof x === 'string' && x.length >= 5) poser(x, 1);
-                });
-            }));
+            // On s'arrête là. Verser toute la préparation dans la requête
+            // paraissait généreux, mais une préparation est un formulaire :
+            // elle contient les mêmes mots que toutes les autres — sécurité,
+            // opérateur, prévention, mise en place. On rapprochait alors les
+            // chantiers par leur formulaire et non par leur contenu, et
+            // n'importe quelle leçon finissait par ressembler à n'importe
+            // quel chantier. Seul ce qui a été écrit pour celui-ci compte.
             (piList || []).forEach(x => poser(x && x.lib, 1));
             if(logi) Object.keys(logi).forEach(k => {
                 const x = logi[k];
@@ -4857,6 +4865,13 @@
             // Ce qui est écarté se compte avant la pénalité : sinon
             // l'application ne saurait pas dire ce qu'elle a laissé de côté.
             if(ancree && !surLaLigne) lien = false;
+            // Le matériel de ligne ne traverse ni les tensions ni les
+            // familles qui n'y touchent pas.
+            if(leconMateriel(l)) {
+                const tr = (f.tensions || []).map(x => rexSlug(x));
+                if(c.famille === 'végétation' || c.famille === 'visite') lien = false;
+                else if(c.tension && tr.length && tr.indexOf(rexSlug(c.tension)) < 0) lien = false;
+            }
             const brut = s;
             if(fam !== c.famille) {
                 s = Math.round(s * 0.4);
@@ -4957,7 +4972,7 @@
             // ligne : mieux vaut une fenêtre vide, qui le dit, qu'une liste
             // qui donne le change. Ce qui a été écarté reste à un clic.
             const c = rexContexte();
-            const r = rexSuggestions(c, 28, 6);
+            const r = rexSuggestions(c, 28, 8);
             rexDernier = { c: c, g: r.groupes, ecartes: r.ecartes, large: false };
             f.style.display = 'flex';
             renderRexFen();
