@@ -4650,19 +4650,25 @@
             rexIdx = { docs: docs, df: df, n: docs.length || 1, moy: moy || 1 };
             return rexIdx;
         }
+        // Le score, et les mots qui l'ont fait : sans eux, on ne saurait pas
+        // dire à l'utilisateur pourquoi une leçon remonte.
         function bm25(d, req, idx) {
             const tf = {};
             d.mots.forEach(w => tf[w] = (tf[w] || 0) + 1);
             const k1 = 1.5, b = 0.75;
             let s = 0;
+            const part = [];
             req.forEach((poids, w) => {
                 const f = tf[w];
                 if(!f) return;
                 const n = idx.df[w] || 0;
                 const idf = Math.log(1 + (idx.n - n + 0.5) / (n + 0.5));
-                s += poids * idf * (f * (k1 + 1)) / (f + k1 * (1 - b + b * d.mots.length / idx.moy));
+                const x = poids * idf * (f * (k1 + 1)) / (f + k1 * (1 - b + b * d.mots.length / idx.moy));
+                s += x;
+                part.push({ w: w, x: x });
             });
-            return s;
+            return { s: s, mots: part.sort((a, b2) => b2.x - a.x).filter(p => p.x > 0.8)
+                                     .slice(0, 4).map(p => p.w) };
         }
 
         // --- Tout ce que le dossier sait dire -----------------------------
@@ -4824,8 +4830,14 @@
                 if(fort.length) lien = true;
                 pour.push(cc.slice(0, 2).map(x => ((REX_CONCEPT[x] || {}).lib || x).toLowerCase()).join(', '));
             }
-            if(bm >= 1.2) lien = true;
-            s += Math.min(28, bm * 2.2);
+            // Un seul mot partagé ne rapproche rien : deux textes du même
+            // métier se croisent toujours sur un terme. Il en faut plusieurs,
+            // et assez rares pour peser.
+            if(bm.s >= 2.6 && bm.mots.length >= 3) {
+                lien = true;
+                pour.push('mots en commun : ' + bm.mots.join(', '));
+            }
+            s += Math.min(28, bm.s * 2.2);
             // La saison compte : le gel, la nidification et la pousse ne
             // tombent pas au même moment de l'année.
             const dr = rexDateMs(f);
@@ -4863,6 +4875,8 @@
             let ecartes = 0;
             idx.docs.forEach(d => {
                 const r = scoreLecon(c, d.f, d.l, bm25(d, c.req, idx));
+                // Si l'on ne peut pas dire pourquoi, on ne montre pas.
+                if(!r.pour.length) r.s = 0;
                 const note = large ? Math.max(r.s, r.brut) : r.s;
                 if(note >= seuil) gard.push({ id: d.id, i: d.i, f: d.f, l: d.l,
                                               s: note, pour: r.pour });
@@ -4883,7 +4897,7 @@
             });
             return { ecartes: ecartes,
                      groupes: [...grp.values()].sort((a, b) => b.s - a.s)
-                              .map(g => { g.items = g.items.slice(0, 5); return g; })
+                              .map(g => { g.items = g.items.slice(0, large ? 5 : 3); return g; })
                               .slice(0, lim || 8) };
         }
 
@@ -4938,18 +4952,20 @@
                     + " Options — Bibliothèque de REX, en déposant les PDF sortis de Kizéo.");
                 return;
             }
+            // On ne force jamais une réponse. Un chantier sans REX qui lui
+            // ressemble n'a rien à apprendre d'un cadenas posé sur une autre
+            // ligne : mieux vaut une fenêtre vide, qui le dit, qu'une liste
+            // qui donne le change. Ce qui a été écarté reste à un clic.
             const c = rexContexte();
-            let r = rexSuggestions(c, 22, 8);
-            let large = false;
-            if(!r.groupes.length) { r = rexSuggestions(c, 10, 4, true); large = true; }
-            rexDernier = { c: c, g: r.groupes, ecartes: r.ecartes, large: large };
+            const r = rexSuggestions(c, 28, 6);
+            rexDernier = { c: c, g: r.groupes, ecartes: r.ecartes, large: false };
             f.style.display = 'flex';
             renderRexFen();
         }
         // Quand on veut quand même voir ce qui a été écarté.
         function elargirRex() {
             if(!rexDernier) return;
-            const r = rexSuggestions(rexDernier.c, 10, 10, true);
+            const r = rexSuggestions(rexDernier.c, 12, 10, true);
             rexDernier = { c: rexDernier.c, g: r.groupes, ecartes: 0, large: true };
             renderRexFen();
         }
@@ -4985,15 +5001,17 @@
                     travaux, autre ligne, ou simple mot en commun. À lire d'un œil, pas à
                     suivre.</div>` : ''}
                 ${!rexDernier.large && rexDernier.ecartes ? `<div class="rex-ecart">
-                    ${rexDernier.ecartes} leçon(s) écartée(s) : visites héliportées, autres
-                    familles de travaux, ou sujets trop généraux pour rapprocher deux
-                    chantiers.
+                    ${rexDernier.ecartes} leçon(s) écartée(s) : observations liées à une
+                    autre ligne, visites héliportées, autres familles de travaux, ou sujets
+                    trop généraux pour rapprocher deux chantiers.
                     <button onclick="elargirRex()">Les voir quand même</button></div>` : ''}
-                ${!n ? `<div class="rex-vide">Aucune leçon à remonter. Soit la
-                    bibliothèque ne couvre pas encore ce genre de chantier, soit la
-                    préparation est trop peu remplie pour qu'on la rapproche de quoi que ce
-                    soit : la nature des travaux et le mode opératoire sont ce qui parle le
-                    plus.</div>` : ''}
+                ${!n ? `<div class="rex-vide"><b>Aucun REX ne correspond vraiment à ce
+                    chantier.</b> Rien n'est forcé : une leçon sans rapport ne vaut pas
+                    mieux qu'une fenêtre vide, et vous feriez défiler pour rien.
+                    <span class="rex-src2">Soit la bibliothèque ne couvre pas encore ce
+                    genre de chantier, soit la préparation est trop peu remplie pour qu'on
+                    la rapproche de quoi que ce soit : la nature des travaux et le mode
+                    opératoire sont ce qui parle le plus.</span></div>` : ''}
                 ${g.map(x => `
                 <div class="rex-g">
                     <div class="rex-g-t">${esc(x.lib)}<span class="rex-n">${x.items.length}</span></div>
