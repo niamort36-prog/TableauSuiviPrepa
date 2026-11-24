@@ -78,6 +78,69 @@
         .carte-barre label { display: flex; align-items: center; gap: 6px;
                              font-size: .85rem; color: #475569; cursor: pointer; }
         .carte-barre .etat { margin-left: auto; font-size: .82rem; color: #64748b; }
+        /* --- La bibliotheque de REX --- */
+        .rex-res { font-size: .9rem; color: #475569; margin-bottom: 10px; }
+        .rex-inc { font-size: .84rem; color: #92400e; background: #fef6e7;
+                   border: 1px solid #f5d9a8; border-radius: 8px;
+                   padding: 8px 12px; margin-bottom: 12px; }
+        .rex-vide { font-size: .9rem; color: #64748b; padding: 18px 2px; }
+        .rex-tab { width: 100%; border-collapse: collapse; font-size: .85rem; }
+        .rex-tab th { text-align: left; color: #64748b; font-weight: 700;
+                      border-bottom: 2px solid var(--border); padding: 6px 8px; }
+        .rex-tab td { border-bottom: 1px solid #eef2f7; padding: 6px 8px;
+                      vertical-align: top; }
+        .rex-kv { color: #94a3b8; font-size: .78rem; display: block; }
+        .rex-x { border: 1px solid var(--border); background: #f8fafc; border-radius: 6px;
+                 padding: 3px 7px; cursor: pointer; font-size: .85rem; }
+        .rex-x:hover { background: #eef2f7; }
+
+        /* La fenetre d'analyse : elle couvre l'ecran, on y lit, on verse,
+           on la ferme. Elle sert depuis la fiche comme depuis les details. */
+        #rex-fen { display: none; position: fixed; inset: 0; z-index: 4000;
+                   background: rgba(15,23,42,.55); align-items: center;
+                   justify-content: center; padding: 20px; }
+        #rex-fen .boite { background: #f8fafc; border-radius: 14px; width: 100%;
+                   max-width: 920px; max-height: 92vh; display: flex;
+                   flex-direction: column; overflow: hidden;
+                   box-shadow: 0 20px 60px rgba(0,0,0,.35); }
+        #rex-fen .tete { background: #6d28d9; color: #fff; padding: 14px 20px;
+                   display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        #rex-fen .tete h3 { margin: 0; font-size: 1.05rem; }
+        #rex-fen .tete button { background: rgba(255,255,255,.18); color: #fff;
+                   border: 0; border-radius: 8px; padding: 6px 12px; cursor: pointer;
+                   font-size: .9rem; font-weight: 700; }
+        #rex-fen-corps { padding: 16px 20px 24px; overflow: auto; }
+        .rex-ctx { font-size: .86rem; color: #475569; background: #fff;
+                   border: 1px solid var(--border); border-radius: 10px;
+                   padding: 10px 14px; margin-bottom: 14px; }
+        .rex-src2 { display: block; color: #94a3b8; font-size: .8rem; margin-top: 3px; }
+        .rex-g { margin-bottom: 18px; }
+        .rex-g-t { font-weight: 800; color: #4c1d95; font-size: .95rem;
+                   margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+        .rex-n { background: #ede9fe; color: #6d28d9; border-radius: 999px;
+                 padding: 1px 9px; font-size: .76rem; font-weight: 700; }
+        .rex-l { background: #fff; border: 1px solid var(--border); border-left: 4px solid #c4b5fd;
+                 border-radius: 10px; padding: 10px 14px; margin-bottom: 8px; }
+        .rex-l-h { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+                   margin-bottom: 6px; }
+        .rex-b { font-size: .74rem; font-weight: 800; border-radius: 6px; padding: 2px 8px; }
+        .rex-b.dif { background: #fdeee6; color: #c2410c; }
+        .rex-b.bon { background: #e6f6ec; color: #15803d; }
+        .rex-src { font-size: .78rem; color: #94a3b8; }
+        .rex-t { font-size: .9rem; color: #1e293b; line-height: 1.45; white-space: normal; }
+        .rex-p { margin-top: 7px; display: flex; gap: 6px; flex-wrap: wrap; }
+        .rex-p span { font-size: .74rem; color: #475569; background: #f1f5f9;
+                      border-radius: 999px; padding: 2px 9px; }
+        .rex-a { margin-top: 9px; display: flex; gap: 7px; flex-wrap: wrap; }
+        .rex-a button { border: 1px solid #c4b5fd; background: #f3eefd; color: #6d28d9;
+                        border-radius: 7px; padding: 5px 11px; font-size: .8rem;
+                        font-weight: 700; cursor: pointer; }
+        .rex-a button:hover { background: #e9ddfb; }
+        .rex-a button.sobre { border-color: var(--border); background: #f8fafc; color: #475569; }
+        .btn-rex { background: #6d28d9; color: #fff; }
+        @media (max-width: 680px) { #rex-fen { padding: 0; } #rex-fen .boite { max-height: 100vh;
+                   border-radius: 0; } }
+
         .carte-zone { display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
                       background: #fff; border: 1px solid var(--border); border-radius: 10px;
                       padding: 10px 14px; margin-bottom: 14px; }
@@ -1607,6 +1670,33 @@
             </div>
         </div>
         <div class="dashboard-container">
+            <div class="header-bar" style="background:#6d28d9; display:flex;
+                 justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap">
+                <h3 style="margin:0; font-size:1.1rem">📚 BIBLIOTHÈQUE DE REX
+                    (<span id="rex-count">0</span>)</h3>
+                <span style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">
+                    <span id="rex-etat" style="color:#e9ddfb; font-size:.82rem"></span>
+                    <label class="btn-replier" style="cursor:pointer; margin:0">📗 Classeur Kizéo
+                        <input type="file" accept=".xlsx,.xls,.csv" style="display:none"
+                               onchange="importerRexClasseur(this)"></label>
+                    <label class="btn-replier" style="cursor:pointer; margin:0">📄 PDF
+                        <input type="file" accept="application/pdf" multiple style="display:none"
+                               onchange="importerRex(this)"></label>
+                </span>
+            </div>
+            <div style="padding:14px 20px">
+                <div style="color:#475569; font-size:.88rem; margin-bottom:12px">
+                    Les REX de tous les chantiers passés, partagés par toutes les équipes.
+                    Le <b>classeur</b> exporté de Kizéo reprend tout le corpus d'un coup ;
+                    les <b>PDF</b> servent au REX qui arrive seul et gardent le document joint.
+                    Le bouton <b>Analyse REX</b> d'une fiche de chantier y cherche ensuite ce
+                    qui vaut le coup.
+                </div>
+                <div id="rex-liste"></div>
+            </div>
+        </div>
+
+        <div class="dashboard-container">
             <div class="header-bar" style="display:flex; justify-content:space-between; align-items:center; gap:12px">
                 <h3 style="margin:0; font-size:1.1rem">&#9881; VERSION</h3>
                 <button class="btn-replier" onclick="rafraichirApp()">&#8635; Rechercher une mise &agrave; jour</button>
@@ -1711,8 +1801,19 @@
             <button class="btn-action btn-arch" onclick="doArchive()">🗃️ Archiver</button>
             <button class="btn-action btn-other" onclick="goPrepa()">📄 Prépa</button>
             <button class="btn-action btn-logi" onclick="goLogi()">🏕️ Logistique</button>
+            <button class="btn-action btn-rex" onclick="analyseRex()">📚 Analyse REX</button>
             <button class="btn-action btn-print" onclick="printSheet()">🖨️ Imprimer A3</button>
             <button class="btn-action btn-save" onclick="save(false)">💾 ENREGISTRER</button>
+        </div>
+    </div>
+
+    <div id="rex-fen" onclick="if(event.target===this) fermerRex()">
+        <div class="boite">
+            <div class="tete">
+                <h3>📚 Analyse des retours d'expérience</h3>
+                <button onclick="fermerRex()">Fermer</button>
+            </div>
+            <div id="rex-fen-corps"></div>
         </div>
     </div>
 
@@ -1724,6 +1825,7 @@
         </div>
         <div class="footer-sticky">
             <button class="btn-action btn-other" onclick="switchScreen('screen-form')">Retour</button>
+            <button class="btn-action btn-rex" onclick="analyseRex()">📚 Analyse REX</button>
             <button class="btn-action btn-prepadoc" onclick="goPrepaDoc()">📑 Préparation de travail</button>
             <button class="btn-action btn-save" onclick="save(false)">💾 ENREGISTRER TOUT</button>
         </div>
@@ -2056,6 +2158,7 @@
 
         // --- 4. ECOUTE TEMPS REEL FIREBASE ---
         // Inutile en mode partage : on ne charge que le chantier concerné.
+        if(!LECTURE) chargerRex();
         if(!LECTURE) db.ref('chantiers').on('value', (snapshot) => {
             const data = snapshot.val();
             // Convertir les objets firebase en tableau
@@ -2789,7 +2892,8 @@
             await goCarte();
         }
         function goOptions() { switchScreen('screen-options'); fillTensionSelect(); renderEquipes();
-                               renderLignes(); renderOperateurs(); renderSecours(); renderVersion(); }
+                               renderLignes(); renderOperateurs(); renderSecours(); renderVersion();
+                               renderRex(); }
 
         // La date du fichier servi : elle dit sans ambiguite si l'on tourne
         // sur la derniere version ou sur une copie gardee en cache.
@@ -3906,6 +4010,960 @@
                 if(Object.keys(jours).length) v[sem] = jours;
             });
             return v;
+        }
+
+        // ==================================================================
+        //  LA BIBLIOTHÈQUE DE RETOURS D'EXPÉRIENCE
+        //  Les REX se saisissent sur Kizéo et en sortent en PDF. Le document
+        //  compte peu : ce qui sert, c'est la leçon qu'il porte. On relève
+        //  donc à l'entrée le contexte du chantier — liaison, tension, type,
+        //  pylônes — et chaque ligne du tableau « Éléments de REX par
+        //  thématique », puis on range le tout dans la base. Le PDF reste
+        //  joint, pour preuve et pour relecture, mais il ne descend que si
+        //  on l'ouvre.
+        //
+        //  L'unité n'est pas le document : c'est la leçon. Un REX en porte
+        //  une à vingt, et c'est la leçon qu'on propose, pas le fichier.
+        // ==================================================================
+        const REX_MAX = 3 * 1024 * 1024;
+        let rexBase = {};          // id -> fiche
+        let rexCharge = false;
+        let rexIdx = null;         // index BM25, reconstruit quand la base bouge
+
+        // Un même mot écrit de dix façons : on ne compare que des formes
+        // réduites, sans accent, sans ponctuation, sans casse.
+        function rexSlug(v) {
+            return String(v || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+                   .toLowerCase().replace(/[^a-z0-9]/g, '');
+        }
+
+        // --- Les thématiques du formulaire --------------------------------
+        // Le formulaire classe déjà chaque leçon, et cet étiquetage vaut
+        // mieux que tout ce qu'on devinerait du texte : il a été posé par
+        // celui qui était sur le chantier. Chaque thématique désigne les
+        // pages de la préparation où sa leçon se lira utilement.
+        const REX_THEMES = {
+            accesetmeteo:           { lib: 'Accès et météo',           pages: ['secours', 'moyens'] },
+            daoenip:                { lib: 'DAOE / NIP',               pages: ['annexes', 'travaux'] },
+            moyensmateriels:        { lib: 'Moyens matériels',         pages: ['outillage', 'adequation'] },
+            moyenshumains:          { lib: 'Moyens humains',           pages: ['moyens'] },
+            organisationduchantier: { lib: 'Organisation du chantier', pages: ['modeop', 'planif'] },
+            securitepdp:            { lib: 'Sécurité / PdP',           pages: ['regles', 'modeop'] },
+            environnement:          { lib: 'Environnement',            pages: ['sue', 'annexes'] },
+            consignation:           { lib: 'Consignation',             pages: ['travaux', 'maltcc'] },
+            vegetation:             { lib: 'Végétation',               pages: ['modeop'] },
+            relationaveclestiers:   { lib: 'Relation avec les tiers',  pages: ['travaux', 'annexes'] },
+            environnementtiers:     { lib: 'Environnement et tiers',   pages: ['sue', 'travaux'] },
+            preparationetetudesmecaniques:
+                                    { lib: 'Préparation et études mécaniques',
+                                                                       pages: ['modeop', 'adequation'] },
+            qualite:                { lib: 'Qualité',                  pages: ['modeop'] }
+        };
+        function rexThemeLib(slug, brut) {
+            const t = REX_THEMES[slug];
+            if(t) return t.lib;
+            return String(brut || '').replace(/\s+/g, ' ').trim() || 'Autre';
+        }
+
+        // --- Le vocabulaire du métier -------------------------------------
+        // Ce qui compte n'est pas le mot, c'est l'idée : « manchon »,
+        // « sertissage » et « matrice » parlent du même geste. Cette table
+        // est ce qui distingue un rapprochement d'une recherche par mot
+        // clé : elle ramène dix formulations à un concept.
+        const REX_CONCEPTS = [
+            { id: 'acces', lib: 'Accès et pistes', mots:
+              ['acces', 'piste', 'chemin', 'cadenas', 'barriere', 'portail', 'bourbier', 'portance',
+               'orniere', 'embourbe', 'franchissement', 'gue', 'tonnage', 'quad', 'tracteur',
+               'inaccessible', 'bloque', 'clef', 'parcelle', 'cloture'] },
+            { id: 'meteo', lib: 'Météo', mots:
+              ['meteo', 'vent', 'orage', 'pluie', 'gel', 'verglas', 'neige', 'canicule', 'chaleur',
+               'brouillard', 'foudre', 'temperature', 'boue', 'humidite'] },
+            { id: 'deroulage', lib: 'Déroulage et câbles', mots:
+              ['deroulage', 'derouleuse', 'treuil', 'frein', 'chaussette', 'cabestan', 'poulie',
+               'pilote', 'touret', 'retente', 'fleche', 'regleur', 'conducteur', 'garde', 'ocp'] },
+            { id: 'manchonnage', lib: 'Manchonnage', mots:
+              ['manchon', 'manchonnage', 'sertissage', 'sertir', 'matrice', 'presse', 'raccord',
+               'jonction', 'douille'] },
+            { id: 'malt', lib: 'MALT / CC et consignation', mots:
+              ['malt', 'vatn', 'equipotentielle', 'courtcircuit', 'shunt', 'perche', 'terre',
+               'consignation', 'regime', 'a1ec', 'a2ec', 'retrait'] },
+            { id: 'nacelle', lib: 'Nacelle / PEMP', mots:
+              ['nacelle', 'pemp', 'panier', 'elevateur', 'telescopique', 'araignee'] },
+            { id: 'levage', lib: 'Levage et efforts', mots:
+              ['grue', 'levage', 'elingue', 'manille', 'crochet', 'palonnier', 'verin', 'palan',
+               'oeillet', 'manucroche', 'charge', 'effort', 'ancrage', 'dynamometre', 'tirfor'] },
+            { id: 'hauteur', lib: 'Travail en hauteur', mots:
+              ['harnai', 'antichute', 'longe', 'actsafe', 'echelle', 'escalade', 'chute',
+               'plateforme', 'glissant', 'glissade', 'pf30', 'pf', 'grimpeur'] },
+            { id: 'outillage', lib: 'Outillage et petit matériel', mots:
+              ['visseuse', 'choc', 'batterie', 'chargeur', 'electrogene', 'perceuse',
+               'percage', 'foret', 'rivet', 'plaque', 'etalonnage', 'achat', 'commande', 'rupture',
+               'outil', 'outillage'] },
+            { id: 'vehicules', lib: 'Véhicules et chargement', mots:
+              ['camion', 'hayon', 'fourgon', 'benne', 'chargement', 'remorque', 'unimog', 'atelier',
+               'rangement', 'sangle', 'plateau', 'lourd', 'vehicule'] },
+            { id: 'vegetation', lib: 'Végétation', mots:
+              ['elagage', 'abattage', 'debroussaillage', 'arbre', 'branche', 'bucheron',
+               'tronconneuse', 'haie', 'broyage', 'coupe', 'bois'] },
+            { id: 'tiers', lib: 'Tiers et riverains', mots:
+              ['riverain', 'proprietaire', 'exploitant', 'agriculteur', 'convention', 'ferree',
+               'sncf', 'deviation', 'croisement', 'autorisation', 'mairie', 'gendarmerie',
+               'refu', 'plainte', 'arrete', 'circulation'] },
+            { id: 'environnement', lib: 'Environnement', mots:
+              ['environnement', 'pollution', 'huile', 'hydrocarbure', 'dechet', 'dib', 'nidification',
+               'faune', 'flore', 'natura', 'humide', 'captage', 'sevego', 'seveso', 'amiante'] },
+            { id: 'documents', lib: 'Documents et régime', mots:
+              ['nip', 'daoe', 'icare', 'attestation', 'pave', 'gdp', 'groupement',
+               'validation', 'document', 'unifilaire', 'ppe'] },
+            { id: 'securite', lib: 'Sécurité et presque-accident', mots:
+              ['accident', 'blessure', 'exclusion', 'lunette', 'epi', 'casque', 'gant', 'incident',
+               'dangereux', 'danger', 'presque', 'visage', 'projection', 'secour'] },
+            { id: 'organisation', lib: 'Organisation et préparation', mots:
+              ['planning', 'delai', 'anticipation', 'brief', 'pjb', 'papoto', 'promo', 'promotion',
+               'effectif', 'horaire', 'retard', 'coactivite', 'prestataire', 'sous', 'traitant'] },
+            { id: 'logistique', lib: 'Logistique et gîte', mots:
+              ['gite', 'hebergement', 'repa', 'deplacement', 'trajet', 'cantine', 'hotel'] }
+        ];
+        const REX_CONCEPT = {};
+        REX_CONCEPTS.forEach(c => REX_CONCEPT[c.id] = c);
+
+        // Les mots vides du français, et ceux qui ne disent rien du métier :
+        // « chantier » est dans tous les REX, il ne départage personne.
+        const REX_STOP = new Set(('alor au aucun aussi autre avec avoir bien car ce cela ces cet cette '
+            + 'chez comme dan de de des du elle en encore est et etait etre eux fait faire il ils je la '
+            + 'le les leur lui mai mais me meme moin mon ne ni no notre nou on ont ou par pa peu plu '
+            + 'pour quand que quel qui sa san se sera se si son sont sur ta tou tout tre tres un une '
+            + 'ver vo votre vou y ete avait avon bonne pratique difficulte chantier rex equipe '
+            + 'support pylone pyl portee travaux travail jour heure prevoir voir faut oui non neant '
+            + 'sans objet ras').split(' '));
+
+        function rexMots(v) {
+            return String(v || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+                   .toLowerCase().split(/[^a-z0-9]+/)
+                   .map(w => w.replace(/s$/, ''))
+                   .filter(w => w.length > 2 && !REX_STOP.has(w));
+        }
+
+        // Les concepts qu'un texte touche, dans l'ordre où ils pèsent.
+        function conceptsDuTexte(txt) {
+            const mots = new Set(rexMots(txt));
+            const out = [];
+            REX_CONCEPTS.forEach(c => {
+                let n = 0;
+                c.mots.forEach(m => { if(mots.has(m.replace(/s$/, ''))) n++; });
+                if(n) out.push({ id: c.id, n: n });
+            });
+            return out.sort((a, b) => b.n - a.n).map(x => x.id);
+        }
+
+        // ------------------------------------------------------------------
+        //  LA LECTURE D'UN REX KIZÉO
+        //  Le document a cinq colonnes à des abscisses fixes. On lit donc
+        //  les positions des mots plutôt qu'un texte mis à plat, où les
+        //  cellules se mélangeraient : la thématique d'une ligne finirait
+        //  collée au récit de la précédente.
+        // ------------------------------------------------------------------
+        const REX_COLS = [[0, 100, 'them'], [100, 170, 'type'], [170, 335, 'texte'],
+                          [335, 460, 'photo'], [460, 9999, 'perim']];
+        const REX_ENTETES = new Set(['thematique', 'durex', 'type', 'retourdexperience',
+                                     'photo', 'perimetre']);
+
+        function base64Octets(base64) {
+            const bin = atob(base64);
+            const buf = new Uint8Array(bin.length);
+            for(let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+            return buf;
+        }
+
+        // Chaque fragment de texte avec sa page et sa position. Les blancs
+        // sont gardés : ce sont eux qui séparent les mots dans un PDF.
+        async function itemsDuPdf(base64) {
+            const lib = await chargerPdfJs();
+            const doc = await lib.getDocument({ data: base64Octets(base64) }).promise;
+            const out = [];
+            for(let n = 1; n <= doc.numPages; n++) {
+                const c = await (await doc.getPage(n)).getTextContent();
+                c.items.forEach(it => {
+                    if(!it.str) return;
+                    out.push({ p: n, x: Math.round(it.transform[4]),
+                               y: Math.round(it.transform[5]), s: it.str });
+                });
+            }
+            return out;
+        }
+
+        // Un rang qui croît du début à la fin du document, pages comprises.
+        function rexRang(it) { return it.p * 1000 + (900 - it.y); }
+        function rexCol(x) {
+            for(const c of REX_COLS) if(x >= c[0] && x < c[1]) return c[2];
+            return 'perim';
+        }
+        // Le texte d'une suite d'items, une ligne par ligne de base.
+        function texteDesItems(its) {
+            let out = '', y = null, p = null, ligne = '';
+            its.forEach(it => {
+                if(y !== null && (it.p !== p || Math.abs(it.y - y) > 2)) {
+                    out += ligne.trim() + '\n'; ligne = '';
+                }
+                y = it.y; p = it.p;
+                ligne += it.s;
+            });
+            return out + ligne.trim() + '\n';
+        }
+
+        function analyserRexKizeo(items) {
+            const t = texteDesItems(items).replace(/ /g, ' ');
+            const u_ = re => { const m = re.exec(t); return m ? m[1].trim() : ''; };
+            const liste = v => String(v || '').split(/[,;\/]+|\set\s/i)
+                               .map(x => x.trim()).filter(Boolean);
+
+            const r = {};
+            r.cdt     = u_(/^\s*CdT\s*:\s*(.*?)(?:\s+Equipe CdT\s*:|$)/mi);
+            r.equipe  = u_(/Equipe CdT\s*:\s*(.*?)(?:\s+GMR\s|$)/i);
+            r.gmr     = u_(/\bGMR\s+([^\n]+)/i);
+            r.chef    = u_(/Chef ou Adj\s*:\s*([^\n]+)/i);
+            r.date    = u_(/Date cr.ation REX\s*:\s*(\d{1,2}\/\d{1,2}\/\d{4})/i);
+            r.kizeo   = u_(/Identifiant\s*kiz.o\s*:\s*(\d+)/i);
+            r.modele  = u_(/Type du chantier\s*:\s*([^\n]+)/i);
+            r.genre   = u_(/^\s*Type chantier\s*:\s*([^\n]+)/mi);
+            r.desig   = u_(/D.signation du chantier\s*:\s*([^\n]+)/i);
+            r.fini    = u_(/Travaux termin.s\s*\?\s*:\s*([^\n]+)/i);
+            r.reste   = u_(/Travaux restants si chantier pas termin.s\s*:\s*([^\n]+)/i);
+            r.tensions = liste(u_(/Tension\(s\)\s*:\s*([^\n]+)/i))
+                         .map(x => x.replace(/\s+/g, ' ').trim());
+            r.lits    = liste(u_(/Ouvrage\(s\)\s*\(Ligne\)\s*:\s*([^\n]+)/i))
+                        .map(x => x.toUpperCase());
+            // Les pylônes se lisent dans la désignation, avec la même règle
+            // que la nature des travaux : « Pyl 176, 174 », « Portée 73-74 ».
+            r.sup = supportsDuTexte(r.desig);
+
+            // --- Le tableau des leçons ---
+            const deb = items.findIndex(x => /elementsderexparthematique/.test(rexSlug(x.s)));
+            const rDeb = deb < 0 ? -1 : rexRang(items[deb]);
+            const fin = items.findIndex(x => /^suiteadonner/.test(rexSlug(x.s)));
+            const rFin = fin < 0 ? Infinity : rexRang(items[fin]);
+
+            const tab = rDeb < 0 ? [] : items.filter(x => {
+                const g = rexRang(x);
+                if(g <= rDeb || g >= rFin) return false;
+                if(!x.s.trim()) return true;
+                const sl = rexSlug(x.s);
+                return !(REX_ENTETES.has(sl) && rexCol(x.x) !== 'texte');
+            });
+
+            // Où commence chaque ligne : la colonne Type ou Périmètre le dit
+            // — elles tiennent sur une ligne et s'alignent en haut de la
+            // cellule. Si les deux manquent, l'écart entre deux thématiques
+            // tranche : un retour à la ligne dans une cellule fait onze
+            // points, le passage à la ligne suivante bien davantage.
+            const debuts = [];
+            tab.forEach(x => {
+                if(!x.s.trim()) return;
+                const c = rexCol(x.x);
+                if(c === 'type' || c === 'perim') debuts.push(rexRang(x));
+            });
+            let prec = null;
+            tab.forEach(x => {
+                if(!x.s.trim() || rexCol(x.x) !== 'them') return;
+                const g = rexRang(x);
+                if(prec === null || g - prec > 14) debuts.push(g);
+                prec = g;
+            });
+            const bornes = [];
+            debuts.sort((a, b) => a - b).forEach(g => {
+                if(!bornes.length || g - bornes[bornes.length - 1] > 5) bornes.push(g);
+            });
+
+            const lignes = bornes.map(() => ({ them: [], type: [], texte: [], perim: [] }));
+            tab.forEach(x => {
+                const g = rexRang(x);
+                let k = -1;
+                for(let i = 0; i < bornes.length; i++) if(bornes[i] <= g + 4) k = i;
+                if(k < 0) return;
+                const c = rexCol(x.x);
+                if(c === 'photo') return;
+                lignes[k][c].push(x);
+            });
+
+            r.lecons = [];
+            lignes.forEach(l => {
+                const texte = texteDesItems(l.texte).split('\n')
+                              .map(x => x.replace(/\s+/g, ' ').trim())
+                              .filter(Boolean).join('\n');
+                if(!texte) return;
+                const brut = l.them.map(x => x.s).join('');
+                const slug = rexSlug(brut);
+                r.lecons.push({
+                    them: slug,
+                    themLib: rexThemeLib(slug, brut),
+                    type: l.type.map(x => x.s).join('').replace(/\s+/g, ' ').trim(),
+                    perim: l.perim.map(x => x.s).join('').replace(/\s+/g, ' ').trim(),
+                    texte: texte,
+                    sup: supportsDuTexte(texte),
+                    concepts: conceptsDuTexte(texte)
+                });
+            });
+            return r;
+        }
+
+        // ------------------------------------------------------------------
+        //  LA BASE
+        //  Deux nœuds : la fiche, légère, que tout le monde charge, et le
+        //  PDF, qui ne descend que si on l'ouvre.
+        // ------------------------------------------------------------------
+        function rexId(f) {
+            if(f.kizeo) return 'k' + f.kizeo;
+            return 'x' + rexSlug((f.lits[0] || '') + (f.date || '') + (f.desig || '')).slice(0, 28);
+        }
+        function rexDateMs(f) {
+            const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(String(f.date || ''));
+            return m ? new Date(+m[3], +m[2] - 1, +m[1]).getTime() : 0;
+        }
+        function chargerRex() {
+            if(LECTURE) return;
+            db.ref('rex').on('value', s => {
+                rexBase = s.val() || {};
+                rexCharge = true;
+                rexIdx = null;
+                const o = document.getElementById('screen-options');
+                if(o && o.classList.contains('active')) renderRex();
+            }, () => { rexCharge = true; });
+        }
+
+        // ------------------------------------------------------------------
+        //  L'IMPORT DU CLASSEUR KIZÉO
+        //  L'export Excel porte tout le corpus d'un coup, et mieux que les
+        //  PDF : une ligne par leçon, le texte intact, sans les coupures de
+        //  colonne d'un document mis en page. Les PDF restent utiles pour le
+        //  REX qui arrive seul et pour garder le document ; les deux se
+        //  rejoignent sur l'identifiant Kizéo, qui est le même.
+        // ------------------------------------------------------------------
+        const XLSX_URL = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+        let xlsxPret = null;
+        function chargerXlsx() {
+            if(xlsxPret) return xlsxPret;
+            xlsxPret = chargerScript(XLSX_URL, 25000).then(() => {
+                if(!window.XLSX) throw new Error("Le lecteur de classeur n'a pas pu \u00eatre t\u00e9l\u00e9charg\u00e9.");
+                return window.XLSX;
+            });
+            return xlsxPret;
+        }
+
+        // Les intitulés peuvent bouger d'un export à l'autre : on les
+        // reconnaît sur leur forme réduite, d'abord à l'identique, puis
+        // sur leur début.
+        const REX_COLONNES = {
+            kizeo:   ['identifiantunique', 'identifiantkizeo'],
+            date:    ['datedecreation', 'datecreationrex'],
+            equipe:  ['equipecdt'],
+            cdt:     ['nomcdt'],
+            tension: ['tension', 'tensions'],
+            lit:     ['ouvrageligne', 'ouvragesligne'],
+            modele:  ['typeduchantier'],
+            desig:   ['designationduchantier'],
+            them:    ['tableauthematiquedurex', 'thematiquedurex'],
+            type:    ['tableautype'],
+            texte:   ['tableauretourdexperience', 'retourdexperience'],
+            perim:   ['tableauinteretdelelementderex', 'perimetredurex'],
+            fini:    ['travauxtermines'],
+            reste:   ['travauxrestants'],
+            chef:    ['nommanagerchefouadj', 'chefouadj']
+        };
+
+        function colonnesRex(entetes) {
+            const sl = entetes.map(x => rexSlug(x));
+            const col = {}, pris = new Set();
+            Object.keys(REX_COLONNES).forEach(k => {
+                let i = sl.findIndex((x, j) => !pris.has(j) && REX_COLONNES[k].indexOf(x) >= 0);
+                if(i < 0) i = sl.findIndex((x, j) => !pris.has(j)
+                             && REX_COLONNES[k].some(c => x.indexOf(c) === 0));
+                if(i >= 0) { col[k] = i; pris.add(i); }
+            });
+            // Le sous-type du chantier change de colonne selon le type :
+            // visite, conventionnel ou autres. On prend celle qui parle.
+            col.genres = sl.map((x, j) => (x.indexOf('typechantier') === 0
+                         || x.indexOf('typedechantier') === 0) && j !== col.modele ? j : -1)
+                         .filter(j => j >= 0);
+            return col;
+        }
+
+        // Une date de classeur : un nombre de jours depuis 1899, ou déjà
+        // une date selon la façon dont la colonne était formatée.
+        function dateClasseur(v) {
+            if(v instanceof Date && !isNaN(v)) return v;
+            const n = parseFloat(v);
+            if(isFinite(n) && n > 20000 && n < 90000)
+                return new Date(Math.round((n - 25569) * 86400000));
+            const m = /^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/.exec(String(v || ''));
+            return m ? new Date(+m[3], +m[2] - 1, +m[1]) : null;
+        }
+        function jourFr(d) {
+            if(!d || isNaN(d)) return '';
+            return String(d.getDate()).padStart(2, '0') + '/'
+                 + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
+        }
+
+        // Un REX déjà là ne se perd pas : le classeur fait foi sur les
+        // leçons, le PDF apporte le document. L'un n'efface pas l'autre.
+        function fusionnerRex(vieux, neuf) {
+            if(!vieux) return neuf;
+            const f = Object.assign({}, vieux, neuf);
+            Object.keys(vieux).forEach(k => {
+                const x = neuf[k];
+                if(x === undefined || x === null || x === ''
+                || (Array.isArray(x) && !x.length)) f[k] = vieux[k];
+            });
+            if(neuf.src === 'pdf' && vieux.src === 'xlsx' && (vieux.lecons || []).length) {
+                f.lecons = vieux.lecons;      // le classeur dit mieux le texte
+                f.src = 'xlsx';
+            }
+            if(!neuf.doc && vieux.doc) f.doc = vieux.doc;
+            return f;
+        }
+
+        async function importerRexClasseur(input) {
+            const f = (input.files || [])[0];
+            input.value = '';
+            if(!f) return;
+            const etat = document.getElementById('rex-etat');
+            const dit = m => { if(etat) etat.textContent = m; };
+            try {
+                dit('Lecture du classeur\u2026');
+                const X = await chargerXlsx();
+                const wb = X.read(new Uint8Array(await f.arrayBuffer()),
+                                  { type: 'array', cellDates: true });
+                const ws = wb.Sheets[wb.SheetNames[0]];
+                const tab = X.utils.sheet_to_json(ws, { header: 1, blankrows: false });
+                if(tab.length < 2) { alert('Ce classeur est vide.'); dit(''); return; }
+                const col = colonnesRex((tab[0] || []).map(x => String(x || '')));
+                if(col.kizeo === undefined || col.texte === undefined) {
+                    alert("Ce classeur n'a pas la forme d'un export de REX Kiz\u00e9o :"
+                        + " ni identifiant, ni colonne de retour d'exp\u00e9rience.");
+                    dit(''); return;
+                }
+                const ch = (r, k) => col[k] === undefined ? '' :
+                    String(r[col[k]] === undefined || r[col[k]] === null ? '' : r[col[k]]).trim();
+
+                // Une ligne par leçon, l'en-tête du REX répété : on regroupe
+                // sur l'identifiant, et chaque champ prend la première
+                // valeur qu'une des lignes veut bien donner.
+                const par = new Map();
+                tab.slice(1).forEach(r => {
+                    if(!r || !r.length) return;
+                    const id = ch(r, 'kizeo');
+                    const texte = ch(r, 'texte');
+                    if(!id && !texte) return;
+                    const cle = id || ('sans' + par.size);
+                    let g = par.get(cle);
+                    if(!g) { g = { kizeo: id, lignes: [] }; par.set(cle, g); }
+                    const prend = (k, v) => { if(!g[k] && v) g[k] = v; };
+                    prend('equipe',  ch(r, 'equipe'));
+                    prend('cdt',     ch(r, 'cdt'));
+                    prend('chef',    ch(r, 'chef'));
+                    prend('modele',  ch(r, 'modele'));
+                    prend('desig',   ch(r, 'desig'));
+                    prend('fini',    ch(r, 'fini'));
+                    prend('reste',   ch(r, 'reste'));
+                    prend('tension', ch(r, 'tension'));
+                    prend('lit',     ch(r, 'lit'));
+                    (col.genres || []).forEach(j => {
+                        const v = r[j] === undefined || r[j] === null ? '' : String(r[j]).trim();
+                        if(v) prend('genre', v);
+                    });
+                    if(!g.jour && col.date !== undefined) {
+                        const d = dateClasseur(r[col.date]);
+                        if(d) g.jour = d;
+                    }
+                    if(texte) g.lignes.push({ them: ch(r, 'them'), type: ch(r, 'type'),
+                                              texte: texte, perim: ch(r, 'perim') });
+                });
+
+                const liste = v => String(v || '').split(/[,;\/]+|\set\s/i)
+                                   .map(x => x.trim()).filter(Boolean);
+                const maj = {};
+                let n = 0, lec = 0;
+                par.forEach(g => {
+                    const fiche = {
+                        kizeo: g.kizeo || '', src: 'xlsx',
+                        date: jourFr(g.jour), equipe: g.equipe || '', cdt: g.cdt || '',
+                        chef: g.chef || '', gmr: '', modele: g.modele || '',
+                        genre: g.genre || '', desig: g.desig || '',
+                        fini: g.fini || '', reste: g.reste || '',
+                        tensions: liste(g.tension).map(x => x.replace(/\s+/g, ' ')),
+                        lits: liste(g.lit).map(x => x.toUpperCase()),
+                        sup: supportsDuTexte(g.desig || ''),
+                        maj: Date.now()
+                    };
+                    fiche.lecons = g.lignes.map(l => {
+                        const texte = String(l.texte).split(/\r?\n/)
+                                      .map(x => x.replace(/\s+/g, ' ').trim())
+                                      .filter(Boolean).join('\n');
+                        const slug = rexSlug(l.them);
+                        return { them: slug, themLib: rexThemeLib(slug, l.them),
+                                 type: l.type, perim: l.perim, texte: texte,
+                                 sup: supportsDuTexte(texte),
+                                 concepts: conceptsDuTexte(texte) };
+                    }).filter(l => l.texte);
+                    if(!fiche.lecons.length) return;
+                    const id = rexId(fiche);
+                    fiche.id = id;
+                    maj['rex/' + id] = fusionnerRex(rexBase[id], fiche);
+                    n++; lec += fiche.lecons.length;
+                });
+                if(!n) { alert('Aucun REX exploitable dans ce classeur.'); dit(''); return; }
+                dit('Enregistrement\u2026');
+                await db.ref().update(maj);
+                dit('');
+                souffler(n + ' REX repris du classeur, ' + lec + ' le\u00e7on(s)');
+            } catch(e) {
+                dit('');
+                alert("Le classeur n'a pas pu \u00eatre lu :\n" + e.message);
+                console.warn('Import du classeur REX :', e);
+            }
+        }
+
+        async function importerRex(input) {
+            const fs = [...(input.files || [])];
+            input.value = '';
+            if(!fs.length) return;
+            const etat = document.getElementById('rex-etat');
+            const dit = m => { if(etat) etat.textContent = m; };
+            let ok = 0, maj = 0;
+            const rates = [];
+            for(let i = 0; i < fs.length; i++) {
+                const f = fs[i];
+                dit('Lecture de ' + (i + 1) + ' / ' + fs.length + '…');
+                if(f.type !== 'application/pdf') { rates.push(f.name + ' : pas un PDF'); continue; }
+                if(f.size > REX_MAX) { rates.push(f.name + ' : plus de 3 Mo'); continue; }
+                try {
+                    const data = await lireBase64(f);
+                    const fiche = analyserRexKizeo(await itemsDuPdf(data));
+                    if(!fiche.lits.length && !fiche.lecons.length) {
+                        rates.push(f.name + " : rien de reconnu, ce n'est pas un REX Kizéo");
+                        continue;
+                    }
+                    const id = rexId(fiche);
+                    fiche.id = id;
+                    fiche.src = 'pdf';
+                    fiche.doc = { nom: f.name, taille: f.size };
+                    fiche.maj = Date.now();
+                    const deja = !!rexBase[id];
+                    await db.ref('rex/' + id).set(fusionnerRex(rexBase[id], fiche));
+                    await db.ref('rexdoc/' + id).set({ nom: f.name, taille: f.size,
+                                                       date: Date.now(), data: data });
+                    if(deja) maj++; else ok++;
+                } catch(e) {
+                    rates.push(f.name + ' : ' + e.message);
+                }
+            }
+            dit('');
+            souffler(ok + ' REX ajouté(s)' + (maj ? ', ' + maj + ' mis à jour' : '')
+                   + (rates.length ? ', ' + rates.length + ' écarté(s)' : ''));
+            if(rates.length) alert('Documents écartés :\n\n' + rates.join('\n'));
+        }
+
+        async function ouvrirRexPdf(id) {
+            const v = (await db.ref('rexdoc/' + id).once('value')).val();
+            if(!v || !v.data) { alert("Le PDF de ce REX n'est pas enregistré."); return; }
+            const a = document.createElement('a');
+            a.href = 'data:application/pdf;base64,' + v.data;
+            a.download = v.nom || (id + '.pdf');
+            a.click();
+        }
+        async function supprimerRex(id) {
+            const f = rexBase[id];
+            if(!f) return;
+            if(!confirm('Retirer le REX ' + (f.lits || []).join(', ') + ' du '
+                      + (f.date || '?') + ' de la bibliothèque ?')) return;
+            await db.ref('rexdoc/' + id).remove().catch(() => {});
+            await db.ref('rex/' + id).remove().catch(e => alert('Erreur : ' + e.message));
+        }
+
+        // ------------------------------------------------------------------
+        //  LE RAPPROCHEMENT
+        //  Deux familles de signaux. Les durs — même liaison, mêmes pylônes,
+        //  même type de chantier, même saison — se vérifient et pèsent lourd.
+        //  Le souple — la ressemblance des textes — ne sert qu'à départager,
+        //  et se mesure en BM25 : un terme rare comme « manchon » compte, un
+        //  terme courant comme « support » ne compte presque pas. C'est ce
+        //  qui sépare ce rapprochement d'une recherche par mot clé.
+        // ------------------------------------------------------------------
+        function rexIndex() {
+            if(rexIdx) return rexIdx;
+            const docs = [];
+            Object.keys(rexBase).forEach(id => {
+                const f = rexBase[id];
+                (f.lecons || []).forEach((l, i) => {
+                    docs.push({ id: id, i: i, f: f, l: l,
+                                mots: rexMots((l.texte || '') + ' ' + (l.themLib || '')
+                                            + ' ' + (f.desig || '') + ' ' + (f.genre || '')) });
+                });
+            });
+            const df = {};
+            docs.forEach(d => new Set(d.mots).forEach(w => df[w] = (df[w] || 0) + 1));
+            const moy = docs.length ? docs.reduce((s, d) => s + d.mots.length, 0) / docs.length : 1;
+            rexIdx = { docs: docs, df: df, n: docs.length || 1, moy: moy || 1 };
+            return rexIdx;
+        }
+        function bm25(d, req, idx) {
+            const tf = {};
+            d.mots.forEach(w => tf[w] = (tf[w] || 0) + 1);
+            const k1 = 1.5, b = 0.75;
+            let s = 0;
+            req.forEach((poids, w) => {
+                const f = tf[w];
+                if(!f) return;
+                const n = idx.df[w] || 0;
+                const idf = Math.log(1 + (idx.n - n + 0.5) / (n + 0.5));
+                s += poids * idf * (f * (k1 + 1)) / (f + k1 * (1 - b + b * d.mots.length / idx.moy));
+            });
+            return s;
+        }
+
+        // --- Tout ce que le dossier sait dire -----------------------------
+        // La fiche du chantier, la préparation de travail page par page et
+        // la logistique. Les cases ne se valent pas : la nature des travaux
+        // et le mode opératoire disent le chantier, le reste l'entoure. On
+        // leur donne donc un poids, au lieu de tout jeter dans le même sac.
+        const REX_SANS = new Set(['sec-sup-lu', 'mo-logi-vu', 'pl-logi-vu']);
+
+        function rexDossier() {
+            const req = new Map();
+            const vus = [];
+            const poser = (txt, poids, nom) => {
+                const s = String(txt || '').trim();
+                if(s.length < 4) return;
+                const m = rexMots(s);
+                if(!m.length) return;
+                if(nom && poids >= 2) vus.push(nom);
+                m.forEach(w => req.set(w, Math.max(req.get(w) || 0, poids)));
+            };
+            const vl = id => { const e = document.getElementById(id); return e ? String(e.value || '') : ''; };
+            const v = (prepa && prepa.v) || {};
+            const L = (prepa && prepa.l) || {};
+
+            // Ce qui dit le chantier.
+            poser(vl('inp-desc'), 3, 'nature des travaux');
+            poser(v['tv-nature'], 3, 'nature des travaux');
+            poser(v['tv-remarques'], 2, 'remarques du chantier');
+            poser(vl('inp-comments'), 2, 'commentaires internes');
+            ['mo-l', 'mo2-l'].forEach(c => (L[c] || []).forEach(r => {
+                if(!r) return;
+                poser(r.sect, 2, 'mode opératoire');
+                poser(r.t, 2, 'mode opératoire');
+                poser(r.r, 2, 'analyse de risques');
+                poser(r.a, 2, 'actions préventives');
+            }));
+            // Le matériel et l'outillage : un REX sur un treuil n'intéresse
+            // que les chantiers qui en emportent un.
+            ['out-l', 'mat-l', 'cab-l', 'metro-l'].forEach(c => (L[c] || []).forEach(r => {
+                if(!r) return;
+                Object.keys(r).forEach(k => poser(r[k], 2, 'matériel et outillage'));
+            }));
+            (chargement || []).forEach(x => poser(x && (x.lib || x.nom || x.designation), 2,
+                                                  'chargement'));
+            // Tout le reste de la préparation, en fond : ce qui est écrit
+            // quelque part compte un peu, même si personne n'y pense.
+            Object.keys(v).forEach(k => {
+                if(REX_SANS.has(k)) return;
+                const x = v[k];
+                if(typeof x !== 'string' || x.length < 5) return;
+                if(/^[\d\s\/.:-]+$/.test(x) || /^[\[{]/.test(x)) return;
+                poser(x, 1);
+            });
+            Object.keys(L).forEach(c => (L[c] || []).forEach(r => {
+                if(!r || typeof r !== 'object') return;
+                Object.keys(r).forEach(k => {
+                    const x = r[k];
+                    if(typeof x === 'string' && x.length >= 5) poser(x, 1);
+                });
+            }));
+            (piList || []).forEach(x => poser(x && x.lib, 1));
+            if(logi) Object.keys(logi).forEach(k => {
+                const x = logi[k];
+                if(typeof x === 'string') poser(x, 1);
+            });
+            return { req: req, sources: [...new Set(vus)] };
+        }
+
+        // Le chantier tel que le dossier le donne : il n'a pas besoin d'être
+        // enregistré pour qu'on lui cherche des REX.
+        function rexContexte() {
+            const vl = id => { const e = document.getElementById(id); return e ? String(e.value || '').trim() : ''; };
+            const lid = vl('inp-line');
+            const l = dbLignes.find(x => x.id === lid);
+            const v = (prepa && prepa.v) || {};
+            const L = (prepa && prepa.l) || {};
+            const d = rexDossier();
+
+            // Les pylônes : ceux de la fiche de secours, et ceux que la
+            // nature des travaux nomme.
+            const sup = new Set(supportsDuTexte(vl('inp-desc') + ' ' + (v['tv-nature'] || '')));
+            (L['sec-sup'] || []).forEach(r => {
+                const n = r && String(r.sup || '').trim();
+                if(n) sup.add(n);
+            });
+            // Les concepts du dossier se lisent sur ce qui le décrit, pas
+            // sur ses quatre-vingts cases.
+            const coeur = vl('inp-desc') + ' ' + (v['tv-nature'] || '') + ' '
+                        + ['mo-l', 'mo2-l'].map(c => (L[c] || []).map(r =>
+                              r ? [r.sect, r.t, r.r, r.a].join(' ') : '').join(' ')).join(' ')
+                        + ' ' + ['out-l', 'mat-l'].map(c => (L[c] || []).map(r =>
+                              r ? Object.values(r).join(' ') : '').join(' ')).join(' ');
+            const dt = vl('inp-start') ? new Date(vl('inp-start')) : null;
+            return {
+                lit: String(litDeLigne(lid) || '').toUpperCase(),
+                ligne: (l && l.n) || '',
+                tension: (l && l.t) || '',
+                modele: vl('inp-modele') || MODELES_FICHE[0],
+                cdt: vl('inp-cdt'),
+                sup: sup,
+                rangs: [...sup].map(rangSupport).filter(x => x < 1e9),
+                jour: dt && !isNaN(dt) ? dt.getTime() : 0,
+                concepts: new Set(conceptsDuTexte(coeur)),
+                req: d.req,
+                sources: d.sources
+            };
+        }
+
+        function scoreLecon(c, f, l, bm) {
+            let s = 0;
+            const pour = [];
+            // Un lien reel : le lieu ou le sujet. Le type de chantier, la
+            // saison et la gravite ne font que pondérer ; seuls, ils
+            // remonteraient n'importe quelle lecon de la bibliotheque.
+            let lien = false;
+            if(c.lit && (f.lits || []).indexOf(c.lit) >= 0) { s += 45; lien = true; pour.push('même liaison'); }
+            // Les pylones du REX et ceux que la lecon nomme elle-meme : le
+            // detail s'ajoute au contexte, il ne le remplace pas. Une lecon
+            // qui cite son support ne doit pas y perdre.
+            const sl = [...new Set([].concat(l.sup || [], f.sup || []))];
+            const com = sl.filter(n => c.sup.has(n));
+            if(com.length) {
+                s += 55; lien = true;
+                pour.push('pylône' + (com.length > 1 ? 's' : '') + ' ' + com.slice(0, 4).join(', '));
+            } else if(sl.length && c.rangs.length
+                   && sl.some(n => c.rangs.some(r => Math.abs(rangSupport(n) - r) <= 5000))) {
+                s += 22; lien = true; pour.push('pylônes voisins');
+            }
+            if(c.modele && f.modele === c.modele) { s += 10; pour.push('même type de chantier'); }
+            if(c.tension && (f.tensions || []).indexOf(c.tension) >= 0) s += 8;
+            const cc = (l.concepts || []).filter(x => c.concepts.has(x));
+            if(cc.length) {
+                s += Math.min(30, 12 * cc.length); lien = true;
+                pour.push(cc.slice(0, 2).map(x => ((REX_CONCEPT[x] || {}).lib || x).toLowerCase()).join(', '));
+            }
+            if(bm >= 1.2) lien = true;
+            s += Math.min(28, bm * 2.2);
+            // La saison compte : le gel, la nidification et la pousse ne
+            // tombent pas au même moment de l'année.
+            const dr = rexDateMs(f);
+            if(dr) {
+                if(c.jour) {
+                    const ec = Math.abs(((c.jour - dr) / 86400000) % 365.25);
+                    if(Math.min(ec, 365.25 - ec) < 45) { s += 7; pour.push('même saison'); }
+                }
+                const an = (Date.now() - dr) / (365.25 * 86400000);
+                if(an > 2) s -= Math.min(10, (an - 2) * 4);
+            }
+            if(c.cdt && f.cdt && rexSlug(f.cdt) === rexSlug(c.cdt)) s += 3;
+            if(/difficult/i.test(l.type || '')) s += 6;
+            return { s: lien ? s : 0, pour: pour };
+        }
+
+        // Les leçons retenues, regroupées par sujet : on propose des sujets,
+        // pas des documents. Deux leçons qui disent la même chose n'en font
+        // qu'une, avec son compte.
+        function rexSuggestions(c, seuil, lim) {
+            const idx = rexIndex();
+            const gard = [];
+            idx.docs.forEach(d => {
+                const r = scoreLecon(c, d.f, d.l, bm25(d, c.req, idx));
+                if(r.s >= seuil) gard.push({ id: d.id, i: d.i, f: d.f, l: d.l, s: r.s, pour: r.pour });
+            });
+            gard.sort((a, b) => b.s - a.s);
+
+            const grp = new Map();
+            gard.forEach(x => {
+                const cle = (x.l.concepts && x.l.concepts[0]) || x.l.them || 'autre';
+                const lib = (REX_CONCEPT[cle] || {}).lib || x.l.themLib || 'Autre';
+                let g = grp.get(cle);
+                if(!g) { g = { cle: cle, lib: lib, s: x.s, items: [] }; grp.set(cle, g); }
+                const sig = rexSlug(x.l.texte).slice(0, 40);
+                const jum = g.items.find(y => rexSlug(y.l.texte).slice(0, 40) === sig);
+                if(jum) { jum.aussi = (jum.aussi || 0) + 1; return; }
+                g.items.push(x);
+            });
+            return [...grp.values()].sort((a, b) => b.s - a.s)
+                   .map(g => { g.items = g.items.slice(0, 5); return g; })
+                   .slice(0, lim || 8);
+        }
+
+        // ------------------------------------------------------------------
+        //  CE QU'ON EN FAIT
+        //  Un REX qu'on lit ne change rien ; un REX qui écrit une ligne dans
+        //  la préparation change le chantier. Chaque leçon porte donc de
+        //  quoi la verser là où elle servira.
+        // ------------------------------------------------------------------
+        function texteLecon(id, i) {
+            const f = rexBase[id];
+            const l = f && (f.lecons || [])[i];
+            if(!l) return '';
+            return l.texte.replace(/\n+/g, ' ') + ' [REX ' + (f.lits || []).join('/')
+                 + ' ' + (f.date || '') + ']';
+        }
+        function verserRemarque(id, i) {
+            const txt = texteLecon(id, i);
+            if(!txt) return;
+            const cour = String(pv('tv-remarques') || '');
+            if(cour.indexOf(txt) >= 0) { souffler('Cette leçon y est déjà'); return; }
+            prepa.v['tv-remarques'] = (cour ? cour.replace(/\s*$/, '') + '\n' : '') + '• ' + txt;
+            majPrepaEtat();
+            souffler('Versé dans les remarques du chantier');
+        }
+        function verserModeOp(id, i) {
+            const f = rexBase[id];
+            const l = f && (f.lecons || [])[i];
+            if(!l) return;
+            const txt = texteLecon(id, i);
+            const bonne = /bonne/i.test(l.type || '');
+            const tab = lst('mo-l', []);
+            if(tab.some(r => r && (String(r.r || '') === txt || String(r.a || '') === txt))) {
+                souffler('Cette leçon y est déjà'); return;
+            }
+            tab.push({ t: '', r: bonne ? '' : txt, a: bonne ? txt : '',
+                       cc: false, e: '', al: '' });
+            majPrepaEtat();
+            souffler(bonne ? 'Versé en action préventive' : 'Versé en analyse de risques');
+        }
+
+        // ------------------------------------------------------------------
+        //  L'ANALYSE, À LA DEMANDE
+        // ------------------------------------------------------------------
+        let rexDernier = null;
+
+        function analyseRex() {
+            const f = document.getElementById('rex-fen');
+            if(!f) return;
+            if(!rexCharge || !Object.keys(rexBase).length) {
+                alert("La bibliothèque de REX est vide.\n\nLes REX s'importent depuis"
+                    + " Options — Bibliothèque de REX, en déposant les PDF sortis de Kizéo.");
+                return;
+            }
+            const c = rexContexte();
+            let g = rexSuggestions(c, 22, 8);
+            let large = false;
+            if(!g.length) { g = rexSuggestions(c, 10, 4); large = true; }
+            rexDernier = { c: c, g: g, large: large };
+            f.style.display = 'flex';
+            renderRexFen();
+        }
+        function fermerRex() {
+            const f = document.getElementById('rex-fen');
+            if(f) f.style.display = 'none';
+            // Ce qui a été versé doit apparaître dans la préparation.
+            if(document.getElementById('screen-prepadoc').classList.contains('active')) renderPrepa();
+        }
+
+        function renderRexFen() {
+            if(!rexDernier) return;
+            const c = rexDernier.c, g = rexDernier.g;
+            const n = g.reduce((s, x) => s + x.items.length, 0);
+            const lus = Object.keys(rexBase).length;
+            const lec = rexIndex().docs.length;
+            const sur = [];
+            if(c.lit) sur.push('liaison <b>' + esc(c.lit) + '</b>');
+            if(c.tension) sur.push(esc(c.tension));
+            if(c.modele) sur.push(esc(c.modele));
+            if(c.sup.size) sur.push(c.sup.size + ' pylône(s)');
+            if(c.concepts.size) sur.push(c.concepts.size + ' sujet(s) de métier');
+
+            document.getElementById('rex-fen-corps').innerHTML = `
+                <div class="rex-ctx">
+                    <b>${lec}</b> leçon${lec > 1 ? 's' : ''} passée${lec > 1 ? 's' : ''} au crible
+                    (${lus} REX) — d'après ${sur.join(' · ')}.
+                    ${c.sources.length ? '<span class="rex-src2">Lu dans : '
+                        + esc(c.sources.join(', ')) + '.</span>' : ''}
+                </div>
+                ${rexDernier.large ? `<div class="rex-inc">Rien ne correspond vraiment à ce
+                    chantier. Voici ce qui s'en approche le plus — à lire d'un œil,
+                    pas à suivre.</div>` : ''}
+                ${!n ? `<div class="rex-vide">Aucune leçon à remonter. Soit la
+                    bibliothèque ne couvre pas encore ce genre de chantier, soit la
+                    préparation est trop peu remplie pour qu'on la rapproche de quoi que ce
+                    soit : la nature des travaux et le mode opératoire sont ce qui parle le
+                    plus.</div>` : ''}
+                ${g.map(x => `
+                <div class="rex-g">
+                    <div class="rex-g-t">${esc(x.lib)}<span class="rex-n">${x.items.length}</span></div>
+                    ${x.items.map(y => {
+                        const dif = /difficult/i.test(y.l.type || '');
+                        return `<div class="rex-l">
+                            <div class="rex-l-h">
+                                <span class="rex-b ${dif ? 'dif' : 'bon'}">${dif ? 'Difficulté'
+                                    : esc(y.l.type || 'Retour')}</span>
+                                <span class="rex-src">${esc((y.f.lits || []).join(', '))}
+                                    &middot; ${esc(y.f.date || '')}
+                                    &middot; ${esc(y.f.cdt || '—')}
+                                    ${y.f.desig ? '&middot; ' + esc(y.f.desig) : ''}</span>
+                                ${y.aussi ? `<span class="rex-n">+${y.aussi} semblable${y.aussi > 1 ? 's' : ''}</span>` : ''}
+                            </div>
+                            <div class="rex-t">${esc(y.l.texte).replace(/\n/g, '<br>')}</div>
+                            <div class="rex-p">${y.pour.map(p => `<span>${esc(p)}</span>`).join('')}</div>
+                            <div class="rex-a">
+                                ${LECTURE ? '' : `
+                                <button onclick="verserRemarque('${esc(y.id)}',${y.i})">+ Remarques du chantier</button>
+                                <button onclick="verserModeOp('${esc(y.id)}',${y.i})">+ Mode opératoire</button>`}
+                                <button class="sobre" onclick="ouvrirRexPdf('${esc(y.id)}')">\u{1F4C4} Le REX</button>
+                            </div>
+                        </div>`;
+                    }).join('')}
+                </div>`).join('')}`;
+        }
+
+        function renderRex() {
+            const n = document.getElementById('rex-count');
+            const liste = document.getElementById('rex-liste');
+            if(!liste) return;
+            const ids = Object.keys(rexBase).sort((a, b) => rexDateMs(rexBase[b]) - rexDateMs(rexBase[a]));
+            if(n) n.textContent = ids.length;
+            if(!ids.length) {
+                liste.innerHTML = `<div style="color:#64748b; font-size:.9rem">
+                    Aucun REX pour le moment. Sortez-les de Kizéo en PDF et déposez-les ici :
+                    vous pouvez en choisir plusieurs centaines d'un seul coup.</div>`;
+                return;
+            }
+            const lec = ids.reduce((s, i) => s + (rexBase[i].lecons || []).length, 0);
+            const inc = [...new Set(ids.reduce((a, i) => a.concat((rexBase[i].lecons || [])
+                         .filter(l => !REX_THEMES[l.them]).map(l => l.themLib)), []))];
+            const lits = new Set(ids.reduce((a, i) => a.concat(rexBase[i].lits || []), []));
+            liste.innerHTML = `
+                <div class="rex-res">${ids.length} REX &middot; ${lec} leçon${lec > 1 ? 's' : ''}
+                    &middot; ${lits.size} liaison(s)</div>
+                ${inc.length ? `<div class="rex-inc">Thématiques non reconnues, à me signaler :
+                    ${esc(inc.join(', '))}</div>` : ''}
+                <div style="overflow:auto"><table class="rex-tab"><thead><tr>
+                    <th>Date</th><th>Liaison</th><th>Type</th><th>Désignation</th>
+                    <th>CdT</th><th>Leçons</th><th></th></tr></thead><tbody>
+                ${ids.map(i => {
+                    const f = rexBase[i];
+                    return `<tr>
+                        <td style="white-space:nowrap">${esc(f.date || '')}</td>
+                        <td><b>${esc((f.lits || []).join(', '))}</b>
+                            <span class="rex-kv">${esc((f.tensions || []).join(', '))}</span></td>
+                        <td>${esc(f.modele || '')}${f.genre ? ' <span class="rex-kv">'
+                            + esc(f.genre) + '</span>' : ''}</td>
+                        <td>${esc(f.desig || '')}${(f.sup || []).length
+                            ? ' <span class="rex-kv">pyl ' + esc((f.sup || []).slice(0, 8).join(', '))
+                            + '</span>' : ''}</td>
+                        <td>${esc(f.cdt || '')}</td>
+                        <td style="text-align:center">${(f.lecons || []).length}</td>
+                        <td style="white-space:nowrap">
+                            <button class="rex-x" onclick="ouvrirRexPdf('${esc(i)}')" title="Ouvrir le PDF">\u{1F4C4}</button>
+                            <button class="rex-x" onclick="supprimerRex('${esc(i)}')" title="Retirer">✕</button>
+                        </td></tr>`;
+                }).join('')}
+                </tbody></table></div>`;
         }
 
         // ==================================================================

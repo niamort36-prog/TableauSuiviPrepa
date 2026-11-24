@@ -482,6 +482,73 @@
         utile pour <i>noter</i> l'emplacement, mais il faudra le copier à la main dans
         l'explorateur.
     </div>
+
+    <h3>Les REX des chantiers passés</h3>
+
+    <p>Au bas de la fiche d'un chantier comme de cet écran, le bouton
+    <b>📚 Analyse REX</b> cherche dans tous les retours d'expérience de l'entreprise
+    ceux qui concernent le chantier qu'on prépare. Il se déclenche quand vous le demandez :
+    plus la préparation est avancée, plus ce qu'il remonte est juste.</p>
+
+    <h4>Ce n'est pas une recherche par mot clé</h4>
+
+    <p>L'unité n'est pas le document mais la <b>leçon</b> : un REX en porte une à vingt,
+    et c'est la leçon qu'on vous propose, pas le fichier. Chacune est pesée sur deux
+    familles de signaux.</p>
+
+    <p>Les signaux <b>durs</b> se vérifient et pèsent lourd :</p>
+    <ul>
+        <li>les <b>mêmes pylônes</b>, ou des pylônes voisins à cinq rangs près — le signal
+            le plus fort qui existe ;</li>
+        <li>la <b>même liaison</b>, par son code LIT ;</li>
+        <li>le <b>même type de chantier</b> et la <b>même tension</b> ;</li>
+        <li>la <b>même saison</b> à un mois et demi près : le gel, la nidification et la
+            pousse ne tombent pas au même moment de l'année ;</li>
+        <li>une <b>difficulté</b> compte plus qu'une bonne pratique, et un REX de plus de
+            deux ans se décote.</li>
+    </ul>
+
+    <p>Les signaux <b>souples</b> ne servent qu'à départager. Un <b>vocabulaire métier</b>
+    ramène dix formulations à une même idée — « manchon », « sertissage » et
+    « matrice » parlent du même geste, « piste », « bourbier » et « portance » du même
+    souci d'accès. La ressemblance des textes se mesure ensuite en <b>BM25</b>, qui pèse
+    les termes <i>rares</i> : « manchon » compte, « chantier » ne compte pas, puisqu'il
+    est dans tous les REX.</p>
+
+    <div class="note">
+        Une leçon n'est proposée que si un <b>lien réel</b> existe : le lieu ou le sujet.
+        Le même type de chantier et la même saison, seuls, ne suffisent pas — sinon
+        n'importe quelle leçon de la bibliothèque remonterait. Quand rien ne correspond
+        vraiment, l'application le dit et montre ce qui s'en approche le plus, en le
+        signalant.
+    </div>
+
+    <h4>Tout le dossier est lu</h4>
+
+    <p>L'analyse ne se contente pas de la ligne et de la nature des travaux. Elle lit la
+    fiche du chantier, la préparation de travail page par page et la logistique — mais
+    sans tout mettre sur le même plan : la <b>nature des travaux</b>, le <b>mode
+    opératoire</b>, l'<b>analyse de risques</b> et les <b>listes de matériel</b> disent le
+    chantier et comptent triple ou double ; le reste des cases n'intervient qu'en fond.
+    Le bandeau de la fenêtre rappelle ce qui a servi.</p>
+
+    <p>Les pylônes viennent de la <b>fiche de secours</b> et de la nature des travaux, et
+    ceux qu'une leçon nomme elle-même s'y ajoutent : un REX qui raconte un accès bloqué
+    au pylône 165 remonte sur un chantier qui travaille du 170 au 176.</p>
+
+    <h4>Verser une leçon dans la préparation</h4>
+
+    <p>Un REX qu'on lit ne change rien ; un REX qui écrit une ligne dans la préparation
+    change le chantier. Chaque leçon porte donc deux boutons :</p>
+    <ul>
+        <li><b>+ Remarques du chantier</b> — la leçon s'ajoute aux remarques importantes,
+            page <i>Travaux à effectuer</i>, avec le rappel de sa source ;</li>
+        <li><b>+ Mode opératoire</b> — une <i>difficulté</i> se range en <b>analyse de
+            risques</b>, une <i>bonne pratique</i> en <b>action préventive</b>, sur une
+            ligne neuve du tableau.</li>
+    </ul>
+    <p>Dans les deux cas, verser deux fois la même leçon ne la double pas.
+    <b>📄 Le REX</b> télécharge le document d'origine, quand il a été joint.</p>
 </section>
 
 <!-- ==================================================== 6. LOGISTIQUE ==== -->
@@ -1751,6 +1818,37 @@
         <figcaption>Les équipes, le référentiel de lignes, puis les opérateurs</figcaption>
     </figure>
 
+    <h3>La bibliothèque de REX</h3>
+
+    <p>Les retours d'expérience se saisissent sur <b>Kizéo</b>. Pour qu'ils servent aux
+    préparations, ils entrent ici, et de deux façons :</p>
+    <ul>
+        <li><b>📗 Classeur Kizéo</b> — l'export Excel des réponses reprend tout le
+            corpus d'un seul coup. C'est la voie principale : une ligne par leçon, le texte
+            intact, rien à deviner. Un nouvel export met à jour ce qui a changé sans rien
+            perdre.</li>
+        <li><b>📄 PDF</b> — pour le REX qui arrive seul, et pour <b>garder le
+            document</b> joint à la fiche. Vous pouvez en déposer plusieurs centaines d'un
+            coup. L'application y relit la même chose : le contexte du chantier et le
+            tableau des éléments de REX, colonne par colonne.</li>
+    </ul>
+
+    <p>Les deux voies se rejoignent sur l'<b>identifiant Kizéo</b>, qui est le même : un
+    REX importé des deux côtés ne fait qu'une fiche. Le classeur fait foi sur le texte des
+    leçons, le PDF apporte le document.</p>
+
+    <p>La bibliothèque est <b>partagée par toutes les équipes</b> : un retour d'une autre
+    équipe sur la même liaison est précisément ce qu'on cherche. Le tableau liste chaque
+    REX avec sa date, sa liaison, ses pylônes et son nombre de leçons ; <b>📄</b>
+    ouvre le document, <b>✕</b> retire le REX.</p>
+
+    <div class="note">
+        Si une <b>thématique</b> du formulaire n'est pas reconnue, l'application l'affiche en
+        clair au-dessus du tableau. Signalez-la : elle sera ajoutée à la table, et ses
+        leçons remonteront alors sur les bonnes pages. En attendant, elles restent
+        exploitables — le texte, lui, est toujours lu.
+    </div>
+
     <h3>Changer d'équipe</h3>
 
     <p>Chaque équipe a <b>sa liste de chantiers et son propre référentiel de lignes</b>.
@@ -2050,6 +2148,8 @@
         <tr><td><b>🗃️ Archiver</b></td><td>Range le chantier dans les archives.</td></tr>
         <tr><td><b>📄 Prépa</b></td><td>Ouvre l'écran de préparation.</td></tr>
         <tr><td><b>🏕️ Logistique</b></td><td>Ouvre Logistique &amp; Terrain.</td></tr>
+        <tr><td><b>📚 Analyse REX</b></td><td>Cherche dans les retours d'expérience
+            de l'entreprise ceux qui concernent ce chantier.</td></tr>
         <tr><td><b>📑 Préparation de travail</b></td><td>Ouvre le document de préparation,
             page par page.</td></tr>
         <tr><td><b>🖨️ Imprimer A3</b></td><td>Sort la feuille A3 de ce chantier.</td></tr>
@@ -2167,6 +2267,12 @@
         <tbody>
         <tr><td><b>📄 Ouvrir le guide (PDF)</b></td><td>Ouvre ce guide dans un nouvel
             onglet.</td></tr>
+        <tr><td><b>📗 Classeur Kizéo</b></td><td>Reprend tout le corpus de REX depuis
+            l'export Excel des réponses.</td></tr>
+        <tr><td><b>📄 PDF</b> (bibliothèque)</td><td>Ajoute un ou plusieurs REX en PDF,
+            et garde le document joint.</td></tr>
+        <tr><td><b>📄</b> / <b>✕</b> sur un REX</td><td>Ouvre le document, ou retire le
+            REX de la bibliothèque.</td></tr>
         <tr><td><b>+ Nouvelle équipe</b>, <b>Basculer sur cette équipe</b>, <b>🗑
             Supprimer</b></td><td>Gèrent les équipes. Chaque équipe a ses chantiers et son
             référentiel de lignes.</td></tr>
