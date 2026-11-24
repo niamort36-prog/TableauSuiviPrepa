@@ -321,6 +321,10 @@
         .opt-used { font-size: 0.75rem; color: #64748b; background: #f1f5f9; border-radius: 10px; padding: 2px 8px; white-space: nowrap; }
 
         /* Repli de la liste des lignes */
+        .btn-tout { border: 1px solid var(--border); background: #fff; color: #475569;
+                    border-radius: 8px; padding: 6px 14px; font-size: .85rem;
+                    font-weight: 700; cursor: pointer; }
+        .btn-tout:hover { background: #f1f5f9; }
         .btn-replier { background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.35); color: #fff;
                        border-radius: 7px; padding: 6px 14px; font-weight: 800; font-size: .82rem; cursor: pointer;
                        white-space: nowrap; }
@@ -1571,16 +1575,22 @@
     </div>
 
     <div id="screen-options" class="screen">
-        <h3>⚙️ Options</h3>
+        <div style="display:flex; justify-content:space-between; align-items:center;
+                    gap:12px; flex-wrap:wrap">
+            <h3 style="margin:0">⚙️ Options</h3>
+            <button class="btn-tout" onclick="toutReplier()" id="opt-tout">Tout réduire</button>
+        </div>
 
         <div class="dashboard-container">
             <div class="header-bar" style="background:#054191; display:flex;
                  justify-content:space-between; align-items:center; gap:12px">
                 <h3 style="margin:0; font-size:1.1rem">📘 GUIDE D’UTILISATION</h3>
+                <span style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">
                 <a class="btn-replier" href="Guide-Suivi-Prepa.pdf" target="_blank"
                    rel="noopener" style="text-decoration:none; display:inline-block">📄 Ouvrir le guide (PDF)</a>
+                <button id="guide-bascule" class="btn-replier" onclick="basculerBloc('guide')">▾ Réduire</button></span>
             </div>
-            <div style="padding:14px 20px; color:#475569; font-size:0.9rem">
+            <div id="guide-corps" style="padding:14px 20px; color:#475569; font-size:0.9rem">
                 Le mode d’emploi complet de l’application : l’écran d’accueil, le chantier,
                 la logistique, la préparation de travail page par page, le partage, l’impression,
                 les options et les archives — sur ordinateur comme sur téléphone, avec tous les
@@ -1592,21 +1602,27 @@
         </div>
 
         <div class="dashboard-container">
-            <div class="header-bar" style="background:#2e7f74">
+            <div class="header-bar" style="background:#2e7f74; display:flex;
+                 justify-content:space-between; align-items:center; gap:12px">
                 <h3 style="margin:0; font-size:1.1rem">👥 ÉQUIPES</h3>
+                <button id="eq-bascule" class="btn-replier" onclick="basculerBloc('equipes')">▾ Réduire</button>
             </div>
+            <div id="eq-corps">
             <div style="padding:15px 20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap">
                 <span style="color:#64748b; font-size:0.9rem">Chaque équipe a sa propre liste de chantiers <b>et son propre référentiel de lignes</b> : un même code peut désigner deux lignes différentes selon l'équipe.</span>
                 <button class="btn-add-ligne" onclick="addEquipeOpt()">+ Nouvelle équipe</button>
             </div>
             <div id="opt-equipes"></div>
+            </div>
         </div>
 
         <div class="dashboard-container">
-            <div class="header-bar" style="background:#7e6a9b">
+            <div class="header-bar" style="background:#7e6a9b; display:flex;
+                 justify-content:space-between; align-items:center; gap:12px">
                 <h3 style="margin:0; font-size:1.1rem">➕ AJOUTER UNE LIGNE</h3>
+                <button id="add-bascule" class="btn-replier" onclick="basculerBloc('ajout')">▾ Réduire</button>
             </div>
-            <div class="opt-add">
+            <div class="opt-add" id="add-corps">
                 <div class="form-group">
                     <label class="form-label">Domaine de tension</label>
                     <select id="opt-t" class="form-input"></select>
@@ -1689,9 +1705,10 @@
                     <label class="btn-replier" style="cursor:pointer; margin:0">📄 PDF
                         <input type="file" accept="application/pdf" multiple style="display:none"
                                onchange="importerRex(this)"></label>
+                    <button id="rex-bascule" class="btn-replier" onclick="basculerBloc('rex')">▾ Réduire</button>
                 </span>
             </div>
-            <div style="padding:14px 20px">
+            <div id="rex-corps" style="padding:14px 20px">
                 <div style="color:#475569; font-size:.88rem; margin-bottom:12px">
                     Les REX de tous les chantiers passés, partagés par toutes les équipes.
                     Le <b>classeur</b> exporté de Kizéo reprend tout le corpus d'un coup ;
@@ -1706,9 +1723,11 @@
         <div class="dashboard-container">
             <div class="header-bar" style="display:flex; justify-content:space-between; align-items:center; gap:12px">
                 <h3 style="margin:0; font-size:1.1rem">&#9881; VERSION</h3>
+                <span style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">
                 <button class="btn-replier" onclick="rafraichirApp()">&#8635; Rechercher une mise &agrave; jour</button>
+                <button id="ver-bascule" class="btn-replier" onclick="basculerBloc('version')">▾ Réduire</button></span>
             </div>
-            <div style="padding:14px 20px; color:#475569; font-size:0.9rem">
+            <div id="ver-corps" style="padding:14px 20px; color:#475569; font-size:0.9rem">
                 Vous utilisez la version du <b id="app-version">&mdash;</b>.
                 <div style="color:#94a3b8; font-size:0.84rem; margin-top:4px">
                     Le navigateur garde l'application en m&eacute;moire pendant dix minutes :
@@ -2901,9 +2920,15 @@
             carteCible = String(id);
             await goCarte();
         }
-        function goOptions() { switchScreen('screen-options'); fillTensionSelect(); renderEquipes();
-                               renderLignes(); renderOperateurs(); renderSecours(); renderVersion();
-                               renderRex(); }
+        function goOptions() {
+            switchScreen('screen-options');
+            fillTensionSelect();
+            Object.keys(BLOCS_OPT).forEach(k => {
+                majBloc(k);
+                if(BLOCS_OPT[k].ouvert) BLOCS_OPT[k].rendu();
+            });
+            majBoutonTout();
+        }
 
         // La date du fichier servi : elle dit sans ambiguite si l'on tourne
         // sur la derniere version ou sur une copie gardee en cache.
@@ -3482,13 +3507,26 @@
         // lignes, vingt agents et douze contacts, c'est trop pour un ecran de
         // telephone. Chacun retient son etat d'une visite a l'autre.
         // Les lignes sont repliees d'emblee, les deux autres ouvertes.
+        // Les options tiennent sur un ecran de telephone comme sur un grand
+        // ecran : chaque bloc se replie, et son etat est retenu d'une visite
+        // a l'autre. Les plus longs s'ouvrent ferme.
         const BLOCS_OPT = {
+            guide:      { corps: 'guide-corps', bouton: 'guide-bascule', cle: 'suivi-guide-ouvert',
+                          ouvert: false, rendu: () => {} },
+            equipes:    { corps: 'eq-corps',  bouton: 'eq-bascule',  cle: 'suivi-equipes-ouvertes',
+                          ouvert: true,  rendu: () => renderEquipes() },
+            ajout:      { corps: 'add-corps', bouton: 'add-bascule', cle: 'suivi-ajout-ouvert',
+                          ouvert: false, rendu: () => {} },
             lignes:     { corps: 'opt-corps', bouton: 'opt-bascule', cle: 'suivi-lignes-ouvertes',
                           ouvert: false, rendu: () => renderLignes() },
             operateurs: { corps: 'op-corps',  bouton: 'op-bascule',  cle: 'suivi-operateurs-ouverts',
                           ouvert: true,  rendu: () => renderOperateurs() },
             secours:    { corps: 'sec-corps', bouton: 'sec-bascule', cle: 'suivi-secours-ouvert',
-                          ouvert: true,  rendu: () => renderSecours() }
+                          ouvert: true,  rendu: () => renderSecours() },
+            rex:        { corps: 'rex-corps', bouton: 'rex-bascule', cle: 'suivi-rex-ouvert',
+                          ouvert: false, rendu: () => renderRex() },
+            version:    { corps: 'ver-corps', bouton: 'ver-bascule', cle: 'suivi-version-ouverte',
+                          ouvert: false, rendu: () => renderVersion() }
         };
         Object.values(BLOCS_OPT).forEach(b => {
             try {
@@ -3498,12 +3536,33 @@
         });
         function blocOuvert(k) { return BLOCS_OPT[k].ouvert; }
 
+        // Un seul geste pour tout fermer, et le meme pour tout rouvrir.
+        function toutReplier() {
+            const cles = Object.keys(BLOCS_OPT);
+            const fermer = cles.some(k => BLOCS_OPT[k].ouvert);
+            cles.forEach(k => {
+                const b = BLOCS_OPT[k];
+                b.ouvert = !fermer;
+                try { localStorage.setItem(b.cle, b.ouvert ? '1' : '0'); } catch(e) {}
+                majBloc(k);
+                if(b.ouvert) b.rendu();
+            });
+            majBoutonTout();
+        }
+        function majBoutonTout() {
+            const bt = document.getElementById('opt-tout');
+            if(!bt) return;
+            bt.textContent = Object.keys(BLOCS_OPT).some(k => BLOCS_OPT[k].ouvert)
+                           ? 'Tout réduire' : 'Tout afficher';
+        }
+
         function basculerBloc(k) {
             const b = BLOCS_OPT[k];
             b.ouvert = !b.ouvert;
             try { localStorage.setItem(b.cle, b.ouvert ? '1' : '0'); } catch(e) {}
             majBloc(k);
             if(b.ouvert) b.rendu();
+            majBoutonTout();
         }
 
         function majBloc(k) {
@@ -4878,26 +4937,38 @@
             // à la portée 73-74 ne dit rien du pylône 12, soixante portées
             // plus loin. Quand aucun support n'est connu de part et d'autre,
             // la ligne seule suffit — on ne peut pas en demander plus.
+            // Deux sortes d'exclusion. Celles qui se discutent — un score
+            // un peu court, une famille voisine — se rouvrent quand on
+            // demande à élargir. Celles-ci, non : une leçon de terrain loin
+            // de son secteur, une pince d'une autre tension, ce n'est pas
+            // « moins sûr », c'est faux. Les rouvrir ne rendrait service à
+            // personne, et c'est là que le cadenas revenait.
+            let exclu = false;
             if(ancree) {
                 const situee = sl.length && c.rangs.length;
                 const pres = situee && sl.some(n => c.rangs.some(
                                   r => Math.abs(rangSupport(n) - r) <= 10000));
-                if(!surLaLigne || (situee && !pres)) lien = false;
+                if(!surLaLigne || (situee && !pres)) exclu = true;
             }
-            // Le matériel de ligne ne traverse ni les tensions ni les
-            // familles qui n'y touchent pas.
             if(leconMateriel(l)) {
                 const tr = (f.tensions || []).map(x => rexSlug(x));
-                if(c.famille === 'végétation' || c.famille === 'visite') lien = false;
-                else if(c.tension && tr.length && tr.indexOf(rexSlug(c.tension)) < 0) lien = false;
+                if(c.famille === 'végétation' || c.famille === 'visite') exclu = true;
+                else if(c.tension && tr.length && tr.indexOf(rexSlug(c.tension)) < 0) exclu = true;
             }
-            const brut = s;
+            if(exclu) lien = false;
+            // Une autre famille de chantier n'est pas un lien plus faible,
+            // c'est un autre métier : des lunettes de soleil pour l'OAN n'ont
+            // rien à dire d'un élagage, et les rouvrir en élargissant ne
+            // rendrait service à personne. Seul le lieu les rattrape.
             if(fam !== c.famille) {
-                s = Math.round(s * 0.4);
-                if(!com.length && !(surLaLigne && precis)) lien = false;
-                else pour.push('mais c\'est ' + (fam === 'visite' ? 'une visite' : 'un chantier ' + fam));
+                if(!com.length && !(surLaLigne && precis)) exclu = true;
+                else {
+                    s = Math.round(s * 0.4);
+                    pour.push('mais c\'est ' + (fam === 'visite' ? 'une visite' : 'un chantier ' + fam));
+                }
             }
-            return { s: lien ? s : 0, brut: brut, famille: fam, pour: pour };
+            if(exclu) lien = false;
+            return { s: lien ? s : 0, brut: exclu ? 0 : s, famille: fam, pour: pour };
         }
 
         // Les leçons retenues, regroupées par sujet : on propose des sujets,
@@ -4909,8 +4980,10 @@
             let ecartes = 0;
             idx.docs.forEach(d => {
                 const r = scoreLecon(c, d.f, d.l, bm25(d, c.req, idx));
-                // Si l'on ne peut pas dire pourquoi, on ne montre pas.
-                if(!r.pour.length) r.s = 0;
+                // Si l'on ne peut pas dire pourquoi, on ne montre pas — et
+                // cela vaut aussi quand on élargit : une leçon sans raison
+                // reste du bruit, qu'on la cherche de près ou de loin.
+                if(!r.pour.length) { r.s = 0; r.brut = 0; }
                 const note = large ? Math.max(r.s, r.brut) : r.s;
                 if(note >= seuil) gard.push({ id: d.id, i: d.i, f: d.f, l: d.l,
                                               s: note, pour: r.pour });
@@ -5041,14 +5114,17 @@
                         Application du ${esc(versionApp())}.</span>
                 </div>
                 ${rexDernier.large ? `<div class="rex-inc">Recherche élargie : les leçons
-                    ci-dessous n'ont pas de lien solide avec ce chantier — autre famille de
-                    travaux, autre ligne, ou simple mot en commun. À lire d'un œil, pas à
-                    suivre.</div>` : ''}
+                    ci-dessous n'ont qu'un lien faible avec ce chantier — une autre famille
+                    de travaux, un score un peu court. À lire d'un œil, pas à suivre.
+                    Ce qui est <b>hors sujet</b> reste écarté : une leçon de terrain loin
+                    de son secteur ou un matériel d'une autre tension ne revient pas,
+                    même ici.</div>` : ''}
                 ${!rexDernier.large && rexDernier.ecartes ? `<div class="rex-ecart">
-                    ${rexDernier.ecartes} leçon(s) écartée(s) : observations liées à une
-                    autre ligne, visites héliportées, autres familles de travaux, ou sujets
-                    trop généraux pour rapprocher deux chantiers.
-                    <button onclick="elargirRex()">Les voir quand même</button></div>` : ''}
+                    ${rexDernier.ecartes} leçon(s) mises de côté : lien trop faible, ou
+                    autre famille de travaux. Celles qui sont hors sujet — terrain d'une
+                    autre ligne, matériel d'une autre tension — ne sont pas comptées ici
+                    et ne reviendront pas.
+                    <button onclick="elargirRex()">Voir les autres</button></div>` : ''}
                 ${!n ? `<div class="rex-vide"><b>Aucun REX ne correspond vraiment à ce
                     chantier.</b> Rien n'est forcé : une leçon sans rapport ne vaut pas
                     mieux qu'une fenêtre vide, et vous feriez défiler pour rien.
