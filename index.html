@@ -114,6 +114,13 @@
                    border: 1px solid var(--border); border-radius: 10px;
                    padding: 10px 14px; margin-bottom: 14px; }
         .rex-src2 { display: block; color: #94a3b8; font-size: .8rem; margin-top: 3px; }
+        .rex-ecart { font-size: .84rem; color: #475569; background: #fff;
+                     border: 1px dashed var(--border); border-radius: 10px;
+                     padding: 9px 14px; margin-bottom: 14px; display: flex;
+                     align-items: center; gap: 10px; flex-wrap: wrap; }
+        .rex-ecart button { border: 1px solid var(--border); background: #f8fafc;
+                     color: #475569; border-radius: 7px; padding: 4px 10px;
+                     font-size: .8rem; font-weight: 700; cursor: pointer; }
         .rex-g { margin-bottom: 18px; }
         .rex-g-t { font-weight: 800; color: #4c1d95; font-size: .95rem;
                    margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
@@ -4112,13 +4119,13 @@
             { id: 'environnement', lib: 'Environnement', mots:
               ['environnement', 'pollution', 'huile', 'hydrocarbure', 'dechet', 'dib', 'nidification',
                'faune', 'flore', 'natura', 'humide', 'captage', 'sevego', 'seveso', 'amiante'] },
-            { id: 'documents', lib: 'Documents et régime', mots:
+            { id: 'documents', lib: 'Documents et régime', large: true, mots:
               ['nip', 'daoe', 'icare', 'attestation', 'pave', 'gdp', 'groupement',
                'validation', 'document', 'unifilaire', 'ppe'] },
-            { id: 'securite', lib: 'Sécurité et presque-accident', mots:
+            { id: 'securite', lib: 'Sécurité et presque-accident', large: true, mots:
               ['accident', 'blessure', 'exclusion', 'lunette', 'epi', 'casque', 'gant', 'incident',
                'dangereux', 'danger', 'presque', 'visage', 'projection', 'secour'] },
-            { id: 'organisation', lib: 'Organisation et préparation', mots:
+            { id: 'organisation', lib: 'Organisation et préparation', large: true, mots:
               ['planning', 'delai', 'anticipation', 'brief', 'pjb', 'papoto', 'promo', 'promotion',
                'effectif', 'horaire', 'retard', 'coactivite', 'prestataire', 'sous', 'traitant'] },
             { id: 'logistique', lib: 'Logistique et gîte', mots:
@@ -4126,6 +4133,33 @@
         ];
         const REX_CONCEPT = {};
         REX_CONCEPTS.forEach(c => REX_CONCEPT[c.id] = c);
+
+        // --- La famille d'un chantier -------------------------------------
+        // Une visite héliportée survole quarante lignes en une journée et
+        // n'apprend rien à qui remplace un armement : ce ne sont pas les
+        // mêmes gestes, pas le même matériel, pas les mêmes risques. On
+        // range donc les chantiers par famille, et on ne mélange pas.
+        function familleChantier(v) {
+            const t = rexSlug(v);
+            if(/visite|vtir|vhc|heliport|survol|diagnostic|investigation|thermograph/.test(t))
+                return 'visite';
+            if(/vegetation|elagage|debroussaill|abattage/.test(t)) return 'végétation';
+            if(/\btst\b|^tst/.test(t)) return 'TST';
+            return 'travaux';
+        }
+
+        // Les liaisons d'un REX. Kizéo les sépare par une barre verticale,
+        // et il arrive qu'un code traîne un tiret devant lui.
+        function litsRex(f) {
+            const out = [];
+            [].concat((f && f.lits) || []).forEach(x => {
+                String(x).split(/[|,;]+/).forEach(y => {
+                    const c = y.replace(/^[-\s]+/, '').trim().toUpperCase();
+                    if(c && out.indexOf(c) < 0) out.push(c);
+                });
+            });
+            return out;
+        }
 
         // Les mots vides du français, et ceux qui ne disent rien du métier :
         // « chantier » est dans tous les REX, il ne départage personne.
@@ -4214,8 +4248,8 @@
         function analyserRexKizeo(items) {
             const t = texteDesItems(items).replace(/ /g, ' ');
             const u_ = re => { const m = re.exec(t); return m ? m[1].trim() : ''; };
-            const liste = v => String(v || '').split(/[,;\/]+|\set\s/i)
-                               .map(x => x.trim()).filter(Boolean);
+            const liste = v => String(v || '').split(/[|,;\/]+|\set\s/i)
+                               .map(x => x.replace(/^[-\s]+/, '').trim()).filter(Boolean);
 
             const r = {};
             r.cdt     = u_(/^\s*CdT\s*:\s*(.*?)(?:\s+Equipe CdT\s*:|$)/mi);
@@ -4478,8 +4512,8 @@
                                               texte: texte, perim: ch(r, 'perim') });
                 });
 
-                const liste = v => String(v || '').split(/[,;\/]+|\set\s/i)
-                                   .map(x => x.trim()).filter(Boolean);
+                const liste = v => String(v || '').split(/[|,;\/]+|\set\s/i)
+                                   .map(x => x.replace(/^[-\s]+/, '').trim()).filter(Boolean);
                 const maj = {};
                 let n = 0, lec = 0;
                 par.forEach(g => {
@@ -4573,7 +4607,7 @@
         async function supprimerRex(id) {
             const f = rexBase[id];
             if(!f) return;
-            if(!confirm('Retirer le REX ' + (f.lits || []).join(', ') + ' du '
+            if(!confirm('Retirer le REX ' + litsRex(f).slice(0, 3).join(', ') + ' du '
                       + (f.date || '?') + ' de la bibliothèque ?')) return;
             await db.ref('rexdoc/' + id).remove().catch(() => {});
             await db.ref('rex/' + id).remove().catch(e => alert('Erreur : ' + e.message));
@@ -4716,6 +4750,7 @@
                 ligne: (l && l.n) || '',
                 tension: (l && l.t) || '',
                 modele: vl('inp-modele') || MODELES_FICHE[0],
+                famille: familleChantier(vl('inp-modele') || MODELES_FICHE[0]),
                 cdt: vl('inp-cdt'),
                 sup: sup,
                 rangs: [...sup].map(rangSupport).filter(x => x < 1e9),
@@ -4733,24 +4768,44 @@
             // saison et la gravite ne font que pondérer ; seuls, ils
             // remonteraient n'importe quelle lecon de la bibliotheque.
             let lien = false;
-            if(c.lit && (f.lits || []).indexOf(c.lit) >= 0) { s += 45; lien = true; pour.push('même liaison'); }
+            // Un REX qui nomme quarante liaisons ne parle d'aucune en
+            // particulier : son poids se partage entre elles.
+            const lits = litsRex(f);
+            const precis = lits.length <= 5;
+            if(c.lit && lits.indexOf(c.lit) >= 0) {
+                s += Math.round(45 / Math.sqrt(lits.length));
+                if(precis) { lien = true; pour.push('même liaison'); }
+                else pour.push('une des ' + lits.length + ' lignes du REX');
+            }
             // Les pylones du REX et ceux que la lecon nomme elle-meme : le
             // detail s'ajoute au contexte, il ne le remplace pas. Une lecon
             // qui cite son support ne doit pas y perdre.
             const sl = [...new Set([].concat(l.sup || [], f.sup || []))];
-            const com = sl.filter(n => c.sup.has(n));
+            // Le pylône 174 d'une ligne n'a rien à voir avec le 174 d'une
+            // autre : les numéros ne se comparent que sur la même liaison.
+            const surLaLigne = !!c.lit && lits.indexOf(c.lit) >= 0;
+            const com = surLaLigne ? sl.filter(n => c.sup.has(n)) : [];
             if(com.length) {
                 s += 55; lien = true;
                 pour.push('pylône' + (com.length > 1 ? 's' : '') + ' ' + com.slice(0, 4).join(', '));
-            } else if(sl.length && c.rangs.length
+            } else if(surLaLigne && sl.length && c.rangs.length
                    && sl.some(n => c.rangs.some(r => Math.abs(rangSupport(n) - r) <= 5000))) {
                 s += 22; lien = true; pour.push('pylônes voisins');
             }
+            const fam = familleChantier((f.modele || '') + ' ' + (f.genre || ''));
             if(c.modele && f.modele === c.modele) { s += 10; pour.push('même type de chantier'); }
             if(c.tension && (f.tensions || []).indexOf(c.tension) >= 0) s += 8;
+            // Un concept ne rapproche que s'il dit quelque chose : ceux qui
+            // sont dans tous les REX — sécurité, organisation, documents —
+            // comptent un peu, mais ne font pas le lien à eux seuls. Et un
+            // sujet qui n'est pas l'un des deux premiers de la leçon n'est
+            // pas ce dont elle parle.
             const cc = (l.concepts || []).filter(x => c.concepts.has(x));
             if(cc.length) {
-                s += Math.min(30, 12 * cc.length); lien = true;
+                s += Math.min(30, 12 * cc.length);
+                const fort = cc.filter((x, i) => (l.concepts || []).indexOf(x) < 2
+                                              && !(REX_CONCEPT[x] || {}).large);
+                if(fort.length) lien = true;
                 pour.push(cc.slice(0, 2).map(x => ((REX_CONCEPT[x] || {}).lib || x).toLowerCase()).join(', '));
             }
             if(bm >= 1.2) lien = true;
@@ -4768,18 +4823,33 @@
             }
             if(c.cdt && f.cdt && rexSlug(f.cdt) === rexSlug(c.cdt)) s += 3;
             if(/difficult/i.test(l.type || '')) s += 6;
-            return { s: lien ? s : 0, pour: pour };
+            // Une autre famille de chantier ne remonte que si elle parle du
+            // lieu même où l'on va : les mêmes pylônes, ou une ligne
+            // nommément. Sinon, elle n'a rien à faire dans cette préparation.
+            // Ce qui est écarté se compte avant la pénalité : sinon
+            // l'application ne saurait pas dire ce qu'elle a laissé de côté.
+            const brut = s;
+            if(fam !== c.famille) {
+                s = Math.round(s * 0.4);
+                if(!com.length && !(surLaLigne && precis)) lien = false;
+                else pour.push('mais c\'est ' + (fam === 'visite' ? 'une visite' : 'un chantier ' + fam));
+            }
+            return { s: lien ? s : 0, brut: brut, famille: fam, pour: pour };
         }
 
         // Les leçons retenues, regroupées par sujet : on propose des sujets,
         // pas des documents. Deux leçons qui disent la même chose n'en font
         // qu'une, avec son compte.
-        function rexSuggestions(c, seuil, lim) {
+        function rexSuggestions(c, seuil, lim, large) {
             const idx = rexIndex();
             const gard = [];
+            let ecartes = 0;
             idx.docs.forEach(d => {
                 const r = scoreLecon(c, d.f, d.l, bm25(d, c.req, idx));
-                if(r.s >= seuil) gard.push({ id: d.id, i: d.i, f: d.f, l: d.l, s: r.s, pour: r.pour });
+                const note = large ? Math.max(r.s, r.brut) : r.s;
+                if(note >= seuil) gard.push({ id: d.id, i: d.i, f: d.f, l: d.l,
+                                              s: note, pour: r.pour });
+                else if(r.brut >= seuil) ecartes++;
             });
             gard.sort((a, b) => b.s - a.s);
 
@@ -4794,9 +4864,10 @@
                 if(jum) { jum.aussi = (jum.aussi || 0) + 1; return; }
                 g.items.push(x);
             });
-            return [...grp.values()].sort((a, b) => b.s - a.s)
-                   .map(g => { g.items = g.items.slice(0, 5); return g; })
-                   .slice(0, lim || 8);
+            return { ecartes: ecartes,
+                     groupes: [...grp.values()].sort((a, b) => b.s - a.s)
+                              .map(g => { g.items = g.items.slice(0, 5); return g; })
+                              .slice(0, lim || 8) };
         }
 
         // ------------------------------------------------------------------
@@ -4809,7 +4880,7 @@
             const f = rexBase[id];
             const l = f && (f.lecons || [])[i];
             if(!l) return '';
-            return l.texte.replace(/\n+/g, ' ') + ' [REX ' + (f.lits || []).join('/')
+            return l.texte.replace(/\n+/g, ' ') + ' [REX ' + litsRex(f).slice(0, 2).join('/')
                  + ' ' + (f.date || '') + ']';
         }
         function verserRemarque(id, i) {
@@ -4851,11 +4922,18 @@
                 return;
             }
             const c = rexContexte();
-            let g = rexSuggestions(c, 22, 8);
+            let r = rexSuggestions(c, 22, 8);
             let large = false;
-            if(!g.length) { g = rexSuggestions(c, 10, 4); large = true; }
-            rexDernier = { c: c, g: g, large: large };
+            if(!r.groupes.length) { r = rexSuggestions(c, 10, 4, true); large = true; }
+            rexDernier = { c: c, g: r.groupes, ecartes: r.ecartes, large: large };
             f.style.display = 'flex';
+            renderRexFen();
+        }
+        // Quand on veut quand même voir ce qui a été écarté.
+        function elargirRex() {
+            if(!rexDernier) return;
+            const r = rexSuggestions(rexDernier.c, 10, 10, true);
+            rexDernier = { c: rexDernier.c, g: r.groupes, ecartes: 0, large: true };
             renderRexFen();
         }
         function fermerRex() {
@@ -4885,9 +4963,15 @@
                     ${c.sources.length ? '<span class="rex-src2">Lu dans : '
                         + esc(c.sources.join(', ')) + '.</span>' : ''}
                 </div>
-                ${rexDernier.large ? `<div class="rex-inc">Rien ne correspond vraiment à ce
-                    chantier. Voici ce qui s'en approche le plus — à lire d'un œil,
-                    pas à suivre.</div>` : ''}
+                ${rexDernier.large ? `<div class="rex-inc">Recherche élargie : les leçons
+                    ci-dessous n'ont pas de lien solide avec ce chantier — autre famille de
+                    travaux, autre ligne, ou simple mot en commun. À lire d'un œil, pas à
+                    suivre.</div>` : ''}
+                ${!rexDernier.large && rexDernier.ecartes ? `<div class="rex-ecart">
+                    ${rexDernier.ecartes} leçon(s) écartée(s) : visites héliportées, autres
+                    familles de travaux, ou sujets trop généraux pour rapprocher deux
+                    chantiers.
+                    <button onclick="elargirRex()">Les voir quand même</button></div>` : ''}
                 ${!n ? `<div class="rex-vide">Aucune leçon à remonter. Soit la
                     bibliothèque ne couvre pas encore ce genre de chantier, soit la
                     préparation est trop peu remplie pour qu'on la rapproche de quoi que ce
@@ -4902,7 +4986,8 @@
                             <div class="rex-l-h">
                                 <span class="rex-b ${dif ? 'dif' : 'bon'}">${dif ? 'Difficulté'
                                     : esc(y.l.type || 'Retour')}</span>
-                                <span class="rex-src">${esc((y.f.lits || []).join(', '))}
+                                <span class="rex-src">${esc(litsRex(y.f).slice(0, 3).join(', '))}${
+                                    litsRex(y.f).length > 3 ? ' +' + (litsRex(y.f).length - 3) : ''}
                                     &middot; ${esc(y.f.date || '')}
                                     &middot; ${esc(y.f.cdt || '—')}
                                     ${y.f.desig ? '&middot; ' + esc(y.f.desig) : ''}</span>
@@ -4936,7 +5021,7 @@
             const lec = ids.reduce((s, i) => s + (rexBase[i].lecons || []).length, 0);
             const inc = [...new Set(ids.reduce((a, i) => a.concat((rexBase[i].lecons || [])
                          .filter(l => !REX_THEMES[l.them]).map(l => l.themLib)), []))];
-            const lits = new Set(ids.reduce((a, i) => a.concat(rexBase[i].lits || []), []));
+            const lits = new Set(ids.reduce((a, i) => a.concat(litsRex(rexBase[i])), []));
             liste.innerHTML = `
                 <div class="rex-res">${ids.length} REX &middot; ${lec} leçon${lec > 1 ? 's' : ''}
                     &middot; ${lits.size} liaison(s)</div>
@@ -4949,7 +5034,9 @@
                     const f = rexBase[i];
                     return `<tr>
                         <td style="white-space:nowrap">${esc(f.date || '')}</td>
-                        <td><b>${esc((f.lits || []).join(', '))}</b>
+                        <td><b>${esc(litsRex(f).slice(0, 3).join(', '))}${
+                            litsRex(f).length > 3 ? ' <span class="rex-kv">+ '
+                            + (litsRex(f).length - 3) + ' autres lignes</span>' : ''}</b>
                             <span class="rex-kv">${esc((f.tensions || []).join(', '))}</span></td>
                         <td>${esc(f.modele || '')}${f.genre ? ' <span class="rex-kv">'
                             + esc(f.genre) + '</span>' : ''}</td>
