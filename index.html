@@ -1818,7 +1818,10 @@
         <div class="boite">
             <div class="tete">
                 <h3>📚 Analyse des retours d'expérience</h3>
-                <button onclick="fermerRex()">Fermer</button>
+                <span style="display:flex; gap:8px">
+                    <button onclick="analyseRex()">↻ Relancer</button>
+                    <button onclick="fermerRex()">Fermer</button>
+                </span>
             </div>
             <div id="rex-fen-corps"></div>
         </div>
@@ -4962,6 +4965,11 @@
         function analyseRex() {
             const f = document.getElementById('rex-fen');
             if(!f) return;
+            // Un champ qu'on vient de remplir n'a pas encore rendu sa valeur
+            // tant que le curseur y est : on le quitte avant de lire le
+            // dossier, sinon la dernière phrase écrite manquerait à l'appel.
+            const ou = document.activeElement;
+            if(ou && ou.blur && /^(INPUT|TEXTAREA|SELECT)$/.test(ou.tagName || '')) ou.blur();
             if(!rexCharge || !Object.keys(rexBase).length) {
                 alert("La bibliothèque de REX est vide.\n\nLes REX s'importent depuis"
                     + " Options — Bibliothèque de REX, en déposant les PDF sortis de Kizéo.");
@@ -4973,7 +4981,8 @@
             // qui donne le change. Ce qui a été écarté reste à un clic.
             const c = rexContexte();
             const r = rexSuggestions(c, 28, 8);
-            rexDernier = { c: c, g: r.groupes, ecartes: r.ecartes, large: false };
+            rexDernier = { c: c, g: r.groupes, ecartes: r.ecartes, large: false,
+                           heure: new Date() };
             f.style.display = 'flex';
             renderRexFen();
         }
@@ -5010,6 +5019,9 @@
                     (${lus} REX) — d'après ${sur.join(' · ')}.
                     ${c.sources.length ? '<span class="rex-src2">Lu dans : '
                         + esc(c.sources.join(', ')) + '.</span>' : ''}
+                    <span class="rex-src2">Analyse refaite à
+                        ${rexDernier.heure ? rexDernier.heure.toLocaleTimeString() : ''}
+                        — chaque clic relit le dossier tel qu'il est.</span>
                 </div>
                 ${rexDernier.large ? `<div class="rex-inc">Recherche élargie : les leçons
                     ci-dessous n'ont pas de lien solide avec ce chantier — autre famille de
